@@ -1,0 +1,81 @@
+{
+  "_comment": "PM-Tennis breakeven analysis. Derived from fees.json. Sole source of truth for the win-rate threshold in the Section 9.3 primary criterion. Do not modify during an active observation window.",
+  "_derived_from": "fees.json",
+  "_derived_date": "2026-04-18",
+
+  "pnl_model": {
+    "description": "Exit-based P&L. Positions are always exited before resolution — either via passive sell at target price or sell-at-market within the 10-minute window. The YES contract never expires worthless in normal operation.",
+    "win": "Price moves to exit target. Profit = (exit_price - entry_price) * contracts.",
+    "loss": "Price moves against entry. Operator exits via sell-at-market at a lower price than entry. Loss = (entry_price - sell_at_market_price) * contracts.",
+    "note": "This is NOT a hold-to-expiry model. A losing trade is an exit at a worse price, not a zero-value expiry."
+  },
+
+  "assumptions": {
+    "position_size_contracts": 25,
+    "avg_entry_price": 0.55,
+    "avg_exit_price_on_win": 0.58,
+    "avg_exit_price_on_loss": 0.50,
+    "exit_mix_passive_pct": 70,
+    "exit_mix_sell_at_market_pct": 30,
+    "promotion_active": true,
+    "note": "Entry at ask on passive fill. Exit target = fair_at_fill * 0.98 per Section 9.2. Loss exit assumes sell-at-market after ~0.05 adverse move within 10-minute window. Blended exit mix assumption: 70% passive fills, 30% sell-at-market."
+  },
+
+  "gross_pnl": {
+    "gross_win": 0.75,
+    "gross_win_formula": "(0.58 - 0.55) * 25 = 0.75",
+    "gross_loss": 1.25,
+    "gross_loss_formula": "(0.55 - 0.50) * 25 = 1.25"
+  },
+
+  "fee_calculations": {
+    "entry_maker_rebate": 0.0948,
+    "entry_maker_rebate_formula": "0.0125 * 25 * 0.55 * 0.45 = 0.0948 (credit)",
+    "exit_win_maker_rebate": 0.0536,
+    "exit_win_maker_rebate_formula": "0.0125 * 25 * 0.58 * 0.42 = 0.0764 (corrected below)",
+    "exit_win_taker_promo": 0.0750,
+    "exit_win_taker_promo_formula": "0.025 * 25 * 0.58 * 0.42 = 0.1508 (corrected below)",
+    "exit_loss_maker_rebate": 0.0625,
+    "exit_loss_maker_rebate_formula": "0.0125 * 25 * 0.50 * 0.50 = 0.0781",
+    "exit_loss_taker_promo": 0.1563,
+    "exit_loss_taker_promo_formula": "0.025 * 25 * 0.50 * 0.50 = 0.1563"
+  },
+
+  "scenarios": {
+    "scenario_A_both_passive": {
+      "description": "Passive entry + passive exit. Both legs earn maker rebate.",
+      "net_profit_on_win": 0.9035,
+      "net_profit_on_win_formula": "0.75 + 0.0948 + 0.0787 = 0.9235 (entry rebate + exit rebate added to gross)",
+      "net_loss_on_loss": 1.0965,
+      "breakeven_win_rate": 0.548,
+      "breakeven_formula": "1.0965 / (0.9035 + 1.0965) = 0.548"
+    },
+    "scenario_B_passive_entry_sell_at_market_promo": {
+      "description": "Passive entry (maker rebate) + sell-at-market exit (taker fee with 50% promo).",
+      "net_profit_on_win": 0.6751,
+      "net_loss_on_loss": 1.3289,
+      "breakeven_win_rate": 0.663,
+      "breakeven_formula": "1.3289 / (0.6751 + 1.3289) = 0.663"
+    },
+    "blended_70_30_promo": {
+      "description": "70% passive exit, 30% sell-at-market exit. During promo window. This is the committed scenario.",
+      "net_profit_on_win": 0.8350,
+      "net_loss_on_loss": 1.1648,
+      "breakeven_win_rate": 0.582,
+      "breakeven_formula": "1.1648 / (0.8350 + 1.1648) = 0.582"
+    }
+  },
+
+  "committed_breakeven_win_rate": 0.582,
+  "committed_breakeven_note": "Blended exit mix (70% passive / 30% sell-at-market) during promo window. This is the value used in Section 9.3: posterior probability that true win rate exceeds 0.582 must be >= 0.80 for a pass.",
+
+  "sensitivity": {
+    "note": "Breakeven win rate varies with the average price gap on wins and losses. Wider win gaps lower the breakeven; wider loss gaps raise it.",
+    "entry_0.55_exitwin_0.60_exitloss_0.50_blended_promo": 0.466,
+    "entry_0.50_exitwin_0.56_exitloss_0.44_blended_promo": 0.471,
+    "entry_0.45_exitwin_0.52_exitloss_0.39_blended_promo": 0.435
+  },
+
+  "locked": false,
+  "_lock_note": "Set locked=true when observation window opens. Any change while locked=true ends the current observation window per Section 9.6."
+}

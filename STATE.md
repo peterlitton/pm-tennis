@@ -33,7 +33,7 @@ project:
   plan_document:
     current_version: v3
     current_version_date: 2026-04-17
-    location: "project knowledge (to be moved to repo once repo exists)"
+    location: "project knowledge and GitHub repository"
     pending_revisions:
       - decision: D-002
         sections: ["Section 8 Phase 7", "Section 9", "Section 11"]
@@ -42,15 +42,15 @@ project:
         sections: ["Section 8 Phase 1", "Section 11.1"]
         summary: "Phase 1 Sports WS granularity check becomes explicit go/no-go gate"
   state_document:
-    current_version: 3
+    current_version: 4
     last_updated: 2026-04-18
-    last_updated_by_session: H-003
+    last_updated_by_session: H-004
 
 # ---- Phase and work package ----
 phase:
   current: pre-build
-  current_work_package: "GitHub + Render setup walkthrough (next session)"
-  work_package_started_session: H-003  # work package transition happens at close of H-003
+  current_work_package: "Phase 1 — Host preparation, verification, and Sackmann pipeline"
+  work_package_started_session: H-004
   last_gate_passed:
     name: null
     phase: null
@@ -70,9 +70,9 @@ phase:
 
 # ---- Session accounting ----
 sessions:
-  last_handoff_id: H-003
-  next_handoff_id: H-004
-  sessions_count: 3  # H-001 (kickoff), H-002 (scaffolding begin), H-003 (scaffolding complete)
+  last_handoff_id: H-004
+  next_handoff_id: H-005
+  sessions_count: 4  # H-001 (kickoff), H-002 (scaffolding begin), H-003 (scaffolding complete), H-004 (infrastructure)
   most_recent_session_date: 2026-04-18
   out_of_protocol_events_cumulative: 0
   out_of_protocol_events_since_last_gate: 0
@@ -81,18 +81,29 @@ sessions:
 # ---- Repository and deployment state ----
 repo:
   host: GitHub
-  url: null
+  url: "https://github.com/peterlitton/pm-tennis"
   visibility: public  # per D-005
   default_branch: main
-  exists: false
+  exists: true
 
 deployment:
   backend:
     provider_category: "managed PaaS with deploy-from-git"
     provider_choice: Render
-    service_url: null
-    region: null
-    exists: false
+    service_name: "pm-tennis-api"
+    service_url: "https://pm-tennis-api.onrender.com"
+    region: "Oregon (US West)"
+    instance_type: "Starter"
+    python_version_deployed: "3.14.3"
+    python_version_target: "3.12"
+    python_version_pinned: false  # flag: pin to 3.12 in Phase 1
+    persistent_disk_mount: "/data"
+    persistent_disk_size_gb: 10
+    auto_deploy: true
+    auto_deploy_branch: main
+    health_check_path: "/healthcheck"
+    exists: true
+    status: live
   frontend:
     provider: Netlify
     site_url: null
@@ -156,6 +167,7 @@ observation_window:
 # ---- Open items requiring attention ----
 open_items:
   tripwire_events_currently_open: 0
+  python_version_pin_needed: true  # deploy used 3.14.3; plan specifies 3.12; fix in Phase 1
   raid_entries_by_severity:
     sev_8: 2   # R-001 (adverse selection), R-010 (statistical power)
     sev_7: 9   # R-002 through R-009, R-011
@@ -169,6 +181,14 @@ open_items:
       count: 4
       summary: "Pilot duration, calibration method, overfitting guardrails, no-tradeable-config branch"
   pending_operator_decisions: []
+
+# ---- Runbooks inventory ----
+runbooks:
+  RB-001:
+    title: "GitHub + Render Setup"
+    path: "runbooks/Runbook_GitHub_Render_Setup.md"
+    produced_session: H-004
+    status: complete
 
 # ---- Governance fingerprint ----
 governance:
@@ -188,19 +208,26 @@ costs:
   expected_monthly_usd:
     baseline: 35-50
     under_memory_pressure: 110
-  actual_monthly_usd: 0
+  actual_monthly_usd_estimate: 8.25  # Starter $7 + 10GB disk $1.25
   cost_components:
-    - component: "Render backend (compute + persistent disk)"
-      expected_usd_range: "30-50"
-      under_pressure_usd: "~100"
+    - component: "Render backend (Starter instance)"
+      expected_usd_range: "7"
+      status: active
+    - component: "Render persistent disk (10 GB)"
+      expected_usd_range: "1.25"
+      status: active
     - component: "Netlify frontend"
       expected_usd_range: "0 to low single digits"
+      status: not-yet-active
     - component: "GitHub repo"
       expected_usd_range: "0"
+      status: active
     - component: "Object storage for nightly backup"
       expected_usd_range: "~5"
+      status: not-yet-active
     - component: "Domain (if custom)"
       expected_usd_range: "~1 (amortized)"
+      status: deferred
     - component: "Polymarket US trading account balance"
       note: "operator-sized per Section 9 position-sizing commitment; not a platform cost"
 
@@ -210,37 +237,44 @@ scaffolding_files:
     status: accepted
     produced_session: H-002
     accepted_session: H-002
-    committed_to_repo: false
+    committed_to_repo: true
+    committed_session: H-004
   Orientation_md:
     status: accepted
     produced_session: H-003
     accepted_session: H-003
-    committed_to_repo: false
+    committed_to_repo: true
+    committed_session: H-004
   Playbook_md:
     status: accepted
     produced_session: H-002
     accepted_session: H-002
-    committed_to_repo: false
+    committed_to_repo: true
+    committed_session: H-004
   SECRETS_POLICY_md:
     status: accepted
     produced_session: H-002
     accepted_session: H-002
-    committed_to_repo: false
+    committed_to_repo: true
+    committed_session: H-004
   DecisionJournal_md:
     status: accepted
-    produced_session: H-003  # formal rebuild; draft-preview existed from H-002
+    produced_session: H-003
     accepted_session: H-003
-    committed_to_repo: false
+    committed_to_repo: true
+    committed_session: H-004
   RAID_md:
     status: accepted
     produced_session: H-003
     accepted_session: H-003
-    committed_to_repo: false
+    committed_to_repo: true
+    committed_session: H-004
   PreCommitmentRegister_md:
     status: accepted
     produced_session: H-003
     accepted_session: H-003
-    committed_to_repo: false
+    committed_to_repo: true
+    committed_session: H-004
   data_dictionary_md:
     status: not-started
     produced_session: null
@@ -258,84 +292,40 @@ scaffolding_files:
 
 ### Where the project is right now
 
-The project is in pre-build, governance scaffolding phase complete. Three sessions have run: H-001 established the governance model and produced the v3 build plan with Section 1.5 inserted. H-002 produced STATE.md (v2), Playbook.md, SECRETS_POLICY.md, and a DecisionJournal draft preview. H-003 (just closed) completed the scaffolding layer: DecisionJournal.md (formal rebuild, v1), RAID.md (v1, 32 entries), PreCommitmentRegister.md (v1 template, 31 entries), and Orientation.md (v1). All seven governance artifacts referenced in Section 1.5 of the build plan now exist as accepted documents. None have been committed to the repository yet because the repository does not exist — the operator holds all files locally.
+Four sessions in. H-004 closed the last pre-Phase-1 infrastructure gap. The GitHub repository `peterlitton/pm-tennis` is live and public, all seven governance scaffolding files are committed for the first time, and the Render backend service `pm-tennis-api` is deployed and returning a live `/healthcheck` response. The operator verified the healthcheck both in a desktop browser and on the iPhone that will be used for trading.
 
-The next work package is the GitHub + Render setup walkthrough. Claude will produce this as a step-by-step runbook document in H-004, and the operator will execute it step by step. Once the repository exists and the backend service is provisioned, Phase 1 technical work begins: host preparation, Sports WS granularity verification (the D-003 gate decision), Sackmann pipeline, and commitment-file derivation.
+Phase 1 technical work begins in H-005. The first task is a quick housekeeping item — pinning the Python version to 3.12 (Render defaulted to 3.14.3) — followed immediately by the Sackmann pipeline, which is the longest Phase 1 deliverable.
 
-No tripwires have fired. No out-of-protocol events have occurred. The D-002 sub-questions remain open and are not blocking until Phase 7 exit.
+No tripwires have fired. No out-of-protocol events have occurred. The D-002 sub-questions remain open and non-blocking.
 
-### What changed in H-003
+### What changed in H-004
 
-**YAML changes from v2 to v3:**
-- `state_document.current_version`: 2 → 3
-- `state_document.last_updated_by_session`: H-002 → H-003
-- `sessions.last_handoff_id`: H-002 → H-003
-- `sessions.next_handoff_id`: H-003 → H-004
-- `sessions.sessions_count`: 2 → 3
-- `phase.current_work_package`: "Governance scaffolding (STATE, Orientation, Playbook, SECRETS_POLICY)" → "GitHub + Render setup walkthrough (next session)"
-- `phase.work_package_started_session`: H-002 → H-003
-- `open_items.raid_entries_by_severity`: all fields were null → populated from RAID.md v1 entry counts
-- `scaffolding_files.Orientation_md`: not-started → accepted (produced H-003, accepted H-003)
-- `scaffolding_files.DecisionJournal_md`: draft-preview → accepted (produced H-003 as formal rebuild, accepted H-003)
-- `scaffolding_files.RAID_md`: not-started → accepted (produced H-003, accepted H-003)
-- `scaffolding_files.PreCommitmentRegister_md`: not-started → accepted (produced H-003, accepted H-003)
+**YAML changes from v3 to v4:**
+- `state_document.current_version`: 3 → 4
+- `state_document.last_updated_by_session`: H-003 → H-004
+- `sessions.last_handoff_id`: H-003 → H-004
+- `sessions.next_handoff_id`: H-004 → H-005
+- `sessions.sessions_count`: 3 → 4
+- `phase.current_work_package`: "GitHub + Render setup walkthrough" → "Phase 1 — Host preparation, verification, and Sackmann pipeline"
+- `phase.work_package_started_session`: H-003 → H-004
+- `repo.url`: null → `https://github.com/peterlitton/pm-tennis`
+- `repo.exists`: false → true
+- `deployment.backend.*`: all fields populated (service live)
+- `deployment.backend.python_version_deployed`: "3.14.3" (new field — flags mismatch with plan's 3.12)
+- `deployment.backend.python_version_pinned`: false (new field — action item for Phase 1)
+- `open_items.python_version_pin_needed`: true (new field)
+- `costs.actual_monthly_usd_estimate`: 0 → 8.25
+- All `scaffolding_files.*.committed_to_repo`: false → true (with `committed_session: H-004`)
+- `runbooks.RB-001`: new section added
 
-**Prose changes:** "Where the project is right now" subsection refreshed to reflect H-003 close state. "What changed in H-003" subsection added (new pattern — this subsection will appear in every STATE version going forward as a session-specific change log within the prose layer).
+### Why the Python version mismatch is a minor flag, not a RAID entry
 
-### Why the "What changed" subsection is new
+Render defaulted to Python 3.14.3 rather than the plan's specified 3.12. For the placeholder `main.py` this has no consequence — `fastapi` and `uvicorn` work fine on 3.14. However the plan specifies 3.12 throughout, and the Sackmann pipeline and capture engine will be written and tested against 3.12. Pinning early is cleaner than allowing the deployed version to drift from the development target. This is handled by adding a `.python-version` file to the repo at the start of H-005, before any Phase 1 code is written. It is flagged in STATE rather than RAID because it requires one small action, not ongoing risk management.
 
-Starting with STATE v3, every version includes a "What changed in H-NNN" subsection describing the delta from the prior version. This serves two purposes: it makes the operator's commit review faster (they see the changes described in plain English rather than having to diff two files), and it gives future-Claude a quick orientation to what happened in the most recent session without having to fully parse the YAML diff. The subsection is session-specific and is replaced on every STATE update — it always describes the most recent session's changes, not a cumulative history. Cumulative history lives in git.
+### Unchanged from STATE v3
 
-### The scaffolding layer is complete — what this means
-
-All seven governance artifacts are now accepted documents. This is a meaningful milestone because it closes the gap between Section 1.5's aspirational governance posture (D-008) and the project's actual state. The Section 1.5.5 tripwires, the handoff protocol, the observation-active lock, the self-audit requirement, and the doc-code coupling rule all now have the supporting documents they reference. The governance layer can operate as designed from this point forward.
-
-It also means the project is ready to begin producing artifacts with real technical content. The GitHub + Render setup walkthrough is the bridge from governance-only work into Phase 1 proper. Once the repository exists, all seven scaffolding files will be committed, and the project will have a complete public record from H-001 onward.
-
-One asymmetry worth naming: the governance layer is currently heavier than the code it governs (no code exists yet). This is by design — the governance was established before the code so that the code is built under a known set of rules. The asymmetry will resolve naturally as Phase 1 begins producing source files.
-
-### RAID entry counts (as of H-003)
-
-The RAID.md v1 produced in H-003 contains 32 entries:
-- 15 Risks (R-001 through R-015): 2 at severity 8, 9 at severity 7, 3 at severity 6, 2 at severity 5 (note: R-009 is severity 6 monitoring, counted in sev_6 above — the YAML counts reflect the RAID's actual severity assignments)
-- 5 Assumptions (A-001 through A-005): 4 unvalidated, 1 monitoring
-- 5 Issues (I-001 through I-005): all open
-- 6 Dependencies (DEP-001 through DEP-006): all active or pre-active
-
-The severity counts in the YAML `open_items.raid_entries_by_severity` reflect open/active entries only, not closed or resolved ones (of which there are none yet).
-
-### Unchanged from STATE v2
-
-The YAML field dictionary, failure modes and recovery procedures, read/write protocol, non-coverage section, and artifact-interactions section in the prose commentary are unchanged from v2. These sections are schema-stable and do not require per-session updates. They are preserved verbatim below.
+The YAML field dictionary, failure modes and recovery procedures, read/write protocol, non-coverage section, and artifact-interactions section in the prose commentary are unchanged from v3. These sections are schema-stable and do not require per-session updates.
 
 ---
 
-### Why STATE has the shape it has
-
-*(unchanged from v2 — see that version for full rationale)*
-
-The design is driven by six principles: one source of truth per fact with tooling reading the structured copy; both layers in one file to prevent drift; explicit nulls rather than omissions; dense now and prunable later; deliberate governance-fingerprint duplication as a redundancy-with-cross-check; and manual update cadence rather than auto-derivation. The trade-offs accepted include YAML parsing sharp edges (mitigated by quoting), fingerprint maintenance overhead, and the every-session-update rule's minimum overhead.
-
-### YAML field dictionary
-
-*(unchanged from v2 — consult v2 or the Orientation.md §4.3 governance-file table for field descriptions)*
-
-### Failure modes and recovery procedures
-
-*(unchanged from v2 — seven failure modes enumerated: SHA disagreement, handoff-ID mismatch, soft-lock state disagreement, missing STATE, malformed YAML, fingerprint disagreement, persistent open sub-questions)*
-
-### Read/write protocol — full procedural spec
-
-*(unchanged from v2 — full session-open and session-close procedures; also summarized in Playbook §1 and §2)*
-
-### What STATE does not track
-
-*(unchanged from v2 — session transcripts, operational telemetry, individual trade records, full STATE history)*
-
-### How STATE interacts with other governance artifacts
-
-*(unchanged from v2 — handoffs, DecisionJournal, RAID, PreCommitmentRegister, commitment files, handoff documents as historical record)*
-
----
-
-*End of STATE.md — current document version: 3. Last updated: H-003.*
+*End of STATE.md — current document version: 4. Last updated: H-004.*

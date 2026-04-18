@@ -1,0 +1,62 @@
+{
+  "_comment": "Polymarket US fee schedule. Effective April 3 2026. Sole source of truth for all fee calculations in PM-Tennis. Do not modify during an active observation window.",
+  "_source": "https://polymarketexchange.com (published fee schedule, verified April 18 2026)",
+
+  "formula": "Fee = theta * C * p * (1 - p)",
+  "formula_variables": {
+    "theta": "fee coefficient (taker or maker)",
+    "C": "number of contracts",
+    "p": "trade price in dollars (0.01 to 0.99)"
+  },
+
+  "taker_theta": 0.05,
+  "maker_theta": 0.0125,
+  "maker_rebate_fraction_of_taker": 0.25,
+
+  "promotions": [
+    {
+      "name": "50% taker rebate",
+      "description": "Promotional 50% rebate on all taker fees, applied weekly to all markets",
+      "effective_from": "2026-04-01",
+      "effective_to": "2026-04-30",
+      "taker_effective_theta": 0.025,
+      "note": "During this window the effective taker theta is halved to 0.025"
+    }
+  ],
+
+  "worked_examples": [
+    {
+      "description": "Taker fee at p=0.50, 100 contracts, no promotion",
+      "C": 100,
+      "p": 0.50,
+      "theta": 0.05,
+      "fee": 1.25,
+      "formula_check": "0.05 * 100 * 0.50 * 0.50 = 1.25"
+    },
+    {
+      "description": "Maker rebate at p=0.50, 100 contracts",
+      "C": 100,
+      "p": 0.50,
+      "theta": 0.0125,
+      "rebate": 0.3125,
+      "formula_check": "0.0125 * 100 * 0.50 * 0.50 = 0.3125"
+    },
+    {
+      "description": "Taker fee at p=0.55, 25 contracts, with 50% promo (effective theta 0.025)",
+      "C": 25,
+      "p": 0.55,
+      "theta": 0.025,
+      "fee": 0.1238,
+      "formula_check": "0.025 * 25 * 0.55 * 0.45 = 0.1238 (rounded)"
+    }
+  ],
+
+  "strategy_implications": {
+    "passive_entry_passive_exit": "Both legs earn maker rebate (theta=0.0125 each leg). Net cost is negative — a small credit.",
+    "passive_entry_sell_at_market_exit": "Entry earns maker rebate, exit pays taker fee (theta=0.05 or 0.025 during promo). Net cost depends on price and promotion status.",
+    "note": "Fee accounting is applied leg-by-leg by the replay simulator."
+  },
+
+  "locked": false,
+  "_lock_note": "Set locked=true and record observation_window_start when observation window opens. Any change while locked=true ends the current observation window per Section 9.6."
+}

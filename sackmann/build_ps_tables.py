@@ -397,7 +397,7 @@ def parse_slam_zip(zf: zipfile.ZipFile, gender: str) -> pd.DataFrame:
 
         # Filter by event_name if available
         if "event_name" in mdf.columns:
-            mask = mdf["event_name"].str.lower().apply(
+            mask = mdf["event_name"].astype(str).str.lower().apply(
                 lambda x: any(kw in str(x) for kw in keywords)
             )
             mdf = mdf[mask]

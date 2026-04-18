@@ -1,11 +1,14 @@
 """
-PM-Tennis — Sackmann P(S) table builder  (v2 — correct column names)
+PM-Tennis — Sackmann P(S) table builder  (v3 — correct pbp format)
 Phase 1 deliverable.
 
-Downloads the two Sackmann point-by-point archives from GitHub, parses them,
-computes empirical win probabilities for every score state, applies Bayesian
-shrinkage for rare states, and writes three Parquet lookup tables plus a
-build_log.json summary.
+Key corrections from v2:
+- server1 column contains a player NAME, not 1/2. We compare server1 vs server2
+  names to determine which player (1 or 2) served first; winner column gives
+  which player number won.
+- pbp strings use semicolons as game separators and dots as set separators.
+  e.g. "SSSS;RRRR;SSRRSS.RSRSRSRR;SSRSS" — strip separators, keep S/R chars.
+- Slam archive gender is determined by filename pattern, not event_name column.
 
 Output files (written to DATA_DIR/sackmann/):
   P_S_best_of_3_mens.parquet
@@ -13,13 +16,8 @@ Output files (written to DATA_DIR/sackmann/):
   P_S_best_of_5_mens.parquet
   build_log.json
 
-Run once during Phase 1 setup.  Safe to re-run; output files are overwritten.
-
 Usage (Render Shell):
   python sackmann/build_ps_tables.py
-
-Environment variables:
-  DATA_DIR   path to persistent disk mount (default: /data)
 """
 
 import json
@@ -67,6 +65,15 @@ PBP_FILE_PATTERNS = {
         "pbp_matches_wta_main_archive.csv",
         "pbp_matches_wta_main_current.csv",
     ],
+}
+
+# Slam points files contain both genders mixed; gender determined by
+# which matches file entries we filter on (event_name in matches file).
+# Men's singles event names contain "Men" or "Gentlemen".
+# Women's singles contain "Women" or "Ladies".
+SLAM_GENDER_KEYWORDS = {
+    "atp": ["men", "gentlemen"],
+    "wta": ["women", "ladies"],
 }
 
 
@@ -156,18 +163,31 @@ def barnett_clarke(state: dict, best_of: int, p_hold: float) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Parse tennis_pointbypoint (pbp string format)
-# Columns: server1 (1 or 2), winner (1 or 2), pbp (string of S/R)
+# Parse tennis_pointbypoint pbp string
+#
+# Format: games separated by ";", sets separated by "."
+# Characters: S = server wins point, R = returner wins point
+# server1 column = NAME of the player who served first (player 1 or 2)
+# winner column  = integer 1 or 2 (which player won)
+#
+# We strip all separators and process the raw S/R sequence.
 # ---------------------------------------------------------------------------
 
-def parse_pbp_string(pbp: str, server1_is_a: bool, best_of: int) -> tuple:
+def parse_pbp_string(pbp: str, server1_is_p1: bool, best_of: int) -> tuple:
     """
-    Parse a compact point sequence.
-    S = server wins point, R = returner wins point.
-    server1_is_a: True if player A (player 1) served first.
-    Returns (transitions list, sets_a, sets_b).
+    Parse a pbp string into state transitions.
+    server1_is_p1: True if player 1 (player A) served first.
+    Returns (transitions, sets_a, sets_b).
     """
-    pbp = pbp.strip().upper()
+    # Strip separators — semicolons (game boundaries) and dots (set boundaries)
+    # Keep only S and R characters
+    clean = pbp.upper().replace(";", "").replace(".", "")
+    # Remove anything that isn't S or R
+    clean = "".join(c for c in clean if c in ("S", "R"))
+
+    if len(clean) < 10:
+        return [], 0, 0
+
     sets_needed = math.ceil((best_of + 1) / 2)
 
     sets_a = sets_b = 0
@@ -175,7 +195,8 @@ def parse_pbp_string(pbp: str, server1_is_a: bool, best_of: int) -> tuple:
     points_a = points_b = 0
     in_tiebreak = False
     tb_a = tb_b = 0
-    server = "a" if server1_is_a else "b"
+    # server tracks "a" or "b"; player A = player 1
+    server = "a" if server1_is_p1 else "b"
 
     transitions = []
 
@@ -206,12 +227,10 @@ def parse_pbp_string(pbp: str, server1_is_a: bool, best_of: int) -> tuple:
         elif games_a == 6 and games_b == 6:
             in_tiebreak = True
 
-    for ch in pbp:
-        if ch not in ("S", "R"):
-            continue
-
+    for ch in clean:
         state_before = make_state()
 
+        # S = server wins, R = returner wins
         server_wins_point = (ch == "S")
         point_to_a = server_wins_point if server == "a" else not server_wins_point
 
@@ -221,8 +240,10 @@ def parse_pbp_string(pbp: str, server1_is_a: bool, best_of: int) -> tuple:
             else:
                 tb_b += 1
             total_tb = tb_a + tb_b
+            # Server switches every 2 points after the first
             if total_tb % 2 == 1:
                 flip()
+            # Tiebreak won: first to 7 with 2-point lead
             if (tb_a >= 7 or tb_b >= 7) and abs(tb_a - tb_b) >= 2:
                 if tb_a > tb_b:
                     games_a += 1
@@ -238,6 +259,7 @@ def parse_pbp_string(pbp: str, server1_is_a: bool, best_of: int) -> tuple:
                 points_a += 1
             else:
                 points_b += 1
+            # Game won: first to 4 with 2-point lead (handles deuce/ad)
             if (points_a >= 4 or points_b >= 4) and abs(points_a - points_b) >= 2:
                 if points_a > points_b:
                     games_a += 1
@@ -255,6 +277,20 @@ def parse_pbp_string(pbp: str, server1_is_a: bool, best_of: int) -> tuple:
 
     return transitions, sets_a, sets_b
 
+
+# ---------------------------------------------------------------------------
+# Parse tennis_pointbypoint archive
+# server1 = player name (string), winner = 1 or 2 (int)
+# server2 = other player name
+# Player 1 = player A; server1_is_p1 = (server1 name == player 1 name)
+# But we don't have a separate player1/player2 column — we use server1 vs server2.
+# Convention: if server1 != server2, and winner == 1, player 1 is the one
+# identified as the match winner. We need to know which player is "player 1".
+# Looking at the data: there is no explicit player1/player2 column.
+# However, winner=1 means "server1 won" based on Sackmann's docs.
+# So: player A = server1's player, winner_a = (winner == 1).
+# server1_is_p1 = True always (server1 IS player 1 by definition).
+# ---------------------------------------------------------------------------
 
 def parse_pointbypoint_zip(zf: zipfile.ZipFile, gender: str, best_of: int) -> pd.DataFrame:
     log.info("Parsing pointbypoint archive — gender=%s best_of=%d", gender, best_of)
@@ -277,30 +313,37 @@ def parse_pointbypoint_zip(zf: zipfile.ZipFile, gender: str, best_of: int) -> pd
             skipped += 1
             continue
 
-        if not {"server1", "winner", "pbp"}.issubset(df.columns):
-            log.warning("Missing columns in %s", basename)
+        if not {"server1", "server2", "winner", "pbp"}.issubset(df.columns):
+            log.warning("Missing columns in %s: %s", basename, list(df.columns))
             skipped += 1
             continue
 
         for _, row in df.iterrows():
             pbp = row.get("pbp", "")
-            if not isinstance(pbp, str) or len(pbp) < 10:
+            if not isinstance(pbp, str) or len(pbp) < 5:
                 skipped += 1
                 continue
+
             try:
-                server1 = int(row["server1"])
                 winner = int(row["winner"])
             except (TypeError, ValueError):
                 skipped += 1
                 continue
 
-            server1_is_a = (server1 == 1)
+            # In Sackmann's pbp files: winner=1 means server1's player won.
+            # Player A = server1's player. server1_is_p1 = True always.
+            # winner_a = 1 if winner == 1, else 0.
             winner_a = 1 if winner == 1 else 0
+            server1_is_p1 = True  # server1 is always player 1 (player A)
 
             try:
-                transitions, sa, sb = parse_pbp_string(pbp, server1_is_a, best_of)
+                transitions, sa, sb = parse_pbp_string(pbp, server1_is_p1, best_of)
             except Exception as e:
                 log.debug("Parse error: %s", e)
+                skipped += 1
+                continue
+
+            if not transitions:
                 skipped += 1
                 continue
 
@@ -319,45 +362,63 @@ def parse_pointbypoint_zip(zf: zipfile.ZipFile, gender: str, best_of: int) -> pd
 
 
 # ---------------------------------------------------------------------------
-# Parse tennis_slam_pointbypoint
-# Points files: 20XX-<slam>-points.csv
+# Parse tennis_slam_pointbypoint archive
+#
 # Matches files: 20XX-<slam>-matches.csv
-# Key columns: match_id, SetNo, P1GamesWon, P2GamesWon,
-#              P1PointsWon, P2PointsWon, PointServer, PointWinner,
-#              SetWinner, event_name
+#   Columns: match_id, player1, player2, winner (1 or 2), event_name
+# Points files: 20XX-<slam>-points.csv
+#   Columns: match_id, SetNo, P1GamesWon, P2GamesWon,
+#            P1PointsWon, P2PointsWon, PointServer (1 or 2), PointWinner (1 or 2)
+#
+# Gender: filter matches by event_name containing "Men"/"Women" keywords.
 # ---------------------------------------------------------------------------
 
 def parse_slam_zip(zf: zipfile.ZipFile, gender: str) -> pd.DataFrame:
     best_of = 5 if gender == "atp" else 3
-    gender_str = "men" if gender == "atp" else "women"
-    log.info("Parsing slam archive — gender=%s best_of=%d", gender, best_of)
+    keywords = SLAM_GENDER_KEYWORDS[gender]
+    log.info("Parsing slam archive — gender=%s best_of=%d keywords=%s",
+             gender, best_of, keywords)
 
-    # Load match winners from matches files
+    # Load match winners + gender filter from matches files
+    # match_id -> winner (1 or 2), filtered to correct gender
     match_winners = {}
     for name in zf.namelist():
-        if not os.path.basename(name).endswith("-matches.csv"):
+        basename = os.path.basename(name)
+        if not basename.endswith("-matches.csv"):
             continue
         try:
             with zf.open(name) as f:
                 mdf = pd.read_csv(f, low_memory=False)
-            if {"match_id", "winner"}.issubset(mdf.columns):
-                for _, row in mdf.iterrows():
-                    try:
-                        match_winners[str(row["match_id"])] = int(row["winner"])
-                    except Exception:
-                        pass
         except Exception:
-            pass
+            continue
 
-    log.info("Loaded %d match winners", len(match_winners))
+        if not {"match_id", "winner"}.issubset(mdf.columns):
+            continue
+
+        # Filter by event_name if available
+        if "event_name" in mdf.columns:
+            mask = mdf["event_name"].str.lower().apply(
+                lambda x: any(kw in str(x) for kw in keywords)
+            )
+            mdf = mdf[mask]
+
+        for _, row in mdf.iterrows():
+            try:
+                match_winners[str(row["match_id"])] = int(row["winner"])
+            except Exception:
+                pass
+
+    log.info("Loaded %d match winners (gender-filtered)", len(match_winners))
 
     state_wins = defaultdict(lambda: [0, 0])
     match_count = 0
     skipped = 0
 
     for name in zf.namelist():
-        if not os.path.basename(name).endswith("-points.csv"):
+        basename = os.path.basename(name)
+        if not basename.endswith("-points.csv"):
             continue
+
         try:
             with zf.open(name) as f:
                 df = pd.read_csv(f, low_memory=False)
@@ -366,31 +427,29 @@ def parse_slam_zip(zf: zipfile.ZipFile, gender: str) -> pd.DataFrame:
             skipped += 1
             continue
 
-        required = {"match_id", "SetNo", "P1GamesWon", "P2GamesWon", "PointServer", "PointWinner"}
+        required = {"match_id", "SetNo", "P1GamesWon", "P2GamesWon",
+                    "PointServer", "PointWinner"}
         if not required.issubset(df.columns):
             skipped += 1
             continue
-
-        # Gender filter
-        if "event_name" in df.columns:
-            mask = df["event_name"].str.lower().str.contains(gender_str, na=False)
-            df = df[mask]
-            if df.empty:
-                continue
 
         for mid, grp in df.groupby("match_id"):
             mid_str = str(mid)
             winner_val = match_winners.get(mid_str)
             if winner_val is None:
-                skipped += 1
+                # Not our gender or missing
                 continue
 
             winner_a = 1 if winner_val == 1 else 0
 
             try:
-                transitions = _parse_slam_group(grp, best_of)
+                transitions = _parse_slam_group(grp)
             except Exception as e:
                 log.debug("Slam group error %s: %s", mid_str, e)
+                skipped += 1
+                continue
+
+            if not transitions:
                 skipped += 1
                 continue
 
@@ -406,12 +465,18 @@ def parse_slam_zip(zf: zipfile.ZipFile, gender: str) -> pd.DataFrame:
     return pd.DataFrame(rows) if rows else pd.DataFrame(columns=["state_key", "wins_a", "count"])
 
 
-def _parse_slam_group(grp: pd.DataFrame, best_of: int) -> list:
+def _parse_slam_group(grp: pd.DataFrame) -> list:
+    """
+    Convert a slam points group (one match) into state transitions.
+    Uses: SetNo, P1GamesWon, P2GamesWon, P1PointsWon, P2PointsWon,
+          PointServer (1=P1, 2=P2), PointWinner (1=P1, 2=P2).
+    """
     transitions = []
 
     def _int(val, default=0):
         try:
-            return int(val)
+            v = int(val)
+            return v if v >= 0 else default
         except Exception:
             return default
 
@@ -426,6 +491,7 @@ def _parse_slam_group(grp: pd.DataFrame, best_of: int) -> list:
         ga = _int(row.get("P1GamesWon", 0))
         gb = _int(row.get("P2GamesWon", 0))
 
+        # Detect set transition to update set score
         if prev_set_no is not None and set_no != prev_set_no:
             sw = _int(row.get("SetWinner", 0))
             if sw == 1:
@@ -435,6 +501,7 @@ def _parse_slam_group(grp: pd.DataFrame, best_of: int) -> list:
 
         prev_set_no = set_no
 
+        # Point score within current game (0-3 range for normal game)
         p1_pts = min(_int(row.get("P1PointsWon", 0)), 3)
         p2_pts = min(_int(row.get("P2PointsWon", 0)), 3)
 
@@ -518,11 +585,11 @@ def build_ps_table(counts_df: pd.DataFrame, best_of: int, serve_hold: float) -> 
 # ---------------------------------------------------------------------------
 
 def main():
-    log.info("=== PM-Tennis Sackmann P(S) table builder v2 ===")
+    log.info("=== PM-Tennis Sackmann P(S) table builder v3 ===")
     build_start = datetime.now(timezone.utc)
     build_log = {
         "built_at": build_start.isoformat(),
-        "builder_version": 2,
+        "builder_version": 3,
         "tables": {},
         "warnings": [],
     }
@@ -543,7 +610,7 @@ def main():
 
     tables_built = 0
 
-    # Men's best-of-3
+    # Men's best-of-3 (ATP main + Challenger)
     if zf_pbp:
         counts = parse_pointbypoint_zip(zf_pbp, gender="atp", best_of=3)
         table = build_ps_table(counts, best_of=3, serve_hold=TOUR_SERVE_HOLD["atp_bo3"])
@@ -551,27 +618,32 @@ def main():
         table.to_parquet(out, index=False)
         total = int(counts["count"].sum()) if not counts.empty else 0
         log.info("Wrote %s (%d states, %d transitions)", out, len(table), total)
-        build_log["tables"]["P_S_best_of_3_mens"] = {"state_count": len(table), "total_transitions": total}
+        build_log["tables"]["P_S_best_of_3_mens"] = {
+            "state_count": len(table), "total_transitions": total}
         tables_built += 1
 
-    # Women's best-of-3
+    # Women's best-of-3 (WTA main + Slam women's)
     counts_wta = pd.DataFrame(columns=["state_key", "wins_a", "count"])
     if zf_pbp:
         counts_wta = parse_pointbypoint_zip(zf_pbp, gender="wta", best_of=3)
     if zf_slam:
         cw = parse_slam_zip(zf_slam, gender="wta")
         if not cw.empty:
-            counts_wta = pd.concat([counts_wta, cw]).groupby("state_key", as_index=False).sum()
+            counts_wta = pd.concat([counts_wta, cw]).groupby(
+                "state_key", as_index=False).sum()
     if not counts_wta.empty:
         table = build_ps_table(counts_wta, best_of=3, serve_hold=TOUR_SERVE_HOLD["wta_bo3"])
         out = OUT_DIR / "P_S_best_of_3_womens.parquet"
         table.to_parquet(out, index=False)
         total = int(counts_wta["count"].sum())
         log.info("Wrote %s (%d states, %d transitions)", out, len(table), total)
-        build_log["tables"]["P_S_best_of_3_womens"] = {"state_count": len(table), "total_transitions": total}
+        build_log["tables"]["P_S_best_of_3_womens"] = {
+            "state_count": len(table), "total_transitions": total}
         tables_built += 1
+    else:
+        build_log["warnings"].append("No women's data parsed")
 
-    # Men's best-of-5
+    # Men's best-of-5 (Slam men's only)
     if zf_slam:
         cm = parse_slam_zip(zf_slam, gender="atp")
         if not cm.empty:
@@ -580,7 +652,8 @@ def main():
             table.to_parquet(out, index=False)
             total = int(cm["count"].sum())
             log.info("Wrote %s (%d states, %d transitions)", out, len(table), total)
-            build_log["tables"]["P_S_best_of_5_mens"] = {"state_count": len(table), "total_transitions": total}
+            build_log["tables"]["P_S_best_of_5_mens"] = {
+                "state_count": len(table), "total_transitions": total}
             tables_built += 1
         else:
             build_log["warnings"].append("No men's Slam data parsed")

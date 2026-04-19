@@ -34,23 +34,32 @@ async def start_discovery():
     """
     Launch the discovery loop as a fire-and-forget asyncio task.
     The task runs for the lifetime of the process. If it crashes, the
-    exception is logged and the web server continues serving healthchecks
-    so Render does not restart the service unnecessarily.
+    exception is logged and the task retries after a delay so the web
+    server is never taken down by discovery failures.
     """
     async def _run():
-        try:
-            from src.capture.discovery import GatewayClient, DiscoveryLoop, TENNIS_SPORT_SLUG, verify_sport_slug
-            client = GatewayClient()
-            slug_ok = await verify_sport_slug(client, TENNIS_SPORT_SLUG)
-            if not slug_ok:
-                log.warning(
-                    "Discovery: sport slug %r not verified. Poll loop will run "
-                    "but may return empty results.", TENNIS_SPORT_SLUG
+        retry_delay = 30
+        while True:
+            try:
+                from src.capture.discovery import (
+                    GatewayClient, DiscoveryLoop,
+                    TENNIS_SPORT_SLUG, verify_sport_slug,
                 )
-            loop = DiscoveryLoop(client, TENNIS_SPORT_SLUG)
-            await loop.run_forever()
-        except Exception as exc:
-            log.critical("Discovery background task crashed: %s", exc, exc_info=True)
+                client = GatewayClient()
+                slug_ok = await verify_sport_slug(client, TENNIS_SPORT_SLUG)
+                if not slug_ok:
+                    log.warning(
+                        "Discovery: sport slug %r not verified. Poll loop will run "
+                        "but may return empty results.", TENNIS_SPORT_SLUG
+                    )
+                loop = DiscoveryLoop(client, TENNIS_SPORT_SLUG)
+                await loop.run_forever()
+            except Exception as exc:
+                log.critical(
+                    "Discovery background task crashed: %s — retrying in %ds",
+                    exc, retry_delay, exc_info=True,
+                )
+                await asyncio.sleep(retry_delay)
 
     asyncio.create_task(_run())
     log.info("Discovery background task started.")

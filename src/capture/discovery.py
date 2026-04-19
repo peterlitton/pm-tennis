@@ -461,12 +461,22 @@ class GatewayClient:
     async def close(self) -> None:
         await self._client.aclose()
 
-    async def get_all_sports(self) -> list[dict]:
+async def get_all_sports(self) -> list[dict]:
         """GET /v2/sports — returns list of sport objects with name/slug/leagues."""
         resp = await self._client.get("/v2/sports")
         resp.raise_for_status()
         data = resp.json()
-        return data.get("sports") or data if isinstance(data, list) else []
+        # Handle multiple possible response shapes from the gateway
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in ("sports", "data", "results", "items"):
+                if key in data and isinstance(data[key], list):
+                    return data[key]
+            # Log the actual keys so we can see the real structure
+            log.warning("Unexpected /v2/sports response shape. Keys: %s", list(data.keys()))
+            return []
+        return []
 
     async def get_events_by_sport(
         self,

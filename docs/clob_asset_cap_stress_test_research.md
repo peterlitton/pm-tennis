@@ -1,14 +1,15 @@
 # CLOB asset-cap stress test — research document (v4)
 
 **Deliverable:** Phase 3 attempt 2, first deliverable (Ruling 1(e), H-010).
-**Authors:** Claude, sessions H-010 (v1–v3) and H-012 (v4).
+**Authors:** Claude, sessions H-010 (v1–v3), H-012 (v4 §13 additive), H-014 (v4 §15 additive).
 **Version history:**
 - v1 (H-010, earlier turn): initial document. Surfaced §2 ambiguity, §4 as set of unanswered questions, §7 as three operator decisions.
 - v2 (H-010, earlier turn): §4 answered via operator-authorized web_fetch research. §2 ambiguity resolved. §3, §5, §7 updated against cited documentation. §11 added naming what research surfaced that changes v1's model.
 - v2.1 (H-010, earlier turn): operator follow-up 1 on v2 review. §4.3 code block re-verified as verbatim from the Markets WebSocket page. §4.3.1 added surfacing a case-style inconsistency between the WebSocket Overview page and the Markets WebSocket page that v2 did not note.
 - v3 (H-010, later turn): operator ruling Q5=(a). Polymarket US Python SDK README fetched and read. §4.3.1 resolved in favor of Markets WebSocket page's camelCase wire shape. §4.7 resolved: SDK uses a single slug namespace across REST and WebSocket on `api.polymarket.us`; bridging gateway slugs remains unverified but a cleaner path is now visible (§4.7.1). §12 added summarizing SDK-vs-hand-rolled code decision now surfaced. Scope tightened: v3 does not re-open any section not directly affected by the SDK read.
 - **v4 (H-012): three H-012 rulings resolved and the §6 meta.json survey executed. §13 added capturing (a) the ruling on POD-H010-§12 = SDK (D-024), (b) the ruling on POD-H010-Q5′ = hybrid probe-first (D-025), (c) the authorization and execution of POD-H010-§6-survey (D-026), (d) the survey findings, (e) the probe-slug default for the Q5′=(c′) probe. v4 is additive only: §§1–12 are unchanged from v3. §5's "actual asset count we expect" estimate (≈38 at H-009 close) and §7's placeholder-bracket discussion are explicitly not revised; §13 cross-references them and notes the updated N=74 baseline instead, preserving v3's operator-accepted text.**
-**Status:** Draft for operator review. No code has been written. No endpoint, subscription format, module path, class name, or function signature has been committed to code based on this document. Every external fact in §4 is cited with URL and excerpt per Ruling 2(a) and Tripwire 1. §13 findings are from a read-only in-session survey of the `pm-tennis-api` Render persistent disk; no writes, no mutation.
+- **v4 §15 additive (H-014): three H-013 code-turn-research tasks resolved against authoritative sources (Ed25519 signing fully internal to SDK; timestamp unit milliseconds; SDK transitive-dep footprint 12 wheel-available packages). D-027 supersession of D-025 commitment 1 after Render disks confirmed strictly single-service — probe slug is now operator-supplied via `--slug=SLUG` CLI arg; D-025's other commitments unaffected. Probe scaffolding at `src/stress_test/` (H-013) documented. Known-stale artifacts from H-013's Option X cut (`src/stress_test/README.md`, `runbooks/Runbook_RB-002_Stress_Test_Service.md`) rewritten at H-014 start. §14 reserved for H-015 probe-outcome addendum. No sections in §§1–14 revised.**
+**Status:** Draft document; v3 operator-accepted at H-010, §13 operator-accepted at H-012, §15 produced at H-014. Scaffolding code at `src/stress_test/` produced at H-013 per §13.5 (operator-committed, 38 unit tests passing, zero SDK mocking, live-probe deferred to H-015 per operator Option X cut). No live probe has been run against Polymarket US; no main-sweep run has been executed. Every external fact in §4 is cited with URL and excerpt per Ruling 2(a) and Tripwire 1. §15 findings extend the same discipline: SDK source and Render docs were fetched and cited before code was written or runbook procedures finalized.
 
 ---
 
@@ -520,4 +521,118 @@ Consolidated for the code turn:
 
 ---
 
-*End of research document — v4, session H-012.*
+## 15. H-013 code-turn results and D-027 — new in H-014 additive
+
+This section is additive to v4. Written at H-014 (2026-04-19) to record: the three H-013 code-turn-research task resolutions, the Render disk-architecture finding that produced D-027, the D-027 supersession of D-025 commitment 1, the probe-scaffolding landing at `src/stress_test/`, and the H-014 correction of the known-stale artifacts committed under H-013's Option X cut. §14 is reserved for the probe-outcome addendum that will be written at H-015 after live probe execution against the Polymarket US gateway; §14 is intentionally out-of-order because the probe outcome is its own unit of analysis and this session (H-014) had no live run.
+
+v4 remains the current version. §§1–14 are unchanged (§14 does not yet exist; nothing to change). A v5 bump was considered at H-014 open and rejected in favor of this §15 additive, following the H-012 precedent for §13.
+
+### 15.1 H-013 code-turn-research resolutions
+
+Three research items were carried forward from D-023/D-024 as not-yet-resolved-but-not-PODs at H-012 close. H-013 resolved all three against authoritative sources before writing code. Each is fully cited below so future sessions have the evidence trail without needing to re-fetch.
+
+**15.1.1 Ed25519 signing surface (D-024 commitment 4a).** Resolved: **fully internal to the `polymarket-us` SDK. No user-code signing surface.** The D-024 commitment-4 escape hatch ("if SDK owns signing, collapses to 'trust the SDK'") is the operative branch.
+
+Evidence:
+- **SDK README** (`github.com/Polymarket/polymarket-us-python`, fetched H-013): the SDK accepts `key_id` and `secret_key` (raw base64) at `AsyncPolymarketUS(...)` construction and exposes no signing primitive, no signing-options argument, no signature-callback hook. All three handshake headers (`X-PM-Access-Key`, `X-PM-Timestamp`, `X-PM-Signature`) are produced inside the SDK; the caller never sees the signed bytes.
+- **Authentication page** (`docs.polymarket.us/api-reference/authentication`, fetched H-013): documents Ed25519 over `timestamp + "GET" + path` with 30-sec clock window. No user-visible signing surface is documented for SDK-based integrations.
+- **Backend library:** `pynacl` (libsodium Python bindings), verified via the SDK's declared deps and via `pip install --dry-run` — see §15.1.3.
+
+Implication: the probe code does not handle any byte-level signing material. The signing-correctness surface is fully inside the SDK. Future-Claude: do not re-open this question unless the SDK's API surface changes.
+
+**15.1.2 Timestamp unit cross-check (D-024 commitment 4b).** Resolved: **milliseconds, unambiguous.** Polymarket's authentication page now contains a header table that reads literally `X-PM-Timestamp: Current time in milliseconds`. The "30 seconds of server time" prose language that v3 §4.2 noted remains on the page as the clock-tolerance description, but is no longer the canonical unit specification — the header table is. Alignment with Polymarket's usage instructions at H-011 (`{unix_ms}`) is now confirmed against the documentation page itself, not just against the usage instructions.
+
+Implication: the SDK sends the timestamp in milliseconds. D-023 subsidiary finding 1 is now fully verified against the authoritative source.
+
+**15.1.3 SDK transitive-dependency footprint (H-012 addendum quiet-uncertainty).** Resolved: **12 packages total, all wheel-available for Linux/x86_64 + CPython 3.12.** No compile required on Render.
+
+Verified H-013 via `pip install polymarket-us==0.1.2 --dry-run --report` in a clean venv:
+
+| Layer | Package | Version constraint |
+|---|---|---|
+| direct | `httpx` | `>=0.27.0` |
+| direct | `pynacl` | `>=1.5.0` |
+| direct | `websockets` | `>=12.0` |
+| transitive | `httpcore` | (via httpx) |
+| transitive | `anyio` | (via httpx/httpcore) |
+| transitive | `idna` | (via httpx) |
+| transitive | `certifi` | (via httpx) |
+| transitive | `h11` | (via httpcore) |
+| transitive | `typing_extensions` | (via anyio) |
+| transitive | `cffi` | (via pynacl) |
+| transitive | `pycparser` | (via cffi) |
+
+Implication: the stress-test service's Render build will install in under a minute and will not require a build toolchain. The H-014 (this session) installation under a local `venv` for test running confirmed the same package set at the same versions; the 38-test suite passes against it.
+
+### 15.2 D-027 supersession of D-025 commitment 1
+
+During H-013 probe-scaffolding work, Claude fetched `render.com/docs/disks` to verify the proposed shared-disk attachment in draft Runbook RB-002 Step 3. The fetch returned authoritative text ruling out the shared-disk architecture:
+
+> A persistent disk is accessible by only a single service instance, and only at runtime. This means: You can't access a service's disk from any other service. You can't scale a service to multiple instances if it has a disk attached. You can't access persistent disks during a service's build command or pre-deploy command (these commands run on separate compute). You can't access a service's disk from a one-off job you run for the service.
+
+This confirms Render disks are strictly single-service. D-025 commitment 1 (probe reads gateway-sourced slug from shared-mounted `/data/matches/` on the stress-test service) is not implementable under the isolated-service architecture required by D-024 commitment 1 and D-020/Q2=(b).
+
+**D-027 (H-013) ruled Option D** after Claude surfaced four options (A: modify pm-tennis-api/requirements.txt — violates D-024 commitment 1; B: expose a candidates-list HTTP endpoint on pm-tennis-api — adds behavior to production discovery service and an auth surface; C: fetch candidates directly from the gateway at probe time — conflicts with D-025's language literally and adds a net-new external dependency to the probe critical path; D: operator picks a slug via pm-tennis-api Shell and passes it to the probe as `--slug=SLUG` — preserves all isolation commitments).
+
+Under D-027, the probe slug is supplied as `--slug=SLUG` on the `pm-tennis-stress-test` Render Shell invocation. `slug_selector.py` remains in the package as a library used by (a) local development, (b) self-check's informational report, (c) a pm-tennis-api Shell helper command (documented in RB-002 §5.1) that lists eligible candidates for operator selection. `slug_selector` is **not** called in the production probe code path on the isolated stress-test service.
+
+D-025's research-question intent is preserved: the probe still tests a gateway-sourced slug against `wss://api.polymarket.us/v1/ws/markets`. The operator selects that slug from Phase 2's byte-identical `meta.json` archive in pm-tennis-api's Shell; it is the same slug D-025 contemplated, sourced by the same mechanism, just reaching the probe via CLI rather than shared-disk filesystem read. The probe outcome (accepted/rejected/ambiguous/exception) answers the same gateway-to-api-slug-bridge question D-025 set out to answer.
+
+**D-025 commitments 2, 3, and 4 are unaffected.** D-027 operator ruling chose supersession over re-interpretation at explicit Claude request — supersession keeps D-025's original text intact in the historical record and forces the new reality into a named, dated, numbered DJ entry. D-025's footer has been updated with `SUPERSEDED IN PART BY D-027`.
+
+### 15.3 Probe scaffolding landed (H-013)
+
+The `src/stress_test/` package was created and committed at H-013 per D-024 commitment 1 and the H-013 cut. Structure:
+
+| File | Purpose |
+|---|---|
+| `src/stress_test/__init__.py` | Package init; version string `0.1.0-stress-test-h013`. |
+| `src/stress_test/probe.py` | Entry point with self-check (default) and probe (`--probe --slug=SLUG`) modes. Every SDK symbol cited against the Polymarket US Python SDK README in the module-header citations block ([A] through [D]). |
+| `src/stress_test/slug_selector.py` | Library for reading `/data/matches/*/meta.json` under local/helper invocation. Schema verified against `src/capture/discovery.py` `TennisEventMeta` dataclass. Under D-027 not called in the production probe path. |
+| `src/stress_test/requirements.txt` | Isolated deps: `polymarket-us==0.1.2`, `pytest==8.3.4`. Per D-024 commitment 1, `/requirements.txt` at the repo root (used by `pm-tennis-api`) is NOT modified. |
+| `src/stress_test/README.md` | Package documentation. Rewritten at H-014 to reflect D-027 (§15.4). |
+| `tests/test_stress_test_slug_selector.py` | 19 tests covering positive/negative/filter-by-status/filter-by-date/malformed-JSON/empty/multi-market/realistic-survey-shape paths. Pure on-disk fixtures; no mocking. |
+| `tests/test_stress_test_probe_cli.py` | 19 tests covering argparse, config-error path, NO_CANDIDATE path, config-checked-before-slug precedence, main() dispatch, ProbeOutcome dataclass, classification-to-exit-code mapping, ProbeConfig clamping. Zero SDK mocking per the H-012 addendum guidance that SDK-mocking would hide the drift class that killed H-008. |
+
+**38 tests pass** (H-013 close and re-verified at H-014 open under a fresh `venv` with the pinned deps). The network-touching probe path is deferred to H-015 live smoke per the D-021 testing posture + live-smoke bar of D-020.
+
+End-to-end smoke of the four CLI exit paths was verified at H-013 close and re-verified at H-014 open:
+- Self-check (no creds, no disk) → `EXIT_OK` with clean stderr output.
+- `--probe --slug=dummy` (no creds) → `EXIT_CONFIG_ERROR`.
+- `--probe` (no `--slug`, empty `PMTENNIS_DATA_ROOT`) → `EXIT_NO_CANDIDATE`.
+- `--help` → renders the argparse help text correctly.
+
+### 15.4 Known-stale artifacts corrected at H-014
+
+Two files committed at H-013 carried sections known-stale under D-027 (flagged in Handoff_H-013 §5 for H-014 first-task correction). Both were rewritten this session before any deployment step:
+
+- **`src/stress_test/README.md`**: `## What this service does` (revised to clarify self-check is informational on slug_selector under D-027; probe mode takes `--slug`); new `## Slug source — D-027 supersedes D-025 commitment 1` section added; `## Authoritative inheritance` slug-schema bullet scoped to "library use only"; `## Running locally` code block updated with `--slug` example and fallback invocation; `## Running on Render` rewritten to describe the two-shell workflow and reference RB-002; exit-code-11 row revised to reflect D-027 meaning ("no `--slug` provided AND fallback returned []"); status line updated to note the H-014 D-027 pass.
+
+- **`runbooks/Runbook_RB-002_Stress_Test_Service.md`**: full rewrite. Step 1 language about region being "load-bearing" for disk-sharing removed (now a latency/cost consideration only). Step 3 ("Attach the persistent disk read-only") replaced with "Skip — no disk attach" and explanatory rationale. The three fallback options (A/B/C) that Step 3 proposed are now inert (D-027 already picked Option D) and removed. Step 4 expected-log-output block revised to show `[info] 0 probe candidates from slug_selector — expected under D-027` as the success signal, not a warn state. Step 5 entirely rewritten as the two-shell workflow: 5.1 in pm-tennis-api Shell (operator runs a short Python snippet importing `slug_selector.list_candidates`, picks a slug); 5.2 in pm-tennis-stress-test Shell (operator runs `python -m src.stress_test.probe --probe --slug=<SLUG> --event-id=<EID>`); 5.3 exit-code interpretation table. Step 6 "Disk-attach outcome" reporting line removed. Teardown section preserved.
+
+One sub-ruling applied under delegated authority at H-014: for the pm-tennis-api-Shell candidate-listing helper, the pasted one-line Python snippet (inlined in RB-002 §5.1) was chosen over a committed `src/stress_test/list_candidates.py` helper file. Rationale: a pasted snippet avoids a new file that would itself require tests, documentation, and maintenance; the Shell-pasted form is transparent and self-documenting. Surfaced in Handoff_H-014 §3 for visibility. If operator prefers a committed helper file at H-015 open, adding one is a cheap reversal.
+
+### 15.5 What H-015 picks up
+
+Consolidated for the next session:
+
+1. **Live probe execution** per §7 Q5′=(c′), D-025 commitments 2–4, and D-027 Option D.
+   - In pm-tennis-api Shell: list candidates via RB-002 §5.1 snippet; pick one freshest active not-ended not-live not-live slug.
+   - In pm-tennis-stress-test Shell: `python -m src.stress_test.probe --probe --slug=<SLUG> --event-id=<EID>`.
+   - Copy the `ProbeOutcome` JSON from stdout back to chat.
+   - Claude logs outcome, classifies probe result, and decides (or surfaces to operator) the main-sweep slug source per D-025 hybrid-probe-first logic.
+2. **Main sweeps** per §7 Q3=(c). Shape: 1/2/5/10 subscriptions × 100 placeholder slugs × 1/2/4 concurrent connections. ~30 minutes. Per §7 Q1=(a), no disk writes of received tick content. Per D-021 testing posture: unit tests + operator code review + smoke run constitute the acceptance bar. Code not yet written — this is H-015 code-turn work. Expected new module: `src/stress_test/sweeps.py` or equivalent.
+3. **Probe-outcome addendum (§14).** Written after live probe result is in hand.
+4. **Main-sweeps addendum** (§16 or further-additive). Written after main sweeps complete.
+5. **Teardown** of the stress-test Render service after the §16 addendum is in hand.
+
+### 15.6 What §15 does not change
+
+- No claim in §§1–12 is revised. All external citations to `docs.polymarket.us` and the Polymarket US Python SDK README stand as v3 recorded them; §15.1.1 and §15.1.2 are confirmations of v3 claims via re-fetch, not revisions of them.
+- §13's H-012 rulings and survey findings stand. D-027 is supersession of **D-025 commitment 1 only**; D-025's commitments 2/3/4 and the probe-slug default at §13.4 remain in force.
+- §13.5's "what the code turn inherits" list is still accurate for the probe's runtime behavior; the slug-source item (point 3) now reads as "operator-supplied via `--slug=SLUG`" under D-027, but the probe-behavior specification (one slug, SDK subscribe, ~10s observation, record outcome, disconnect) is unchanged.
+- No plan-text revisions are cut. Plan-text revisions v4.1-candidate, v4.1-candidate-2, and v4.1-candidate-3 remain queued in STATE `pending_revisions`.
+
+---
+
+*End of research document — v4, §13 H-012 additive + §15 H-014 additive. §14 reserved for H-015 probe-outcome addendum.*

@@ -18,6 +18,68 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-027 — Probe-slug transport: operator-supplied CLI argument (supersedes D-025 commitment 1)
+
+**Date:** 2026-04-19
+**Session:** H-013
+**Type:** Architecture / Supersession
+
+**Source:** Operator ruling at H-013 after Claude fetched `render.com/docs/disks` during probe-scaffolding work and discovered the D-025 commitment 1 architecture was not implementable on Render. Operator ruled "Option D" then "Supersession" when asked whether D-027 should re-interpret or supersede D-025.
+
+**Decision:** The probe slug is supplied to the stress-test probe as an operator-provided CLI argument (`--slug=SLUG`, with optional `--event-id=EVENT_ID` for traceability), not read from the shared Render persistent disk. `src/stress_test/slug_selector.py` remains in the codebase as a library for local development and for a pm-tennis-api-Shell helper command that lists eligible candidates, but is not called by the production probe path on the isolated `pm-tennis-stress-test` Render service.
+
+This supersedes D-025 commitment 1, which specified the probe would read one gateway-sourced slug directly from a Phase 2 `meta.json` file under `/data/matches/`. The research-question intent of D-025 (probe a gateway-sourced slug against the api WebSocket to characterize the gateway-to-api slug bridge) is preserved; only the transport mechanism changes. D-025 commitments 2, 3, and 4 are unaffected.
+
+**Considered (from in-session exchange, full text in Handoff_H-013):**
+
+- (A) Run the probe from `pm-tennis-api` Shell — uses the already-attached disk natively, but requires modifying `pm-tennis-api/requirements.txt` to add `polymarket-us` (violating D-024 commitment 1) and weakens the D-020/Q2=(b) isolation.
+- (B) Expose an HTTP endpoint on `pm-tennis-api` that returns eligible candidates as JSON; stress-test service fetches via HTTPS — preserves isolation but requires a behavior change to the production discovery service and adds an auth surface (shared-secret reuse).
+- (C) Have the probe fetch candidates directly from the gateway (`gateway.polymarket.us/v2/sports/tennis/events`) at runtime — perfect isolation but conflicts with D-025's commitment-1 language literally (slug sourced fresh from gateway at probe time, not from Phase 2's archived copy), and pulls a new external dependency onto the probe critical path.
+- (D) Operator picks a slug via `pm-tennis-api` Shell and passes it to the probe as `--slug` — preserves all isolation commitments, preserves D-025's research-question intent, adds an operator-in-the-loop step consistent with the rest of the project's posture.
+
+Selected: (D). Operator ruling.
+
+**Rationale (operator-approved):**
+
+1. **Discovery that forced the ruling.** During H-013 probe-scaffolding work, Claude fetched `https://render.com/docs/disks` to verify the proposed shared-disk attach step in draft Runbook RB-002. The fetch returned authoritative text: *"A persistent disk is accessible by only a single service instance, and only at runtime. This means: You can't access a service's disk from any other service. You can't scale a service to multiple instances if it has a disk attached. You can't access persistent disks during a service's build command or pre-deploy command (these commands run on separate compute). You can't access a service's disk from a one-off job you run for the service."* This is fully authoritative Render documentation and does not admit any read-only-shared-mount pattern. Also confirmed in `feedback.render.com` staff response: "only a single instance can write to/read from them."
+
+2. **D-024 commitment 1 and D-020/Q2=(b) are the binding isolation constraints.** `pm-tennis-api/requirements.txt` must not be modified by Phase 3 attempt 2; the stress-test code must run in a new, separate Render service, torn down after. Option A violates both. Option B preserves both but requires adding an endpoint to the running discovery service. Option D preserves both without any change to `pm-tennis-api`.
+
+3. **D-025's research-question intent is preserved.** D-025 exists to answer: "can a slug that Phase 2 observed via the gateway be used to subscribe on `api.polymarket.us`'s WebSocket?" The operator picking that slug from Phase 2's archive via pm-tennis-api Shell and passing it to the probe is the same research question, same evidence — the slug was gateway-sourced, Phase 2 wrote it byte-identically to disk, the operator copies it out. The probe tests exactly what D-025 intended to test. Option D is semantically equivalent at the research level while being the only option compatible with Render's actual disk model.
+
+4. **Supersession, not re-interpretation.** Per operator ruling, this entry is recorded as supersession of D-025 commitment 1 rather than re-interpretation. The reasoning the operator accepted: re-interpretation sets a precedent that Claude can soften committed language when implementation realities shift; supersession is more conservative, keeps D-025's original text intact in the historical record, and forces the new reality into a named, dated, numbered decision entry.
+
+**Commitment:**
+
+1. The stress-test probe (`src/stress_test/probe.py`) takes `--slug=SLUG` as its authoritative slug source in probe mode. `--event-id=EVENT_ID` is optional and informational only (appears in the outcome record for traceability, not dispatched on).
+2. `slug_selector.py` remains in the repo. It is used by (a) the stress-test self-check mode as an informational report on local-dev fallback availability; (b) the pm-tennis-api Shell helper workflow for the operator to list candidates prior to probe invocation. It is **not** called in the production probe code path on the Render stress-test service.
+3. If neither `--slug` nor a usable `slug_selector` fallback is available, the probe exits `EXIT_NO_CANDIDATE` with stderr naming the missing `--slug` argument and referencing RB-002. Silent fallback to whatever `slug_selector` returns is avoided because on the isolated Render service there is no `/data/matches/` to return from; any non-empty result would indicate a bug.
+4. Runbook RB-002 (the Render-provisioning walkthrough) must be updated before H-014 deployment: Step 3 ("attach disk") becomes "skip — no disk attach for the stress-test service"; Step 5 ("how H-014 will execute the probe") becomes the two-shell workflow — list candidates in pm-tennis-api Shell, invoke probe in pm-tennis-stress-test Shell with `--slug` and `--event-id`. H-013 does not update RB-002 this session per the operator's Option X cut; the update is the first H-014 task.
+5. `src/stress_test/README.md` similarly carries known-stale content about disk-based slug selection; update bundled with the RB-002 fix at H-014 open.
+
+**Effect on other decisions:**
+
+- **D-025 commitment 1:** superseded. D-025 footer updated to reference D-027. Commitments 2, 3, 4 remain unaffected. The hybrid-probe-first architecture itself (one-slug probe before main sweeps, outcome-determines-main-sweep-slug-source) is preserved intact.
+- **D-024:** unchanged. SDK-based approach stands. D-024 commitment 1 (pm-tennis-api requirements.txt not modified) is actively reinforced by D-027's Option D.
+- **D-020:** unchanged. Q2=(b) isolated Render service stands.
+- **D-023:** unchanged. Credential env-var names and storage location stand.
+- **D-026:** unchanged. §6 survey findings and N baseline stand; the survey's probe-slug-default recording (event 9392) is still the traceability anchor, now with the operator-selection workflow as the consuming path rather than runtime filesystem read.
+
+**What this entry does not decide:**
+
+- The specific text of Runbook RB-002's revised Steps 3 and 5 — authored at H-014 open.
+- The specific text of `src/stress_test/README.md`'s revised sections — authored at H-014 open.
+- Whether research-doc v4 gets a §15 additive or a v5 bump — H-014 ruling.
+- Whether a pm-tennis-api Shell helper command for listing eligible candidates is a committed artifact or a throwaway one-liner — H-014 judgment; either suffices for the stress-test workflow.
+
+**Evidence trail:**
+
+- Render docs fetched H-013 via `web_fetch https://render.com/docs/disks` — full text preserved in the H-013 chat transcript.
+- Research-doc v4 §4.5 remains the authoritative record of what the stress test exists to measure (per-subscription count, concurrent-connection count); D-027 changes none of that.
+- Code changes landing this session implementing D-027: `src/stress_test/probe.py` (CLI flags + run_probe slug-source precedence + self-check D-027 awareness + section-header references); `tests/test_stress_test_probe_cli.py` (19 new tests covering argparse + exit-code paths + main() dispatch + ProbeOutcome + classification mapping + ProbeConfig clamping). All 38 tests (slug_selector 19 + probe CLI 19) pass.
+
+---
+
 ## D-026 — POD-H010-§6-survey resolved: authorized and executed; N baseline = 74
 
 **Date:** 2026-04-19
@@ -108,6 +170,8 @@ The operator's initial "most conservative" phrasing admitted of two readings —
 **Subsidiary finding surfaced during resolution:**
 
 The research-doc §7 Q5′ language describes (c′) as "Claude's preferred path — most research-first-consistent." That language was written by Claude-H-010 in H-010 and was approved by operator in-session at H-012 with the clarification described above. Future-Claude reading this entry should understand that the (c′) rationale is not a retrospective justification; it was the Claude-H-010 recommendation before the ruling, preserved in the research document as v3 since H-010 close.
+
+**SUPERSEDED IN PART BY D-027 (2026-04-19, H-013).** Commitment 1's specification of reading the probe slug from Phase 2's meta.json archive on the shared Render persistent disk is superseded by D-027 Option D (operator-supplied slug via `--slug=SLUG` CLI argument) after H-013 research confirmed Render disks are strictly single-service per `render.com/docs/disks`. The research-question intent of D-025 — probing a gateway-sourced slug against the api WebSocket — is preserved in D-027; only the slug-to-probe transport changes. Commitments 2, 3, and 4 are unaffected.
 
 ---
 

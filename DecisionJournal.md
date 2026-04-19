@@ -18,6 +18,46 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-023 — POD-H010-Q4 resolved: Polymarket US API credentials exist and are stored at Render env vars
+
+**Date:** 2026-04-19
+**Session:** H-011
+**Type:** Configuration / Secret-handling
+
+**Source:** Operator confirmation in H-011 that credentials were generated at `polymarket.us/developer` and stored on the `pm-tennis-api` Render service. Polymarket-supplied usage instructions pasted into chat (instructions only, not key values), and verified against the H-010 research document §4.2.
+
+**Decision:** Option (a) per POD-H010-Q4 enumeration in `docs/clob_asset_cap_stress_test_research.md` v3 §7 Q4. Polymarket US API credentials exist. They are stored as Render environment variables on the `pm-tennis-api` service under the names:
+
+- `POLYMARKET_US_API_KEY_ID` — the Polymarket-issued Key ID
+- `POLYMARKET_US_API_SECRET_KEY` — the Polymarket-issued Secret Key
+
+Stress-test code and all subsequent Polymarket-US-authenticated code paths read these values via `os.environ` by name. Neither the names-plus-values pair nor the values themselves ever enter the repo, in accordance with SECRETS_POLICY §A.2, §A.5, and §B.2.
+
+**Considered (from research-doc §7 Q4):**
+- (a) Credentials exist — operator supplies via Render env vars, code reads by name
+- (b) Credentials do not exist — operator generates at `polymarket.us/developer`
+- (c) Credentials exist but operator wants a separate scoped stress-test key
+
+Selected: (a). Operator generated the credentials during H-011 (outside-session action at `polymarket.us/developer`), stored them in Render env vars directly in the Render dashboard, and reported the variable names back in chat. No value ever appeared in the chat transcript.
+
+**Reasoning:** The three-header auth scheme (`X-PM-Access-Key`, `X-PM-Timestamp`, `X-PM-Signature`) that Polymarket's usage instructions describe matches what the H-010 research doc §4.2 established from `docs.polymarket.us/api-reference/websocket/overview` and `docs.polymarket.us/api-reference/authentication`. Scoped keys per option (c) were not requested; Polymarket's standard key issuance is used. The SECRETS_POLICY-prescribed storage mechanism (platform environment variables, read by name in code, never committed) is used.
+
+**Commitment:** Any code that authenticates against Polymarket US's private endpoints reads the credential values from `POLYMARKET_US_API_KEY_ID` and `POLYMARKET_US_API_SECRET_KEY` via `os.environ` at runtime. The variable names are load-bearing; renaming them requires a DecisionJournal entry and a coordinated update of both the Render dashboard and any code that references them. Values are rotated at Polymarket US and updated in the Render dashboard if SECRETS_POLICY §B.5 procedures are ever invoked.
+
+**Subsidiary findings surfaced during Q4 resolution:**
+
+1. **Timestamp unit disambiguated.** Polymarket's usage instructions specify `X-PM-Timestamp: {unix_ms}` — milliseconds. The H-010 research doc §4.2 cited the authentication page's "30 seconds of server time" language but did not definitively pin the timestamp unit. The millisecond unit is the canonical value for code purposes; the authentication page will be re-fetched at code-turn time to cross-check. If the documentation page still reads ambiguously or specifies seconds, the inconsistency is surfaced at that point, not now.
+
+2. **Byte-level Ed25519 signing operation still not fully verified.** The H-010 research doc §4.2 noted that the precise byte sequence being signed (exact input bytes, exact encoding) "is a detail the code turn must verify via the authentication page or the official Python SDK." Polymarket's usage instructions do not fully resolve this either — they state "sign the timestamp" but do not specify byte-level canonical form. This remains a code-turn research task; it is not a pending operator decision and does not block H-012 session-open.
+
+3. **Render environment variable visibility.** Render masks env var values by default in the dashboard; there is no separate "mark as secret" toggle. This deviated from Claude's initial recommendation language (which had implied such a toggle might exist) and was corrected in H-011.
+
+**Effect on other pending operator decisions:**
+- **POD-H010-Q5'** (slug source) and **POD-H010-§12** (SDK vs hand-roll): unblocked from the credential-availability angle. Remain open for operator ruling at H-012.
+- **POD-H010-§6-survey**: not affected by Q4; remains open for operator authorization at H-012.
+
+---
+
 ## D-022 — Ruling 5: commit cadence for Phase 3 attempt 2
 
 **Date:** 2026-04-19

@@ -45,14 +45,14 @@ project:
         sections: ["discovery.py line 37 / line 120 code comments"]
         summary: "Line 37 and line 120 code comments in src/capture/discovery.py state that side.identifier is the 'asset/token ID for CLOB subscription.' Polymarket US Markets WebSocket's documented subscription unit is market_slug, not side.identifier. Comments are misleading against actual Polymarket US behavior. Cosmetic comment-level patch; no code-behavior change. Surfaced by H-010 research in docs/clob_asset_cap_stress_test_research.md v3 §11 point 3. Apply under Playbook §12 when next plan revision is cut, alongside I-014 and v4.1-candidate-2."
   state_document:
-    current_version: 8
+    current_version: 9
     last_updated: 2026-04-19
-    last_updated_by_session: H-010
+    last_updated_by_session: H-011
 
 # ---- Phase and work package ----
 phase:
   current: phase-3-attempt-2-ready
-  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). Research document v3 produced and accepted at H-010 (docs/clob_asset_cap_stress_test_research.md). Code turn deferred to H-011 pending operator rulings on Q4 (API credentials), Q5' (slug source), §12 (SDK vs hand-roll), and §6 meta.json survey authorization."
+  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). Research document v3 produced and accepted at H-010. Q4 (credentials) resolved at H-011 via D-023 — credentials stored at Render env vars POLYMARKET_US_API_KEY_ID and POLYMARKET_US_API_SECRET_KEY. Code turn deferred to H-012+ pending operator rulings on Q5' (slug source), §12 (SDK vs hand-roll), and §6 meta.json survey authorization."
   work_package_started_session: null  # starts next session
   last_gate_passed:
     name: "Phase 2 exit gate"
@@ -73,9 +73,9 @@ phase:
 
 # ---- Session accounting ----
 sessions:
-  last_handoff_id: H-010
-  next_handoff_id: H-011
-  sessions_count: 10
+  last_handoff_id: H-011
+  next_handoff_id: H-012
+  sessions_count: 11
   most_recent_session_date: 2026-04-19
   out_of_protocol_events_cumulative: 0
   out_of_protocol_events_since_last_gate: 0
@@ -214,12 +214,6 @@ open_items:
     issues_open: 13   # 15 total issues; I-001 resolved H-005 and I-013 resolved H-009
     assumptions_unvalidated: 6  # A-001, A-002, A-003, A-004, A-006, A-008
   pending_operator_decisions:
-    - id: POD-H010-Q4
-      surfaced_session: H-010
-      surfaced_in: "docs/clob_asset_cap_stress_test_research.md v2 §7 Q4, re-surfaced v3 §9"
-      question: "API credential status for Polymarket US (polymarket.us/developer). Do credentials exist (a), not exist (b), or should a scoped stress-test key be generated (c)?"
-      blocks: "All stress-test code — authentication is required for Markets WebSocket per docs/clob_asset_cap_stress_test_research.md v3 §4.2"
-      status: open
     - id: POD-H010-Q5p
       surfaced_session: H-010
       surfaced_in: "docs/clob_asset_cap_stress_test_research.md v3 §7 Q5'"
@@ -229,7 +223,7 @@ open_items:
     - id: POD-H010-§12
       surfaced_session: H-010
       surfaced_in: "docs/clob_asset_cap_stress_test_research.md v3 §12"
-      question: "SDK vs hand-rolled WebSocket client for stress test. Options: (a) polymarket-us SDK, (b) hand-rolled, (c) hybrid. Claude recommendation: (a) for stress test, defer long-term decision. Connected to Q4 and Q5' — resolve together."
+      question: "SDK vs hand-rolled WebSocket client for stress test. Options: (a) polymarket-us SDK, (b) hand-rolled, (c) hybrid. Claude recommendation: (a) for stress test, defer long-term decision. Connected to Q4 (resolved) and Q5' — resolve together."
       blocks: "Structure of all stress-test code"
       status: open
     - id: POD-H010-§6-survey
@@ -238,14 +232,21 @@ open_items:
       question: "Authorization to walk operator through the Render-shell meta.json survey that produces current slug-count baseline. Operator-executed via Render shell; Claude provides commands and reads output."
       blocks: "Concrete 'N' value for stress-test sweeps in §7 Q3"
       status: open
+  resolved_operator_decisions_current_session:
+    - id: POD-H010-Q4
+      resolved_session: H-011
+      resolved_by_decision: D-023
+      resolution_summary: "Option (a) — credentials exist and are stored as Render env vars POLYMARKET_US_API_KEY_ID and POLYMARKET_US_API_SECRET_KEY on the pm-tennis-api service. Values never entered the chat transcript; no rotation required."
   phase_3_attempt_2_notes:
     - "Research-first discipline in force per D-016 commitment 2 and R-010 — no fabrication of URLs or module symbols"
     - "H-010: research document produced at docs/clob_asset_cap_stress_test_research.md, three versions this session (v1, v2, v2.1, v3). v3 accepted."
+    - "H-011: POD-H010-Q4 resolved via D-023. Polymarket US API credentials stored at Render env vars POLYMARKET_US_API_KEY_ID and POLYMARKET_US_API_SECRET_KEY on pm-tennis-api. Values never entered chat. Polymarket usage instructions confirmed three-header auth scheme and disambiguated timestamp unit as milliseconds (unix_ms)."
     - "Sports WS endpoint and subscription format research deferred to Phase 3 attempt 2 Sports WS deliverable; not in scope for the asset-cap stress test deliverable"
     - "H-010 established (cited in v3): Markets WebSocket endpoint = wss://api.polymarket.us/v1/ws/markets; auth = Ed25519 three-header (X-PM-Access-Key, X-PM-Timestamp, X-PM-Signature); subscription unit = market slug; wire format = camelCase enum-string (confirmed via SDK README response-side evidence); per-subscription cap = 100 slugs; concurrent-connection and rate limits not documented"
     - "Storage-growth runway (~35 days from 2026-04-19 at 290 MB/day) is a Phase 3 attempt 2 design consideration — R-012"
     - "sportradar_game_id populates closer to match start, not at discovery — capture worker design implication"
-    - "Four pending operator decisions block the code turn: POD-H010-Q4, POD-H010-Q5p, POD-H010-§12, POD-H010-§6-survey. See pending_operator_decisions."
+    - "H-011 close: three pending operator decisions remain to unblock the code turn: POD-H010-Q5p, POD-H010-§12, POD-H010-§6-survey. See pending_operator_decisions. (POD-H010-Q4 resolved at H-011 — see resolved_operator_decisions_current_session.)"
+    - "H-011: Byte-level Ed25519 signing operation (exact input bytes, exact encoding) still not verified against authoritative source. Polymarket usage instructions paste in H-011 did not fully resolve. Surfaced in D-023; code-turn research task, not a POD."
 
 # ---- Runbooks inventory ----
 runbooks:
@@ -286,6 +287,8 @@ architecture_notes:
   - "Polymarket US wire format for Markets WebSocket: camelCase with enum-string subscription types (e.g., requestId, subscriptionType='SUBSCRIPTION_TYPE_MARKET_DATA', marketSlugs). Resolved H-010 via SDK README response-side evidence; Overview page's snake_case prose is stale."
   - "api.polymarket.us shares a single slug namespace across REST (markets.retrieve_by_slug, markets.book) and WebSocket (subscribe slug list). Gateway-to-api slug identity still unverified at H-010 close — open as POD-H010-Q5p."
   - "Polymarket US Python SDK exists at github.com/Polymarket/polymarket-us-python (package polymarket-us, Python 3.10+). SDK-vs-hand-roll decision open as POD-H010-§12."
+  - "Polymarket US Markets WebSocket timestamp header (X-PM-Timestamp) is in milliseconds per Polymarket-supplied usage instructions (H-011, D-023). Prior research-doc §4.2 cited '30 seconds of server time' language from the authentication page but did not fully pin the unit. Millisecond unit is canonical for code; authentication page will be re-fetched at code-turn time to cross-check."
+  - "Polymarket US API credentials stored at Render env vars POLYMARKET_US_API_KEY_ID and POLYMARKET_US_API_SECRET_KEY on pm-tennis-api service (H-011, D-023). Values never in repo, never in chat transcript. Code reads by name via os.environ."
 
 # ---- Cost tracking ----
 costs:
@@ -314,9 +317,9 @@ costs:
 scaffolding_files:
   STATE_md:
     status: accepted
-    current_version: 8
-    committed_to_repo: pending  # v8 uploaded this session
-    committed_session: H-010
+    current_version: 9
+    committed_to_repo: pending  # v9 produced this session
+    committed_session: H-011
   Orientation_md:
     status: accepted
     committed_to_repo: true
@@ -328,13 +331,12 @@ scaffolding_files:
     committed_to_repo: true
   DecisionJournal_md:
     status: accepted
-    committed_to_repo: pending  # D-018 through D-022 added this session; uploaded
-    committed_session: H-010
+    committed_to_repo: pending  # D-023 added this session
+    committed_session: H-011
     pending_entries: []
   RAID_md:
     status: accepted
-    committed_to_repo: pending  # I-015 and D-018–D-022 added this session; uploaded
-    committed_session: H-010
+    committed_to_repo: true  # no changes this session; H-010 I-015 landed before H-011 open
   PreCommitmentRegister_md:
     status: accepted
     committed_to_repo: true
@@ -342,9 +344,21 @@ scaffolding_files:
     status: accepted
     path: "docs/clob_asset_cap_stress_test_research.md"
     current_version: 3
-    committed_to_repo: pending  # produced this session; uploaded
+    committed_to_repo: true  # filename-drift fix at H-011: repo file renamed from docs/CLOB-asset-cap-stress-test-research.md to docs/clob_asset_cap_stress_test_research.md to match canonical references
     committed_session: H-010
-    note: "Phase 3 attempt 2 first-deliverable research doc per D-018 and D-019. v1 → v2 → v2.1 → v3 all produced this session."
+    renamed_session: H-011
+    note: "Phase 3 attempt 2 first-deliverable research doc per D-018 and D-019. v1 → v2 → v2.1 → v3 all produced at H-010. At H-011 the on-disk filename was corrected from CLOB-asset-cap-stress-test-research.md to the canonical clob_asset_cap_stress_test_research.md that all references throughout STATE/RAID/handoffs already used. Zero reference updates required; git tracked as a 100%-similarity rename."
+  Handoff_H010_md:
+    status: accepted
+    path: "Handoff_H-010.md"
+    committed_to_repo: true  # filename-drift fix at H-011: renamed from Handoff_H_010.md (underscore) to Handoff_H-010.md (hyphen) to match convention used H-004 through H-009
+    committed_session: H-010
+    renamed_session: H-011
+  Handoff_H011_md:
+    status: accepted
+    path: "Handoff_H-011.md"
+    committed_to_repo: pending  # produced this session
+    committed_session: H-011
   data_dictionary_md:
     status: not-started
     note: "Phase 3 deliverable"
@@ -388,39 +402,50 @@ phase_2_files:
 
 Phase 2 remains complete and operational. The service at `pm-tennis-api.onrender.com` continues to run the reverted Phase 2 `main.py` (SHA `ceeb5f29…`, 2,989 bytes, 87 lines). Discovery loop polls `gateway.polymarket.us/v2/sports/tennis/events` every 60 seconds. No Phase 3 code exists on `main`.
 
-H-010 executed Phase 3 attempt 2's research-first opening move per D-018 and D-019. The operator-ruled scope menu from H-010 produced five decisions (D-018 through D-022) covering first deliverable (asset-cap stress test), research form (standalone doc → review → code), definition of done, testing posture (unit + live smoke), and commit cadence. Four versions of the asset-cap stress test research document were produced this session: v1 (initial), v2 (§4 answered via Polymarket US docs fetch), v2.1 (§4.3 verbatim excerpt verification, §4.3.1 case-style inconsistency surfacing), v3 (SDK README read, §4.3.1 resolved, §4.7 partially resolved, §12 surfaced). v3 is accepted. No code has been written.
+H-010 executed Phase 3 attempt 2's research-first opening move per D-018 and D-019. H-011 resolved the first of four pending operator decisions that blocked the code turn: POD-H010-Q4 (API credential status) was ruled as option (a) via D-023. Polymarket US API credentials are stored as Render environment variables `POLYMARKET_US_API_KEY_ID` and `POLYMARKET_US_API_SECRET_KEY` on the pm-tennis-api service. Values never appeared in the chat transcript; the SECRETS_POLICY §A.6 guard operated correctly.
 
-What the H-010 research established (all cited in `docs/clob_asset_cap_stress_test_research.md` v3, all from `docs.polymarket.us` per D-013): Markets WebSocket is `wss://api.polymarket.us/v1/ws/markets`. Authentication is Ed25519 with three handshake headers (X-PM-Access-Key, X-PM-Timestamp, X-PM-Signature) signing `timestamp + "GET" + path`, 30-second clock window. Subscription unit is market slug, not the side.identifier that `discovery.py` line 37 comment suggests. Wire format is camelCase with enum-string subscription types; the Overview page's snake_case+integer example is stale. Per-subscription cap is 100 slugs. Concurrent-connection and rate limits are not documented — that is the empirical gap the stress test exists to characterize.
+Three PODs remain open and block the code turn at H-012: POD-H010-Q5p (slug source for stress test — api / gateway / hybrid), POD-H010-§12 (SDK vs hand-rolled WebSocket client), and POD-H010-§6-survey (authorization for a Render-shell walkthrough to produce the concrete slug-count baseline). Per H-010 addendum pacing guidance ("slow is smooth"), H-011 resolved Q4 alone and did not attempt to resolve Q5p/§12 jointly in the same session.
 
-What the research did not establish: whether gateway-sourced slugs (what Phase 2 meta.json currently contains) are identical to api.polymarket.us-accepted slugs. The SDK read revealed this was a bridge question the SDK doesn't answer directly, and surfaced an alternative architecture (stress-test-from-api) that avoids the bridge entirely. This is open as POD-H010-Q5p.
+What the H-011 session additionally surfaced: Polymarket's supplied usage instructions disambiguated the timestamp unit (milliseconds, not seconds — H-010 research doc §4.2 had cited "30 seconds of server time" language without nailing the unit). The byte-level Ed25519 signing operation remains unresolved by any authoritative source in-session; it is flagged for code-turn research in D-023 rather than raised as a POD.
 
-Four pending operator decisions block the code turn: Q4 (API credential status), Q5p (slug source for the test), §12 (SDK vs hand-rolled WebSocket client), and §6 meta.json survey authorization. These are the first business of H-011.
+What the H-010 research established (all cited in `docs/clob_asset_cap_stress_test_research.md` v3, all from `docs.polymarket.us` per D-013) remains valid: Markets WebSocket is `wss://api.polymarket.us/v1/ws/markets`. Authentication is Ed25519 with three handshake headers signing `timestamp + "GET" + path`, 30-second clock window. Subscription unit is market slug. Wire format is camelCase with enum-string subscription types. Per-subscription cap is 100 slugs. Concurrent-connection and rate limits are not documented — that is the empirical gap the stress test exists to characterize.
 
-Two plan-text patches accumulated this session beyond I-014: v4.1-candidate-2 (§5.4 / §11.3 revise the 150-asset-cap phrasing per I-015) and v4.1-candidate-3 (discovery.py line-37 / line-120 code comments correct the subscription-unit description per §11 point 3 of the research doc). All three are tracked in `pending_revisions` and will be bundled when the next plan revision is cut.
+What the research did not establish (and H-011 did not change): whether gateway-sourced slugs are identical to api.polymarket.us-accepted slugs. This is open as POD-H010-Q5p for H-012 to resolve.
 
-### What changed in H-010
+Three plan-text patches are queued in `pending_revisions` against the next plan revision: v4.1-candidate (Section 5.6 baseline-path correction per I-014), v4.1-candidate-2 (Section 5.4 / Section 11.3 "150-asset cap" revision per I-015), and v4.1-candidate-3 (discovery.py line-37 / line-120 code-comment correction per H-010 research doc §11 point 3). All three will be bundled when the next plan revision is cut.
 
-DecisionJournal: D-018 through D-022 added at the top of file (Rulings 1–5 from the H-010 scope menu).
+### What changed in H-011
 
-RAID: new issue I-015 (150-asset-cap inheritance finding, severity 3). Five new decisions in the RAID decisions table mirror the DecisionJournal additions.
+DecisionJournal: D-023 added at the top of file (POD-H010-Q4 resolution).
 
-STATE bumped from v7 to v8. Material changes: version and session counters advanced; three new pending_operator_decisions (Q4, Q5', §12, §6 survey); `phase_3_attempt_2_notes` extended with H-010 research progress; `scaffolding_files` bumped for the three H-009 bundle entries that actually landed (STATE/DecisionJournal/RAID `committed_to_repo: pending → true` against H-009) plus a new entry for the research document; `architecture_notes` extended with what H-010 established about the Polymarket US API surface; two new `pending_revisions` entries (v4.1-candidate-2 for I-015, v4.1-candidate-3 for the discovery.py comment).
+STATE bumped from v8 to v9. Material changes: session counters advanced (sessions_count 10→11, last_handoff_id H-010→H-011, next_handoff_id H-011→H-012); POD-H010-Q4 moved from `pending_operator_decisions` to new `resolved_operator_decisions_current_session` subsection; `phase_3_attempt_2_notes` extended with Q4 resolution and the Ed25519 byte-level open research task; `architecture_notes` extended with the timestamp-unit disambiguation and the env-var-name commitment; scaffolding_files inventory updated (H-010 bundle now shown as landed; v9 pending; research doc and handoff filenames corrected; new Handoff_H-011 entry); new entry in scaffolding_files for Handoff_H-010 reflecting the rename from Handoff_H_010.md.
 
-### H-011 starting conditions
+Files renamed at H-011 close (filename-drift fixes surfaced in the H-011 self-audit, operator-authorized to land):
+- `docs/CLOB-asset-cap-stress-test-research.md` → `docs/clob_asset_cap_stress_test_research.md` (matches all existing references across STATE, RAID, DecisionJournal, and handoffs)
+- `Handoff_H_010.md` → `Handoff_H-010.md` (matches the hyphenated convention used H-004 through H-009)
+
+Both renames are git-tracked as 100%-similarity renames; zero content changed; zero reference updates required anywhere in the repo.
+
+RAID: no changes this session. No issues added; one proposed issue (I-016, architectural-alternative REST polling) was drafted and withdrawn before writing based on research-first concerns surfaced during the draft review (see Handoff_H-011 §3 for the decision trail).
+
+No tripwires fired. No out-of-protocol events. OOP counters remain at 0 cumulative, 0 since last gate.
+
+### H-012 starting conditions
 
 When the next session opens, Claude will find:
 
-- Repo on `main` with H-010 bundle landed (STATE v8, DecisionJournal with D-018–D-022, RAID with I-015 and D-018–D-022, research document v3, handoff H-010).
+- Repo on `main` with H-011 bundle landed (STATE v9, DecisionJournal with D-023, two filename renames, Handoff_H-011).
 - Service running `main.py` at `0.1.0-phase2`, discovery loop healthy. 38 active tennis events.
 - Zero Phase 3 code on `main`.
+- Polymarket US credentials at Render env vars POLYMARKET_US_API_KEY_ID and POLYMARKET_US_API_SECRET_KEY (D-023). Code reads via os.environ; values never in repo.
 - Research-first discipline in force per D-016 and D-019.
-- Four pending operator decisions listed in `pending_operator_decisions`: POD-H010-Q4, POD-H010-Q5p, POD-H010-§12, POD-H010-§6-survey. First business of H-011 is operator rulings on these.
-- The Phase 3 exit criteria in `phase.next_gate_expected.triggers` remain unchanged.
+- Three pending operator decisions remain: POD-H010-Q5p, POD-H010-§12, POD-H010-§6-survey. Session-open next action at H-012 should clear Q5p and §12 jointly (they interact), then §6 survey, then code turn — per H-010 addendum pacing guidance.
+- Phase 3 exit criteria in `phase.next_gate_expected.triggers` remain unchanged.
 
 ### Validation posture going forward
 
-Unchanged from H-009. At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode: code drafted in the session that names any external endpoint, URL, module path, class name, or function signature must trace to (a) operator-provided material, (b) an existing committed file, or (c) documentation fetched in this same session. H-010 exercised this discipline: every external claim in the research document is cited with URL and excerpt; no code was written. The self-audit for H-011 will include a specific check that code, when it is drafted, continues this discipline.
+Unchanged from H-010. At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode: code drafted in the session that names any external endpoint, URL, module path, class name, or function signature must trace to (a) operator-provided material, (b) an existing committed file, or (c) documentation fetched in this same session. H-011 exercised this discipline on the I-016 draft-and-withdraw: a RAID entry written against "outside-session" research was caught on draft review, pushback surfaced to the operator, entry withdrawn before writing. The governance layer operated correctly without a tripwire firing.
 
 ---
 
-*End of STATE.md — current document version: 8. Last updated: H-010.*
+*End of STATE.md — current document version: 9. Last updated: H-011.*

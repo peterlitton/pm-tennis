@@ -18,6 +18,117 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-022 — Ruling 5: commit cadence for Phase 3 attempt 2
+
+**Date:** 2026-04-19
+**Session:** H-010
+**Type:** Process / Governance
+
+**Source:** Operator direction for H-010 — Phase 3 attempt 2 scope (menu paste in H-010 session opening, Ruling 5).
+
+**Decision:** Periodic commits within a deliverable are permitted; a handoff is required at session end. This matches the commit cadence used during Phase 2.
+
+**Considered:**
+- (a) One commit per deliverable; handoff required before each commit
+- (b) One commit per deliverable; handoff required only at session end
+- (c) Periodic commits within a deliverable are fine; handoff required at session end
+- (d) Something else
+
+**Reasoning (operator):** "Same cadence used for Phase 2 (which succeeded). The H-008 problem was the missing handoff, not the number of commits."
+
+**Commitment:** Intra-deliverable commit pacing is a judgment call for the work being done. The hard requirement is Playbook §2 session-close and R-011 proactive-handoff discipline. The attempt-1 failure is addressed by the handoff rule, not by restricting commit frequency.
+
+---
+
+## D-021 — Ruling 4: testing posture for Phase 3 attempt 2
+
+**Date:** 2026-04-19
+**Session:** H-010
+**Type:** Process / Quality
+
+**Source:** Operator direction for H-010 — Phase 3 attempt 2 scope (Ruling 4).
+
+**Decision:** Each deliverable is tested with unit tests plus a lightweight live smoke test before it is considered complete.
+
+**Considered:**
+- (a) Unit tests only; live validation deferred to the Ruling 3 checkpoint
+- (b) Unit tests plus a lightweight live smoke test on one match or one asset before the deliverable is considered complete
+- (c) Live-first — thinnest working version against real data, validate by inspection, then add tests
+- (d) Something else
+
+**Reasoning (operator):** "Addresses the specific attempt-1 failure mode (tests passed, live operation failed) without reversing the testing pyramid."
+
+**Commitment:** No Phase 3 attempt 2 deliverable is declared complete on unit-test evidence alone. A live smoke test is part of the completion bar. The live smoke test is narrower than the Ruling 3 checkpoint (one match / one asset / one connection is sufficient); the Ruling 3 checkpoint is the broader acceptance event.
+
+---
+
+## D-020 — Ruling 3: definition of done for the first deliverable
+
+**Date:** 2026-04-19
+**Session:** H-010
+**Type:** Process / Acceptance
+
+**Source:** Operator direction for H-010 — Phase 3 attempt 2 scope (Ruling 3, including the adjustment note for the asset-cap stress test).
+
+**Decision:** The first deliverable of Phase 3 attempt 2 is accepted when (1) unit tests pass, (2) the operator has reviewed the code, and (3) a single live verification has run against the actual Polymarket US gateway. Because the first deliverable is the asset-cap stress test (D-018), the single-live-verification language is adjusted per the operator's menu note: **the stress test runs to completion against the actual gateway with the actual asset count we expect.** "Actual asset count we expect" is the asset count implied by current discovery volume under the subscription-unit interpretation established by the Phase 3 attempt 2 research document; it is not a pre-guessed number.
+
+**Considered:**
+- (a) Unit tests + operator code review + single live poll/connection against one real market
+- (b) (a) plus a 1-hour unattended test
+- (c) (a) plus a manual walkthrough of the admin UI surfaces
+- (d) Something else
+
+**Reasoning (operator):** "Unit-tests-only missed the H-008 failure; live verification on one real market catches it without requiring hours of unattended runtime."
+
+**Commitment:** The Ruling 3 checkpoint is a per-deliverable acceptance event distinct from the Phase 3 exit gate. The Phase 3 exit gate (48-hour unattended run, pool stale-connection handling, Sports WS retirement handler, handicap median, asset-cap stress test, first-server identification) remains the eventual target; Ruling 3 is the interim bar each deliverable clears. The first-deliverable live verification is the stress test itself running to completion; there is no separate "single live connection" step layered on top.
+
+---
+
+## D-019 — Ruling 2: research-first form for Phase 3 attempt 2
+
+**Date:** 2026-04-19
+**Session:** H-010
+**Type:** Process / Governance
+
+**Source:** Operator direction for H-010 — Phase 3 attempt 2 scope (Ruling 2). Implements D-016 commitment 2 (research-first discipline for external APIs and cross-module symbols).
+
+**Decision:** Research that concerns external endpoints or cross-module symbols is produced as a **standalone research document** first. Operator reviews the document. Code begins in a subsequent Claude turn only after the review.
+
+**Considered:**
+- (a) Standalone research document first, operator reviews, then code begins in a subsequent Claude turn
+- (b) Research produced inline, operator spot-checks each citation, code begins immediately after each research block is accepted
+- (c) Operator supplies the documentation links; Claude works strictly from supplied material and refuses to use anything else
+
+**Reasoning (operator):** "Maximum distance from the H-008 fabrication pattern."
+
+**Commitment:** The research-document-then-code sequencing applies for the duration of Phase 3 attempt 2 unless explicitly lifted. Each research document goes through operator review before the turn that begins the corresponding code. Hybrid — operator supplies links during a research turn — is compatible with (a) and does not constitute a switch to (c). A switch to (b) or (c) for a specific deliverable requires a new ruling and a new DecisionJournal entry.
+
+---
+
+## D-018 — Ruling 1: first deliverable of Phase 3 attempt 2
+
+**Date:** 2026-04-19
+**Session:** H-010
+**Type:** Scope / Sequencing
+
+**Source:** Operator direction for H-010 — Phase 3 attempt 2 scope (Ruling 1).
+
+**Decision:** The first deliverable of Phase 3 attempt 2 is the deferred CLOB asset-cap stress test from Phase 1 (RAID I-002). Other Phase 3 components (CLOB pool, Sports WS client, correlation layer, handicap updater) follow after the stress test resolves pool sizing.
+
+**Considered:**
+- (a) CLOB WebSocket pool
+- (b) Sports WebSocket client
+- (c) Correlation layer
+- (d) Handicap updater
+- (e) Deferred CLOB asset-cap stress test (I-002)
+- (f) Something else
+
+**Reasoning (operator):** "Resolving the sizing question first determines how the CLOB pool gets built and avoids redoing pool design later."
+
+**Commitment:** The asset-cap stress test runs before the CLOB pool is built. The "soft 150-asset cap" referenced in plan §5.4 and §11.3 is verified empirically against the Polymarket US CLOB service before any long-lived pool code is written. The stress-test design is scoped by the Phase 3 attempt 2 research document (v1 produced this session; v2 pending §4 external research).
+
+---
+
 ## D-017 — v3→v4 plan revision (retroactive journaling)
 
 **Date of decision:** 2026-04-18

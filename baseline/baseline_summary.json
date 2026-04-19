@@ -1,0 +1,152 @@
+{
+  "metadata": {
+    "source": "71 iPhone screenshots of Polymarket US History tab",
+    "capture_date": "2026-04-18",
+    "period_covered": "Approximately 8 days ending 2026-04-18",
+    "scope": "Tennis only",
+    "excluded_match": "STENAP vs TRISCH",
+    "excluded_reason": "Pure market-making outlier; not representative of discretionary trading. Operator-directed exclusion.",
+    "fee_treatment": "Fee-net; all trades within 50% taker-fee rebate promo window through 2026-04-30. Compared against breakeven.json threshold of 58.2%."
+  },
+  "cuts": {
+    "all_tennis": {
+      "label": "All tennis contracts (excl outlier)",
+      "n_contracts": 131,
+      "n_wins": 59,
+      "n_losses": 72,
+      "n_flats": 0,
+      "win_rate": 0.4504,
+      "win_rate_vs_breakeven_pp": -13.16,
+      "total_wagered": 11165.52,
+      "total_pnl": 954.42,
+      "roi": 0.0855,
+      "mean_winner": 53.6,
+      "mean_loser": -30.67,
+      "magnitude_ratio": 1.748,
+      "sum_winner_pnl": 3162.45,
+      "sum_loser_pnl": -2208.03,
+      "reconciles": 954.42,
+      "binomial_p_value_vs_breakeven": 0.9991
+    },
+    "swing_only": {
+      "label": "Swing-strategy contracts (excl outlier)",
+      "n_contracts": 68,
+      "n_wins": 38,
+      "n_losses": 30,
+      "n_flats": 0,
+      "win_rate": 0.5588,
+      "win_rate_vs_breakeven_pp": -2.32,
+      "total_wagered": 7523.08,
+      "total_pnl": 1074.86,
+      "roi": 0.1429,
+      "mean_winner": 50.63,
+      "mean_loser": -28.3,
+      "magnitude_ratio": 1.789,
+      "sum_winner_pnl": 1923.77,
+      "sum_loser_pnl": -848.91,
+      "reconciles": 1074.86,
+      "binomial_p_value_vs_breakeven": 0.6967
+    },
+    "hold_only": {
+      "label": "Hold-strategy contracts (excl outlier)",
+      "n_contracts": 63,
+      "n_wins": 21,
+      "n_losses": 42,
+      "n_flats": 0,
+      "win_rate": 0.3333,
+      "win_rate_vs_breakeven_pp": -24.87,
+      "total_wagered": 3642.44,
+      "total_pnl": -120.44,
+      "roi": -0.0331,
+      "mean_winner": 58.98,
+      "mean_loser": -32.36,
+      "magnitude_ratio": 1.823,
+      "sum_winner_pnl": 1238.68,
+      "sum_loser_pnl": -1359.12,
+      "reconciles": -120.44,
+      "binomial_p_value_vs_breakeven": 1.0
+    }
+  },
+  "sizing_buckets": [
+    {
+      "range": "<$25",
+      "n_contracts": 39,
+      "wins": 13,
+      "losses": 26,
+      "win_rate": 0.3333,
+      "total_wagered": 470.17,
+      "total_pnl": 265.88,
+      "roi": 0.5655
+    },
+    {
+      "range": "$25-50",
+      "n_contracts": 29,
+      "wins": 10,
+      "losses": 19,
+      "win_rate": 0.3448,
+      "total_wagered": 1021.8,
+      "total_pnl": -102.99,
+      "roi": -0.1008
+    },
+    {
+      "range": "$50-100",
+      "n_contracts": 35,
+      "wins": 18,
+      "losses": 17,
+      "win_rate": 0.5143,
+      "total_wagered": 2513.39,
+      "total_pnl": 308.09,
+      "roi": 0.1226
+    },
+    {
+      "range": "$100-200",
+      "n_contracts": 19,
+      "wins": 11,
+      "losses": 8,
+      "win_rate": 0.5789,
+      "total_wagered": 2809.33,
+      "total_pnl": -303.22,
+      "roi": -0.1079
+    },
+    {
+      "range": "$200-500",
+      "n_contracts": 5,
+      "wins": 3,
+      "losses": 2,
+      "win_rate": 0.6,
+      "total_wagered": 1415.75,
+      "total_pnl": 324.42,
+      "roi": 0.2292
+    },
+    {
+      "range": ">$500",
+      "n_contracts": 4,
+      "wins": 4,
+      "losses": 0,
+      "win_rate": 1.0,
+      "total_wagered": 2935.08,
+      "total_pnl": 462.24,
+      "roi": 0.1575
+    }
+  ],
+  "correlations": {
+    "cost_vs_net_pnl_pearson": 0.314,
+    "cost_vs_win_binary_pearson": 0.244
+  },
+  "size_by_strategy": {
+    "swing": {
+      "n": 68,
+      "median": 56.38,
+      "mean": 110.63,
+      "min": -0.0,
+      "max": 919.14
+    },
+    "hold": {
+      "n": 63,
+      "median": 31.97,
+      "mean": 57.82,
+      "min": -0.0,
+      "max": 381.08
+    }
+  }
+}

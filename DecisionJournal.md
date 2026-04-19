@@ -18,6 +18,131 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-026 — POD-H010-§6-survey resolved: authorized and executed; N baseline = 74
+
+**Date:** 2026-04-19
+**Session:** H-012
+**Type:** Research / Survey execution / POD resolution
+
+**Source:** Operator direction at H-012: "Authorize §6 survey + read discovery.py first." Resolves POD-H010-§6-survey. Survey script produced by Claude, reviewed against `src/capture/discovery.py`-derived schema before execution, and executed by operator via Render shell on `pm-tennis-api` at 2026-04-19T16:22:29Z. Survey output pasted back in-session. Findings recorded in `docs/clob_asset_cap_stress_test_research.md` v4 §13.2.
+
+**Decision:** POD-H010-§6-survey is authorized and executed. The three survey objectives (confirm on-disk schema, produce current N baseline for stress-test sweeps, identify probe-slug candidates for Q5′=(c′)) are met. No further operator decisions are required from this POD.
+
+**Considered:**
+- (a) Authorize and execute this session, with Claude reading `discovery.py` first to verify the `meta.json` schema before drafting commands
+- (b) Authorize and execute this session, drafting from research-doc §6 alone without schema verification
+- (c) Authorize but defer execution to a later session
+
+Selected: (a). Operator ruling. Rationale for (a)-over-(b): research-doc v3 §6 was written before H-010 had access to the actual `meta.json` on-disk schema and used the casual phrasing "/data/events/" for the meta.json location, which is in fact the raw-poll-snapshot directory; per-match meta.json files live at `/data/matches/{event_id}/meta.json` per `discovery.py` `_meta_path()`. Drafting commands against research-doc §6 alone would have pointed at the wrong directory. Reading `discovery.py` first caught the drift before command execution. This is a small but concrete illustration of the H-011-addendum lesson about checking second sources.
+
+**Survey script as-executed:** reproduced verbatim in Handoff_H-012 §4. Five sections: (1) directory and count, (2) sample meta.json, (3) total slug count, (4) distribution, (5) status flags + sample slugs. All read-only; no mutation.
+
+**Findings:**
+
+1. **On-disk schema confirmed.** `meta.json` contents match the `TennisEventMeta` dataclass in `src/capture/discovery.py` lines 139–193. Top-level `moneyline_markets[]` with per-element `market_slug` (string). The schema reflected in the v3 research doc (under §2 and §3) is confirmed as accurate at the field-name level; the only correction is the *path* (research-doc v3's casual "/data/events/" reference, now corrected to `/data/matches/{event_id}/meta.json`).
+
+2. **N baseline = 74.** Total market slugs across all 74 active tennis events at survey time. Up from the ≈38 estimate in research-doc v3 §5 ("actual asset count we expect") which was as-of H-009 close. The doubling is explained by ~36 hours of continuous Phase 2 discovery writing new immutable `meta.json` files since H-009 — `_write_meta` never overwrites (discovery.py line 371), so the archive accumulates monotonically. This is expected behavior, not drift.
+
+3. **Distribution is uniform.** All 74 events carry exactly 1 moneyline market. No multi-moneyline events in the current population. Sweep arithmetic in §7 Q3 remains valid; the 100-slug-per-subscription cap (§4.4) is not approached by real slugs alone.
+
+4. **All 40 surveyed events are active/not-ended/not-live.** `active=True`, `ended=False`, `live=False` on every surveyed row. No status filtering is needed for the probe — any surveyed event is a valid candidate at survey time.
+
+5. **Probe-slug default selected.** Event 9392, slug `aec-atp-digsin-meralk-2026-04-21`, ATP match 2026-04-21 between Digvijaypratap Singh and Mert Alkaya. Selected from the most-recently-discovered batch (timestamp 2026-04-19T14:04:52Z, 4 candidates in that batch). Recorded in research-doc v4 §13.4 for traceability. Not committed as the probe slug at code-turn time — at code-turn time a fresh `meta.json` scan selects the probe slug, because the survey snapshot will be ~hours to ~days old by then and candidates may have ended.
+
+6. **Incidental confirmation.** `participant_type` on the sample event is `PARTICIPANT_TYPE_TEAM`, consistent with STATE `discovery.participant_type_confirmed` and A-009. The slug format `aec-<tour>-<player_a_abbrev>-<player_b_abbrev>-<YYYY-MM-DD>` is observed consistently across all 40 surveyed slugs; the `aec-` prefix is a Polymarket US convention not interpreted by this document.
+
+**Commitment:**
+
+1. The code-turn scoping document (research-doc v4 §13.5) is the canonical reference for what the stress-test code inherits. It consolidates D-023, D-024, D-025, and D-026 findings.
+2. The probe-slug default (event 9392) is a traceability anchor only. Actual slug selection at code-turn time re-reads `/data/matches/*/meta.json`.
+3. STATE `discovery` block updated at session close to reflect the new event and meta.json counts (38 → 74) per the survey findings. This is a refresh of a stale snapshot, not a revision of prior work.
+4. Research-doc v4 is the canonical version going forward. v3 is preserved in git history.
+
+**Subsidiary finding surfaced during survey:**
+
+Research-doc v3 referenced meta.json locations casually as "/data/events/" in several places (§7 Q5′ and D-025's commitment 1 draft, pre-H-012). The actual path is `/data/matches/{event_id}/meta.json`. **This is a v3 text error, not a v4 revision target** — per the scoping decision for v4 (additive only), v3's text is preserved as accepted; v4 §13 notes the correction in the survey-findings discussion. If the operator wants v3's "/data/events/" references retroactively corrected, that becomes a separate v4.1 revision or a future-session cleanup. Not urgent.
+
+**Effect on other pending operator decisions:**
+
+None remain blocking the code turn. The H-010 POD queue (POD-H010-Q4, -Q5′, -§12, -§6-survey) is fully resolved across H-011 (D-023) and H-012 (D-024, D-025, D-026). Code turn is blocked only on code-turn research tasks (byte-level Ed25519 signing via SDK; timestamp-unit cross-check) that are not PODs.
+
+---
+
+## D-025 — POD-H010-Q5′ resolved: hybrid probe-first for slug source
+
+**Date:** 2026-04-19
+**Session:** H-012
+**Type:** Architecture / Scope / Research-first
+
+**Source:** Operator direction at H-012: "Resolve POD-H010-Q5′: (c′) hybrid probe-first". Resolves POD-H010-Q5′ per `docs/clob_asset_cap_stress_test_research.md` v3 §7 Q5′ option (c′). Jointly ruled with POD-H010-§12 (see D-024).
+
+**Decision:** Option (c′) per research-doc §7 Q5′. The stress test begins with a one-slug probe that uses a gateway-sourced slug (a slug already present in Phase 2's `meta.json` archive on `/data/events/`) to subscribe against `wss://api.polymarket.us/v1/ws/markets` via the SDK. Probe outcome determines the slug source for the main stress-test sweeps:
+- If the probe succeeds (subscription accepted, market-data messages received): the gateway-to-api slug bridge is confirmed working; the main sweeps may use either gateway-sourced or api-sourced slugs. The default in that case is api-sourced (cleanest, and the SDK's `markets.list()` provides them).
+- If the probe fails (subscription rejected, error response, connection closed with an error): the bridge is confirmed broken; the main sweeps use api-sourced slugs (SDK's `markets.list()`) exclusively. The probe result is itself data — recorded in the stress-test addendum to the research document.
+
+**Considered (from research-doc §7 Q5′):**
+- (a′) Stress-test-from-api — SDK or raw HTTPS against `api.polymarket.us/v1/markets`, subscribe via `/v1/ws/markets`. Clean test; gateway bridge not tested.
+- (b′) Stress-test-from-gateway — use slugs Phase 2 wrote to `meta.json`, subscribe via `/v1/ws/markets`. Tests bridge at scale; if bridge is broken, main stress test loses its slug source.
+- (c′) Hybrid probe-first — one-slug gateway probe to resolve the bridge question definitively, then choose (a′) or (b′) for the main sweeps based on the probe result.
+
+Selected: (c′).
+
+**Reasoning (Claude's recommendation, operator-approved under "most conservative" framing clarified in-session):** Most research-first-consistent path of the three. The ~30 seconds of probe code resolves an open unknown (gateway-to-api slug compatibility, identified in research-doc §4.7 as partially resolved by the SDK README read but not confirmed for gateway-sourced slugs specifically) before the main stress-test measurements begin. Under (a′), the bridge question is simply deferred — a legitimate choice but carries the unknown forward into Phase 3's full deliverable. Under (b′), the bridge question is on the critical path of the main sweeps — if it fails, the stress-test main run is lost along with the bridge finding, and the stress test's main deliverable is compromised. (c′) preserves the stress test's integrity and resolves the bridge question as a side effect.
+
+The operator's initial "most conservative" phrasing admitted of two readings — (a′) under a minimize-test-risk reading and (c′) under a research-first-maximalism reading — and was clarified in-session as (c′). The clarification is logged because the dual-reading ambiguity is itself a small lesson about operator-language precision that future-Claude may benefit from seeing: "conservative" is not a self-defining term when competing risk vectors are in play.
+
+**Commitment:**
+
+1. The stress-test code includes, as its first runtime action after authentication, a one-slug probe:
+   - Select one gateway-sourced slug from a Phase 2 `meta.json` file on the `/data/events/` Render persistent disk.
+   - Subscribe it via the SDK's `markets_ws.subscribe()` with `SUBSCRIPTION_TYPE_MARKET_DATA` and the single slug in `marketSlugs`.
+   - Observe the response for a short window (proposed ~10 seconds; exact bound set at code-turn time).
+   - Record probe outcome explicitly: accepted, rejected with error payload, connection closed with code, or silent/no response.
+   - Disconnect and proceed to the main sweeps.
+2. The main sweeps' slug source is determined by probe outcome per the decision above.
+3. The probe outcome is written to a stress-test-results artifact and added as an addendum to `docs/clob_asset_cap_stress_test_research.md` (v3.1 or v4, per H-010 next-action §4) alongside the §6 survey results.
+4. If the probe outcome is ambiguous (e.g., slow response that eventually succeeds, or partial message stream), the ambiguity is itself surfaced in the addendum rather than quietly resolved by the stress-test code. This is a preventive application of the research-first discipline: probe results that Claude does not understand unambiguously are not silently collapsed into a binary pass/fail.
+
+**Joint ruling note:** This decision is coherent with D-024 (SDK-based). The SDK's `markets_ws.subscribe(request_id, subscription_type, market_slugs_list)` is the probe vehicle; the SDK's `markets.list()` provides api-sourced slugs for the main sweeps under either probe outcome.
+
+**Subsidiary finding surfaced during resolution:**
+
+The research-doc §7 Q5′ language describes (c′) as "Claude's preferred path — most research-first-consistent." That language was written by Claude-H-010 in H-010 and was approved by operator in-session at H-012 with the clarification described above. Future-Claude reading this entry should understand that the (c′) rationale is not a retrospective justification; it was the Claude-H-010 recommendation before the ruling, preserved in the research document as v3 since H-010 close.
+
+---
+
+## D-024 — POD-H010-§12 resolved: SDK for the stress test
+
+**Date:** 2026-04-19
+**Session:** H-012
+**Type:** Architecture / Scope
+
+**Source:** Operator direction at H-012: "Resolve POD-H010-§12: (a) SDK". Resolves POD-H010-§12 per `docs/clob_asset_cap_stress_test_research.md` v3 §12 option (a). Jointly ruled with POD-H010-Q5′ (see D-025).
+
+**Decision:** Option (a) per research-doc §12. The Phase 3 attempt 2 asset-cap stress test is built on the official Polymarket US Python SDK (`polymarket-us`, repository `github.com/Polymarket/polymarket-us-python`). Stress-test code uses SDK methods — at minimum `client.ws.markets()`, `await markets_ws.connect()`, and `await markets_ws.subscribe(request_id, subscription_type, market_slugs_list)` — rather than a hand-rolled WebSocket client against `wss://api.polymarket.us/v1/ws/markets`.
+
+**Considered (from research-doc §12):**
+- (a) Use `polymarket-us` SDK — minimal Tripwire 1 exposure, ships fastest, one new dependency
+- (b) Hand-rolled WebSocket client — full visibility, zero new deps, high Tripwire 1 surface (every wire field is a citation requirement)
+- (c) Hybrid — SDK for connection/auth, hand-rolled pool management on top
+
+Selected: (a).
+
+**Reasoning (Claude's recommendation, operator-approved):** The stress test's goal is to characterize Polymarket US's undocumented connection and subscription limits (research-doc §4.5, §5, §11 point 1), not to exercise the pool-management code that Phase 3's full deliverable will eventually implement. The SDK gets to "can we hold N subscriptions across M connections?" fastest, with wire-format correctness as the SDK's responsibility rather than a per-field citation burden on hand-rolled code. The SDK's youth (5 stars / 10 commits at H-010 v3 fetch time) is a known risk but is outweighed for a time-boxed stress test whose runtime is ≤30 minutes per configuration (research-doc §5).
+
+The decision for the stress test explicitly does **not** commit the Phase 3 full deliverable (CLOB pool with 15-minute proactive recycle and 90-second liveness probe per plan §5.4) to SDK-based construction. That architectural choice is re-evaluated after the stress test results are in hand. The plan §5.4 pool-management semantics (recycle cadence, liveness probe) may or may not align with what the SDK provides; that is a later decision.
+
+**Commitment:**
+
+1. The stress-test code adds `polymarket-us` to a requirements file in a new, separate Render service per D-020 / Q2=(b) (isolated stress-test service, torn down after). The `pm-tennis-api` service's `requirements.txt` is not modified.
+2. Every SDK symbol referenced in stress-test code traces to the Polymarket US Python SDK README (the source read during H-010 v3 research). Unverified SDK internals are not assumed; if a needed detail is not in the README, the SDK source is fetched at code-turn time (research-doc §4.3.1 closing note) and cited in the addendum to the research document.
+3. Authentication credentials are read via `os.environ["POLYMARKET_US_API_KEY_ID"]` and `os.environ["POLYMARKET_US_API_SECRET_KEY"]` per D-023. The SDK's own authentication flow consumes these.
+4. The two code-turn research tasks flagged in D-023 still stand, now scoped through the SDK: (a) byte-level Ed25519 signing — if the SDK owns signing internally, this collapses to "trust the SDK" rather than byte-level verification; if any signing surface is exposed to user code, that surface is cited; (b) timestamp-unit cross-check against `docs.polymarket.us/api-reference/authentication` — runs regardless of SDK use, because the SDK may or may not expose the timestamp it sent.
+
+**Joint ruling note:** This decision interacts with D-025 (POD-H010-Q5′). The SDK's `client.markets.list()` on `api.polymarket.us` provides a natural api-sourced slug path, compatible with the Q5′=(c′) hybrid probe-first ruling in D-025.
+
+---
+
 ## D-023 — POD-H010-Q4 resolved: Polymarket US API credentials exist and are stored at Render env vars
 
 **Date:** 2026-04-19

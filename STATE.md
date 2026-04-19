@@ -45,14 +45,14 @@ project:
         sections: ["discovery.py line 37 / line 120 code comments"]
         summary: "Line 37 and line 120 code comments in src/capture/discovery.py state that side.identifier is the 'asset/token ID for CLOB subscription.' Polymarket US Markets WebSocket's documented subscription unit is market_slug, not side.identifier. Comments are misleading against actual Polymarket US behavior. Cosmetic comment-level patch; no code-behavior change. Surfaced by H-010 research in docs/clob_asset_cap_stress_test_research.md v3 §11 point 3. Apply under Playbook §12 when next plan revision is cut, alongside I-014 and v4.1-candidate-2."
   state_document:
-    current_version: 12
+    current_version: 13
     last_updated: 2026-04-19
-    last_updated_by_session: H-014
+    last_updated_by_session: H-015
 
 # ---- Phase and work package ----
 phase:
-  current: phase-3-attempt-2-service-provisioned
-  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). H-013 landed probe scaffolding (src/stress_test/) + 38 unit tests + three code-turn-research resolutions + D-027 (probe-slug transport supersedes D-025 commitment 1). H-014 landed: (1) stale-artifact corrections per D-027 (src/stress_test/README.md rewrite + runbooks/Runbook_RB-002_Stress_Test_Service.md full rewrite); (2) research-doc §15 additive capturing H-013 code-turn-research resolutions, D-027 supersession + evidence trail, probe scaffolding inventory, stale-artifact-corrected note, and H-015 forward look; (3) pm-tennis-stress-test Render service provisioned per D-027-correct RB-002 — self-check green (polymarket_us 0.1.2 imports OK, both credentials set, 0 probe candidates as expected under D-027). H-015 picks up with: (1) live probe execution per D-025/D-027 two-shell workflow (pm-tennis-api Shell lists candidates → pm-tennis-stress-test Shell runs probe with --slug --event-id → ProbeOutcome JSON pasted back); (2) probe-outcome §14 addendum to research doc; (3) main sweeps (§7 Q3=(c)) — new code module likely src/stress_test/sweeps.py; (4) main-sweeps §16 addendum."
+  current: phase-3-attempt-2-probe-blocked-on-calendar
+  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). H-015 attempted live-probe execution per RB-002 §5 two-shell workflow but probe was blocked: `slug_selector.list_candidates()` returned empty in the pm-tennis-api Shell. Diagnostic A confirmed Phase 2 discovery is healthy (116 event dirs on disk, up from 74 at H-012 — monotonic growth as expected). Diagnostic B revealed root cause: 10 most-recent meta.json files (event_ids 9440–9449) all have `event_date=\"\"` despite event titles encoding the date as text (e.g., 'Elmer Moeller vs. Hugo Gaston 2026-04-20'). Operator confirmed the surfaced events are future games and that no eligible matches exist in the next ~24h. Two findings: (a) calendar-empty for ~24h means probe genuinely had nothing to run against today; (b) `event_date` extraction in src/capture/discovery.py line 328 is reading a wrong-named gateway field — filed as RAID I-016 (severity 6). H-016 picks up: (1) investigate I-016 in src/capture/discovery.py and the gateway raw event payload to identify the correct date key (Phase-2-touching change requires explicit operator authorization separate from Phase 3 work package); (2) live probe execution per RB-002 §5 (either after I-016 is fixed, or via the title-date workaround documented in I-016 if the Phase-2 fix is not authorized in time, or by retry once calendar populates if neither blocks); (3) §14 addendum (probe outcome); (4) main sweeps deferred again to H-017."
   work_package_started_session: null  # starts next session
   last_gate_passed:
     name: "Phase 2 exit gate"
@@ -73,9 +73,9 @@ phase:
 
 # ---- Session accounting ----
 sessions:
-  last_handoff_id: H-014
-  next_handoff_id: H-015
-  sessions_count: 14
+  last_handoff_id: H-015
+  next_handoff_id: H-016
+  sessions_count: 15
   most_recent_session_date: 2026-04-19
   out_of_protocol_events_cumulative: 0
   out_of_protocol_events_since_last_gate: 0
@@ -236,38 +236,37 @@ open_items:
   raid_entries_by_severity:
     sev_8: 3   # R-008, R-009, I-012
     sev_7: 9   # R-010, I-003, I-004, I-005, I-006, I-007, I-008 (and 2 others)
-    sev_6: 3   # I-009, I-010, I-011
+    sev_6: 4   # I-009, I-010, I-011, I-016 (new H-015)
     sev_5: 0
     sev_4_and_below: 3  # I-002 (severity 2), I-014 (severity 3), I-015 (severity 3)
-    issues_open: 13   # 15 total issues; I-001 resolved H-005 and I-013 resolved H-009
+    issues_open: 14   # 16 total issues; I-001 resolved H-005 and I-013 resolved H-009; I-016 added H-015
     assumptions_unvalidated: 6  # A-001, A-002, A-003, A-004, A-006, A-008
-  pending_operator_decisions: []  # H-013 ruled D-027 in-session; H-014 had no PODs to open. No operator decisions blocking H-015.
+  pending_operator_decisions: []  # H-015 had no PODs reach DJ-entry threshold; all rulings were on method/convention. No operator decisions blocking H-016.
   resolved_operator_decisions_current_session:
-    # Pruned to current-session (H-014) entries only per the stricter reading
-    # of the convention flagged in Handoff_H-012 §8 — confirmed by operator
-    # at H-014 open. History is preserved in DJ entries and prior handoffs
-    # (H-013 rulings live in Handoff_H-013 §2 and §3); this field's name is
-    # load-bearing and the stricter reading keeps it honest.
-    - id: H-014-STATE-v11-remediation
-      resolved_session: H-014
-      resolved_by_decision: in-session remediation (not a DJ entry)
-      resolution_summary: "STATE v11 was produced at H-013 close but was omitted from the H-013 commit bundle (operator error). H-014-Claude surfaced the discrepancy at session open rather than silently reconciling; operator uploaded the v11 file out-of-band; H-014 proceeded from the correct v11 baseline."
-    - id: H-014-cut-point
-      resolved_session: H-014
+    # Pruned to current-session (H-015) entries only per the H-014-settled
+    # stricter-reading convention. H-014 entries are preserved in
+    # Handoff_H-014 §2/§3 and STATE v12's prose; this field reflects only
+    # the current session's in-session rulings.
+    - id: H-015-cut-point
+      resolved_session: H-015
       resolved_by_decision: in-session ruling (not a DJ entry)
-      resolution_summary: "Option 2 — rewrite the two known-stale artifacts per D-027, produce research-doc §15 additive, provision the Render service per corrected RB-002. Defer live probe execution + main sweeps code + addendum to H-015. Consistent with H-010/H-011/H-012/H-013 pacing discipline."
-    - id: H-014-research-doc-additive-vs-bump
-      resolved_session: H-014
+      resolution_summary: "Probe + §14 addendum this session; main-sweeps deferred to H-016. Consistent with H-014-Claude's default offer in the addendum notes; consistent with H-010/H-011/H-012/H-013/H-014 pacing discipline. Cut held even after probe blocked — session did not extend silently into investigation work; surfaced finding as RAID I-016 and closed cleanly."
+    - id: H-015-section-14-stays-reserved
+      resolved_session: H-015
       resolved_by_decision: in-session ruling (not a DJ entry)
-      resolution_summary: "§15 additive (not v5 bump) — consistent with the H-012 precedent that added §13 to v4 without a version bump. §14 is reserved for the H-015 probe-outcome addendum; §15 is intentionally out-of-order because the probe outcome is its own unit of analysis."
-    - id: H-014-helper-snippet-convention
-      resolved_session: H-014
-      resolved_by_decision: in-session ruling under delegated authority (not a DJ entry)
-      resolution_summary: "pm-tennis-api-Shell candidate-listing helper is a pasted one-line Python snippet (inlined in RB-002 §5.1), not a committed src/stress_test/list_candidates.py file. Rationale: avoids a new file requiring tests/docs/maintenance; Shell-pasted form is transparent. Flagged in Handoff_H-013 §10 item 3 as a deferred H-014 choice; Claude applied the smaller cut under delegated authority. Cheap to reverse at H-015 if operator prefers."
-    - id: H-014-pruning-convention
-      resolved_session: H-014
+      resolution_summary: "§14 of research doc remains reserved (option a) rather than receiving a placeholder for the H-015 attempt (option b). Rationale: §14 should mean 'probe outcome from a probe that ran.' H-015 attempt + calendar block + I-016 finding documented in Handoff_H-015 §3 and STATE v13 (correct location for session-specific events per the prose-vs-YAML discipline). H-016 writes §14 when an actual probe runs."
+    - id: H-015-diagnostic-execution
+      resolved_session: H-015
       resolved_by_decision: operator ruling mid-session (not a DJ entry)
-      resolution_summary: "resolved_operator_decisions_current_session: stricter-reading pruning confirmed as the convention. Operator's reasoning: records are preserved elsewhere (DJ entries + committed handoffs). The H-013 call to prune was not a one-off; this is now the settled convention for future sessions."
+      resolution_summary: "Operator authorized Diagnostic A (count + list event dirs) and Diagnostic B (sample meta.json metadata) in pm-tennis-api Shell to confirm the system-vs-calendar attribution for the empty list_candidates() result. Diagnostic A: 116 dirs, healthy growth from H-012's 74. Diagnostic B (after heredoc workaround for bracketed-paste): 10 events, all active=True ended=False live=False, all event_date='', titles include 2026-04-20 dates. Surfaced I-016 finding."
+    - id: H-015-RAID-vs-DJ-classification-of-I-016
+      resolved_session: H-015
+      resolved_by_decision: operator ruling at session close (not a DJ entry)
+      resolution_summary: "I-016 (empty event_date in meta.json) goes to RAID; not a DJ entry. Operator ruling: the finding cannot be validated for some time (depends on Phase-2 raw payload inspection), so RAID is the right home; DJ stays at 27 entries with no H-015 additions. Consistent with the pruning convention's spirit — DJ for project-shape commitments, RAID for risks/issues, STATE for session-method rulings."
+    - id: H-015-helper-snippet-friction-surface
+      resolved_session: H-015
+      resolved_by_decision: in-session note (not a DJ entry; not requiring operator ruling)
+      resolution_summary: "First operator use of the H-014 sub-ruling pasted-snippet helper convention (RB-002 §5.1) produced two failed pastes due to bracketed-paste markers in the Render Shell environment. Diagnostic B also failed for same reason; heredoc workaround succeeded. Stronger evidence than H-014 had for converting to a committed src/stress_test/list_candidates.py helper file. Surfaced for H-016 explicit consideration; not flipped in H-015 to honor the cut."
   phase_3_attempt_2_notes:
     - "Research-first discipline in force per D-016 commitment 2 and R-010 — no fabrication of URLs or module symbols. H-013 exercised it three times in preventive mode without firing a tripwire."
     - "H-010: research document produced at docs/clob_asset_cap_stress_test_research.md, three versions this session (v1, v2, v2.1, v3). v3 accepted."
@@ -290,6 +289,14 @@ open_items:
     - "H-014: Retrospective fabrication check at session open against H-013 code — 38/38 tests pass under pinned deps in fresh venv; every SDK symbol in probe.py resolves against installed polymarket-us==0.1.2; env var names match D-023; slug_selector schema matches TennisEventMeta dataclass. No fabrication. Live self-check on Render (noted above) provides additional retrospective confirmation — the code that worked locally boots and imports cleanly on the target platform too."
     - "H-014: One sub-ruling under delegated authority — pm-tennis-api-Shell candidate-listing helper is a pasted Python snippet (inlined in RB-002 §5.1), not a committed list_candidates.py file. Avoids a new file requiring tests/docs/maintenance; pasted form is transparent. Reversible at H-015 if operator prefers."
     - "H-014 close: zero PODs. Service provisioned + healthy. Rewritten artifacts verified. §15 additive in place. H-015 opens with live-probe execution + main-sweeps code as the core work."
+    - "H-015 open: full reading completed (Handoff_H-014, STATE v12, Orientation, Playbook §1-§7, DecisionJournal D-016 through D-027, RAID Issues + Decisions, SECRETS_POLICY §A.5-A.7, RB-002, README, probe.py full 765 lines including classification logic, research-doc §7 Q1-Q5' and §15 full additive). Per-operator-direction full reading at session open. Retrospective fabrication check: 38/38 tests pass in fresh venv against pinned deps (polymarket-us==0.1.2 + pytest==8.3.4). H-014 commit-bundle integrity confirmed: 5-file bundle landed (STATE v11+v12, Handoff_H-014, README rewrite, RB-002 rewrite, research-doc §15 additive); no v11/v12-style discrepancies."
+    - "H-015 cut at session open: probe + §14 addendum this session; main-sweeps deferred to H-016. Consistent with H-014-Claude default offer in addendum notes."
+    - "H-015 probe attempt blocked on calendar. Step 1 (slug selection in pm-tennis-api Shell): operator pasted helper snippet from RB-002 §5.1 — first attempt and a retry both corrupted by bracketed-paste markers (^[[200~ prefix attached to PYTHONPATH= token, bash interpreted as filename, errored). Simpler invocation without PYTHONPATH= prefix worked (operator was already at /opt/render/project/src). list_candidates() returned empty result."
+    - "H-015 Diagnostic A (operator-authorized, pm-tennis-api Shell): `ls /data/matches/ | wc -l` = 116 directories, up from 74 at H-012. Discovery is healthy and growing monotonically as expected (_write_meta is immutable per discovery.py)."
+    - "H-015 Diagnostic B (operator-authorized, pm-tennis-api Shell): heredoc workaround used after first attempt failed bracketed-paste markers same way. 10 most-recent meta.json files (event_ids 9440-9449) inspected. All 10 show active=True ended=False live=False. Titles include 2026-04-20 dates (e.g., 'Elmer Moeller vs. Hugo Gaston 2026-04-20'). All 10 show event_date='' (empty string). Operator confirmed these are future games and that no eligible matches exist in the next ~24h."
+    - "H-015 finding: empty event_date is a real Phase-2 data-extraction issue, separate from the calendar block. Root cause likely at src/capture/discovery.py line 328: `event_date=str(event.get('eventDate') or '').strip()` — Polymarket gateway responses likely don't have a top-level `eventDate` key. slug_selector._passes_date_filter (lines 142-156) correctly rejects empty event_date as defensive behavior. Filed as RAID I-016 (severity 6). Per operator ruling at H-015 close: RAID, not DJ — finding cannot be validated for some time."
+    - "H-015: Helper-snippet bracketed-paste friction — second observed instance this session (helper snippet + Diagnostic B both failed; heredoc workaround succeeded for Diagnostic B). Stronger evidence than H-014 for converting the H-014 sub-ruling pasted-snippet helper to a committed src/stress_test/list_candidates.py file. Surfaced for H-016 explicit consideration; not flipped in H-015 to honor the cut."
+    - "H-015 close: zero PODs. Probe blocked on calendar + I-016. RAID I-016 filed (sev 6). DJ unchanged (27 entries). H-016 opens with: (1) investigate I-016 in src/capture/discovery.py and gateway raw event payload — Phase-2-touching change requires explicit operator authorization; (2) probe retry (after I-016 fix, or via title-date workaround per I-016, or once calendar populates); (3) §14 addendum (probe outcome); (4) main sweeps deferred to H-017."
 
 # ---- Runbooks inventory ----
 runbooks:
@@ -375,10 +382,10 @@ costs:
 scaffolding_files:
   STATE_md:
     status: accepted
-    current_version: 12
-    committed_to_repo: pending  # v12 produced this session
-    committed_session: H-014
-    note: "v11 was produced at H-013 close but omitted from the H-013 commit bundle (operator error); remediated by operator out-of-band at H-014 open (v11 file uploaded; H-014 worked from it as the correct baseline). v12 is the normal-session-close artifact."
+    current_version: 13
+    committed_to_repo: pending  # v13 produced this session
+    committed_session: H-015
+    note: "v13 reflects H-015 probe attempt + block, RAID I-016 finding filing, and pruning of resolved_operator_decisions to H-015 entries only per the H-014-settled convention."
   Orientation_md:
     status: accepted
     committed_to_repo: true
@@ -395,7 +402,9 @@ scaffolding_files:
     pending_entries: []
   RAID_md:
     status: accepted
-    committed_to_repo: true  # no changes this session; last modified H-010 when I-015 landed
+    committed_to_repo: pending  # I-016 added this session; sev_6 count and issues_open count both bumped
+    committed_session: H-015
+    note: "H-015 added I-016 (empty event_date in meta.json — sev 6) per operator ruling. Header 'Last updated' line bumped to H-015 close 2026-04-19."
   PreCommitmentRegister_md:
     status: accepted
     committed_to_repo: true
@@ -403,10 +412,10 @@ scaffolding_files:
     status: accepted
     path: "docs/clob_asset_cap_stress_test_research.md"
     current_version: 4
-    committed_to_repo: pending  # §15 additive produced this session
+    committed_to_repo: true  # §15 additive committed in H-014 commit af5885e
     committed_session: H-014
     renamed_session: H-011
-    note: "v4 remains the current version. §13 added at H-012 (H-012 rulings + survey); §15 additive added at H-014 (H-013 code-turn-research resolutions + D-027 supersession + scaffolding note + stale-artifact-corrected note + H-015 forward look). §14 is reserved for the H-015 probe-outcome addendum. v5 bump was considered and rejected in favor of §15 additive, following H-012 precedent."
+    note: "v4 remains the current version. §13 added at H-012 (H-012 rulings + survey); §15 additive added at H-014 (H-013 code-turn-research resolutions + D-027 supersession + scaffolding note + stale-artifact-corrected note + H-015 forward look). §14 is reserved for the H-016 probe-outcome addendum (originally reserved for H-015 but probe blocked on calendar + I-016). v5 bump was considered at H-014 and rejected in favor of §15 additive, following H-012 precedent. No changes at H-015."
   Handoff_H010_md:
     status: accepted
     path: "Handoff_H-010.md"
@@ -431,8 +440,13 @@ scaffolding_files:
   Handoff_H014_md:
     status: accepted
     path: "Handoff_H-014.md"
-    committed_to_repo: pending  # produced this session
+    committed_to_repo: true  # landed in H-014 commit 087557d
     committed_session: H-014
+  Handoff_H015_md:
+    status: accepted
+    path: "Handoff_H-015.md"
+    committed_to_repo: pending  # produced this session
+    committed_session: H-015
   data_dictionary_md:
     status: not-started
     note: "Phase 3 deliverable"
@@ -466,9 +480,9 @@ phase_3_attempt_2_files:
     note: "Isolated deps for pm-tennis-stress-test service. polymarket-us==0.1.2 + pytest==8.3.4. pm-tennis-api's /requirements.txt is NOT modified per D-024 commitment 1. Verified at H-014 via Render build: installs cleanly (16 packages, all wheels, no compile)."
   src_stress_test_README_md:
     path: "src/stress_test/README.md"
-    status: pending
+    status: committed
     committed_session: H-014
-    note: "Rewritten at H-014 per D-027: new 'Slug source' section; What-this-service-does updated; Authoritative-inheritance slug-schema bullet scoped to library use only; Running-locally updated with --slug example; Running-on-Render rewritten for two-shell workflow referencing RB-002; exit-code-11 description updated; Tests section updated to 38 tests (both files) and §15 addendum reference; status line reflects H-014 D-027 pass. No longer pending-stale."
+    note: "Rewritten at H-014 per D-027: new 'Slug source' section; What-this-service-does updated; Authoritative-inheritance slug-schema bullet scoped to library use only; Running-locally updated with --slug example; Running-on-Render rewritten for two-shell workflow referencing RB-002; exit-code-11 description updated; Tests section updated to 38 tests (both files) and §15 addendum reference; status line reflects H-014 D-027 pass. Landed in H-014 commit 626a548."
   tests_test_stress_test_slug_selector_py:
     path: "tests/test_stress_test_slug_selector.py"
     status: committed
@@ -514,82 +528,72 @@ phase_2_files:
 
 ### Where the project is right now
 
-Phase 2 remains complete and operational. The service at `pm-tennis-api.onrender.com` continues to run the reverted Phase 2 `main.py` (SHA `ceeb5f29…`, 2,989 bytes, 87 lines). Discovery loop polls `gateway.polymarket.us/v2/sports/tennis/events` every 60 seconds. No Phase 2 code was modified this session. Discovery archive continues to grow monotonically (`_write_meta` is immutable).
+Phase 2 remains complete and operational. The service at `pm-tennis-api.onrender.com` continues to run the reverted Phase 2 `main.py` (SHA `ceeb5f29…`, 2,989 bytes, 87 lines). Discovery loop polls `gateway.polymarket.us/v2/sports/tennis/events` every 60 seconds. No Phase 2 code was modified this session. Discovery archive continues to grow monotonically — H-015 Diagnostic A confirmed 116 event directories on disk, up from 74 at H-012 (~24h growth). `_write_meta` immutability holds.
 
-**Phase 3 attempt 2 has a live isolated service as of H-014.** `pm-tennis-stress-test` is provisioned on Render at `https://pm-tennis-stress-test.onrender.com`, Auto-Deploy Off, no persistent disk per D-027. Self-check verified: polymarket_us 0.1.2 imports cleanly, both credential env vars set, 0 probe candidates under D-027 (expected — confirms isolation). The service's start command is the default no-op self-check; the probe runs only on manual invocation via the two-shell workflow in RB-002 §5.
+**Phase 3 attempt 2 stress-test service remains live as of H-014.** `pm-tennis-stress-test` at `https://pm-tennis-stress-test.onrender.com` continues to self-check green per H-014's verified provisioning. No code changes this session; no SDK calls made; no live probe executed.
 
-**Stale artifacts from H-013's Option X cut have been corrected.** Both `src/stress_test/README.md` (slug-selection sections, Running-on-Render, exit-code table) and `runbooks/Runbook_RB-002_Stress_Test_Service.md` (Step 3 "Skip — no disk attach," Step 5 two-shell workflow, fallback Options A/B/C removed) were rewritten per D-027 at H-014 open. Research-doc §15 additive captures the H-013 code-turn-research resolutions with full evidence trails, the D-027 supersession, the scaffolding inventory, and the H-014 stale-artifact corrections.
+**H-015 attempted live probe execution per RB-002 §5 two-shell workflow but probe was blocked.** Step 1 (slug selection in pm-tennis-api Shell) returned an empty `list_candidates()` result. Two diagnostics were operator-authorized: Diagnostic A (`ls /data/matches/`) confirmed the system is healthy with 116 event directories, monotonic growth from H-012's 74. Diagnostic B (sample of 10 most-recent meta.json files, after a heredoc workaround for bracketed-paste markers) revealed two co-occurring conditions: (a) operator-confirmed: no eligible matches in the next ~24h regardless (the surfaced events are future games dated 2026-04-20+); and (b) all 10 meta.json files have empty `event_date` fields despite the date being encoded in the title text. The probe was blocked today by (a); but (b) is a separate Phase-2 data-extraction issue that would block a probe retry tomorrow if not investigated, and is filed as RAID I-016.
 
-**All three H-013 code-turn-research tasks remain resolved against authoritative sources.** §15.1.1: SDK Ed25519 signing is fully internal (no user-code signing surface). §15.1.2: X-PM-Timestamp is milliseconds, unambiguous. §15.1.3: SDK transitive deps = 12 standard wheel-available packages for Linux/x86_64 + CPython 3.12. See `architecture_notes` YAML block for the citation trail.
+**RAID I-016 (sev 6) filed at H-015 close.** Likely root cause: `src/capture/discovery.py` line 328 uses `event.get("eventDate")` to extract the date, but Polymarket gateway responses appear to use a different key name. `slug_selector._passes_date_filter` correctly rejects empty `event_date` as defensive behavior — the issue is upstream extraction, not selector logic. H-016's first action is to investigate the gateway raw event payload (a one-time read from `/data/events/2026-04-19.jsonl` or equivalent) and identify the correct key. **Phase 2 code is preserved per D-016**; any actual fix to `discovery.py` is a Phase-2-touching change requiring explicit operator authorization separate from the Phase 3 work package. A workaround for the probe-retry path that bypasses `discovery.py` (parsing the date from event titles in `slug_selector` only) is documented in I-016.
 
-**D-027 remains active.** D-025 commitment 1 is superseded; commitments 2/3/4 stand. D-024 commitment 1 (pm-tennis-api/requirements.txt untouched) is actively reinforced by D-027. D-020/Q2=(b) isolation is preserved and now concretely realized in a running service. The research-question intent of D-025 — probe a gateway-sourced slug against the api WebSocket — is preserved; only the slug-to-probe transport changed from shared-disk read to operator-supplied `--slug=SLUG` CLI argument.
+**The H-014 sub-ruling pasted-snippet helper convention surfaced friction in production use.** Two of the three multi-line snippet pastes operator attempted in the pm-tennis-api Render Shell this session were corrupted by bracketed-paste escape markers (`^[[200~ ... ~`), making bash interpret the whole expression as a non-existent filename. The simpler single-line invocation (without `PYTHONPATH=` prefix, since operator was already at the right cwd) and the heredoc-wrapped Diagnostic B both worked. This is meaningful empirical data that the H-014 sub-ruling — chosen at H-014 under delegated authority on the basis that "Shell-pasted form is transparent and self-documenting" — has a real cost in this Shell environment. H-015 did not flip the convention to honor the cut-point ruling. **Strong recommendation surfaced for H-016 explicit consideration:** convert to a committed `src/stress_test/list_candidates.py` helper file invokable as `python -m src.stress_test.list_candidates`, removing the multi-line-paste failure mode entirely.
 
-**What the H-015 session inherits:**
+**D-027 remains active.** D-025 commitment 1 is superseded; commitments 2/3/4 stand. D-024 commitment 1 (pm-tennis-api/requirements.txt untouched) is actively reinforced. D-020/Q2=(b) isolation is preserved.
 
-- Repo with the full H-013 + H-014 bundle: STATE v12, DJ with D-027 and D-025 footer (unchanged at H-014), Handoff_H-014, rewritten README, rewritten RB-002, research-doc v4 with §15 additive.
-- Live `pm-tennis-stress-test` service with credentials + no disk, ready for the two-shell probe workflow.
-- Zero operator decisions blocking.
-- §14 reserved in the research doc for the H-015 probe-outcome addendum.
-- Zero net-new code this session (all H-013 code still in force; no new modules added).
+**What the H-016 session inherits:**
 
-### What changed in H-013
+- Repo with the full H-013 + H-014 + H-015 bundle: STATE v13, DJ unchanged at 27 entries (no H-015 additions per operator ruling), Handoff_H-015, RAID with new I-016 entry (sev 6, total open issues 14).
+- Live `pm-tennis-stress-test` service with credentials + no disk; self-check verified at H-014 and not regressed at H-015 (no code changes touching the service this session).
+- Live `pm-tennis-api` service with 116 event dirs on disk and growing.
+- Empty `event_date` finding (I-016) waiting for investigation as H-016 first action.
+- Helper-snippet convention flip waiting for H-016 explicit consideration.
+- §14 of research doc still reserved for the probe-outcome addendum (now an H-016 deliverable).
+- Three plan-text revisions queued in STATE `pending_revisions` (unchanged).
+- Zero pending operator decisions.
+- Six consecutive sessions (H-010 through H-015) closed without firing a tripwire or invoking OOP.
 
-DecisionJournal: D-027 prepended (newest-first per convention). D-025's resolution footer updated with "SUPERSEDED IN PART BY D-027" note per DJ conventions line 13. D-025 original text preserved in full.
+### What changed in H-015
 
-Research document: unchanged at H-013 (v4 remains accepted). D-027 ruling was captured in the DJ and Handoff_H-013; research-doc §15 additive produced at H-014 (see below).
+**Probe attempt blocked, surfaced cleanly.** Two-shell workflow attempted per RB-002 §5; Step 1 (slug selection) returned empty. Operator-confirmed calendar block + I-016 finding. No probe ever executed. No SDK calls made. No `pm-tennis-stress-test` Shell invoked. The H-014-Claude addendum-flagged "highest fabrication-risk surface since H-008" was not exercised this session — saved for H-016.
 
-STATE: bumped v10 → v11. Material changes: session counters advanced; `phase.current` bumped from `phase-3-attempt-2-ready` to `phase-3-attempt-2-probe-scaffolded`; `phase.current_work_package` rewritten to reflect H-013 completion and H-014 pickup; `resolved_operator_decisions_current_session` pruned to H-013 entries only per the stricter reading (Claude-under-delegated-authority ruling at H-013); `phase_3_attempt_2_notes` + several entries covering D-027, code-turn-research resolutions, scaffolding completion, known-stale artifacts; `architecture_notes` +5 entries on Render disks/D-027/SDK signing/timestamp unit/transitive deps; `runbooks` inventory added RB-002 with stale-flag; new `phase_3_attempt_2_files` section tracked the stress-test package and test files.
+**RAID I-016 filed.** Empty `event_date` field in meta.json. Sev 6 (material; not critical because the discovery service itself is operational and the bug is in a derived field). Per operator ruling at session close: RAID, not DJ — finding cannot be validated for some time and the right home is the issue log.
 
-Code + tests: `src/stress_test/` package created with 5 files; `tests/test_stress_test_slug_selector.py` (19 tests) and `tests/test_stress_test_probe_cli.py` (19 tests) created. All 38 tests passing. Draft runbook RB-002 created but carried two known-stale sections (Steps 3 and 5) flagged for H-014 rewrite.
+**STATE bumped v12 → v13.** Material changes: session counters advanced (sessions_count 14→15, last_handoff_id H-014→H-015, next_handoff_id H-015→H-016); `phase.current` bumped from `phase-3-attempt-2-service-provisioned` to `phase-3-attempt-2-probe-blocked-on-calendar`; `phase.current_work_package` rewritten to reflect H-015 attempt and outcome; `raid_entries_by_severity.sev_6` 3→4 and `issues_open` 13→14; `resolved_operator_decisions_current_session` pruned per H-014 settled convention and replaced with H-015's 5 in-session rulings; `phase_3_attempt_2_notes` +9 entries for H-015; `scaffolding_files`: H-014 entries (Handoff_H-014, README, RB-002, research-doc) flipped pending→true with commit SHAs; STATE v13 + Handoff_H-015 + RAID v15 added as pending. Prose sections refreshed.
 
-### What changed in H-014
+**DecisionJournal: no changes this session.** H-015 had no PODs open and none of its in-session rulings reached DJ-entry threshold (all were on method/convention, not project-shape commitments). Counter stays at 27. RAID I-016 went to RAID per operator ruling, not DJ.
 
-**STATE v11 remediation at session open.** STATE v11 was produced at H-013 close but was omitted from the H-013 commit bundle (operator error). H-014-Claude surfaced the discrepancy at self-audit time rather than silently reconciling; operator supplied the v11 file out-of-band; H-014 proceeded from the correct v11 baseline without any silent reconciliation.
+**Tripwires: none fired.** Three preventive-mode disciplines exercised without firing: (1) the H-008 fabrication-class danger zone was kept saved for H-016 by honoring the cut-point even after the probe was blocked (no extension into "let me just investigate I-016 a little while we're here"); (2) Diagnostic B was not silently re-attempted after bracketed-paste failure — surfaced the friction and offered the operator a heredoc workaround with explicit reasoning; (3) the I-016 finding was surfaced sharply rather than silently rationalizing the empty-list as "calendar empty, fine, move on" — diagnostic B revealed something the operator could not have known from calendar knowledge alone.
 
-**Stale-artifact corrections.** Both `src/stress_test/README.md` and `runbooks/Runbook_RB-002_Stress_Test_Service.md` were rewritten per D-027 at H-014 open, before any deployment work. README: "What this service does" revised; new "Slug source — D-027 supersedes D-025 commitment 1" section added; Authoritative-inheritance slug-schema bullet scoped to library use only; Running-locally updated with `--slug` examples; Running-on-Render rewritten to describe the two-shell workflow and reference RB-002; exit-code-11 row revised to reflect D-027 meaning; status line updated. RB-002: full rewrite. Step 3 replaced with "Skip — no disk attach" + rationale. Step 5 rewritten as the two-shell workflow (pm-tennis-api Shell lists candidates via pasted Python snippet → pm-tennis-stress-test Shell runs probe with `--slug` + `--event-id` → operator pastes `ProbeOutcome` JSON back). Step 1 "load-bearing region" language removed. Fallback Options A/B/C from stale Step 3 removed as inert under D-027.
+**OOP events: 0 this session.** Counters remain at 0 cumulative, 0 since last gate.
 
-**Research-doc §15 additive.** Added to v4 without a version bump, per the H-012 precedent for §13. Content: §15.1 H-013 code-turn-research resolutions (three sub-items, each with authoritative citations); §15.2 D-027 supersession with the render.com/docs/disks verbatim quote and the four-option rationale; §15.3 probe-scaffolding landed inventory + end-to-end smoke results; §15.4 known-stale artifacts corrected at H-014; §15.5 what H-015 picks up; §15.6 what §15 does not change. §14 reserved for the H-015 probe-outcome addendum (intentionally out-of-order — probe outcome is its own unit of analysis and no live probe ran at H-014).
+**One sub-ruling under delegated authority (H-015-Claude):** when operator said "for B please present script," I read it as "show the script content for the operator to run via heredoc workaround" rather than "commit a helper file to the repo," and explicitly surfaced the two readings before acting. Operator's subsequent action (running the heredoc) confirmed reading 1 was correct. Documenting because delegated-authority calls are exactly what the H-014 helper-snippet flag was about — surface before acting, even if the smaller cut feels obvious.
 
-**Retrospective fabrication check at session open.** 38 unit tests re-run in a fresh venv against the pinned deps — all passing. Every SDK symbol in `probe.py` resolves against installed `polymarket-us==0.1.2`. Env var names match D-023. `slug_selector` schema matches `TennisEventMeta`. No fabrication. End-to-end smoke of the four CLI paths (self-check, probe/no-creds/config-error, probe/no-slug/no-candidate, `--help`) re-verified — all match H-013's claims and the probe.py code.
-
-**pm-tennis-stress-test Render service provisioned.** Following the D-027-correct RB-002, operator created the service with Auto-Deploy Off, no persistent disk, the two required env vars. Build succeeded with 16 packages (all wheel-only, no compile). Self-check output verified line-by-line against RB-002 Step 4's expected block: polymarket_us 0.1.2 import ok, SDK surfaces importable, both credentials set, 0 probe candidates (the D-027 isolation signal), self-check complete. Exit-after-selfcheck restart-loop is expected and cosmetic; the sleep-loop alternative is documented in RB-002 Step 4 if the churn becomes noise. Service URL: `https://pm-tennis-stress-test.onrender.com`. No HTTP surface is served.
-
-**STATE bumped v11 → v12.** Material changes: session counters advanced (sessions_count 13→14, last_handoff_id H-013→H-014, next_handoff_id H-014→H-015); `phase.current` bumped from `phase-3-attempt-2-probe-scaffolded` to `phase-3-attempt-2-service-provisioned`; `phase.current_work_package` rewritten to reflect H-014 completion and H-015 pickup; new `deployment.stress_test` block added; `resolved_operator_decisions_current_session` pruned per confirmed stricter convention and replaced with H-014's in-session rulings (STATE-v11-remediation, cut-point, additive-vs-bump, helper-snippet, pruning-convention); `phase_3_attempt_2_notes` +8 entries for H-014; `runbooks.RB-002.status` flipped from stale-draft to active; `architecture_notes` +1 entry on the provisioned service; `scaffolding_files` flipped H-013 pendings to true and added pending H-014 artifacts (v12, Handoff_H-014, rewritten README, rewritten RB-002, §15 additive); `phase_3_attempt_2_files` status flips (pending → committed for H-013 files; pending-stale → pending for README post-rewrite).
-
-DecisionJournal: no changes this session. H-014 had no PODs open and none of its in-session rulings reached DJ-entry threshold (all were on method/convention, not project-shape commitments). Counter stays at 27.
-
-RAID: no changes this session. No issues added or resolved; no new risks; no new assumptions.
-
-Tripwires: none fired. Three preventive-mode exercises of research-first discipline without firing — the "I think I know the Render repo path" moment (verified via web_search before RB-002 committed the path in Step 5.1); the retrospective fabrication check against H-013 code (preventive in-session check before trusting the committed scaffolding); the STATE-v11 missing-from-commit discrepancy (surfaced rather than silently reconciled).
-
-OOP events: 0 this session. Counters remain at 0 cumulative, 0 since last gate.
-
-One sub-ruling made under operator-delegated authority — the pm-tennis-api-Shell candidate-listing helper is a pasted Python snippet (inlined in RB-002 §5.1), not a committed `src/stress_test/list_candidates.py` file. Reasoning documented in research-doc §15.4 and Handoff_H-014 §3; reversible at H-015 if operator prefers.
-
-### H-015 starting conditions
+### H-016 starting conditions
 
 When the next session opens, Claude will find:
 
-- Repo on `main` with the full H-013 + H-014 bundle landed: STATE v12, DJ (D-027 + D-025 footer, unchanged at H-014), Handoff_H-014, `src/stress_test/` package (with D-027-correct README), tests, RB-002 rewritten D-027-correct, research-doc v4 with §13 + §15 additives (§14 reserved).
-- Discovery service `pm-tennis-api.onrender.com` running `main.py` at `0.1.0-phase2`, healthy. Event count continues to grow monotonically since H-012 survey (74 → higher by ~48h).
-- Stress-test service `pm-tennis-stress-test.onrender.com` live, Auto-Deploy Off, no disk attached, both credential env vars set, self-check verified healthy. Exit-after-selfcheck restart-loop running; no action required from H-015 unless the loop becomes noisy.
-- Zero production Phase 3 code on `main` in `src/capture/` (Phase 2 preserved). Phase 3 probe code is in `src/stress_test/` — isolated by path per D-024 commitment 1 and D-020/Q2=(b).
-- **Zero pending operator decisions.**
-- Research doc at v4 with §13 + §15 additives; §14 reserved for H-015 probe-outcome addendum.
-- D-027 active; D-025 commitment 1 superseded; D-025 commitments 2/3/4, D-024, D-023, D-020 all in force.
-- Research-first discipline in force per D-016 and D-019.
-- Pruning convention for `resolved_operator_decisions_current_session`: stricter reading, settled as of H-014.
+- Repo on `main` with the full H-013 + H-014 + H-015 bundle: STATE v13, DecisionJournal unchanged at 27 entries (last entry D-027), Handoff_H-015, RAID with I-016 newly filed (sev 6, total open 14).
+- Discovery service `pm-tennis-api.onrender.com` running `main.py` at `0.1.0-phase2`, healthy. Event count 116+ at H-015 close (continues to grow at ~1-2 events/hour during normal hours).
+- Stress-test service `pm-tennis-stress-test.onrender.com` live, Auto-Deploy Off, no persistent disk, both credential env vars set, self-check expected to remain green (no code changes this session).
+- I-016 (empty event_date) waiting for investigation as the first action.
+- The pasted-snippet helper convention from H-014 is still in force per RB-002 §5.1; H-015's empirical friction data is documented for H-016 to consider flipping to a committed file.
+- Zero pending operator decisions.
+- Three plan-text pending revisions in STATE unchanged (v4.1-candidate, -2, -3).
+- Research-first discipline in force per D-016, D-019.
+- Pruning convention for `resolved_operator_decisions_current_session`: stricter reading, settled.
 
 ### Validation posture going forward
 
-At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode. At H-015 open, the check has two application surfaces:
+At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode. At H-016 open, the check has three application surfaces:
 
-- **Preventive for new H-015 code.** Main sweeps will likely require a new module (e.g., `src/stress_test/sweeps.py`) that uses SDK methods beyond the probe's current surface (`client.markets.list()` for api-sourced slugs, `markets_ws` semantics for multiple concurrent subscriptions). Every SDK symbol in sweep code must trace to the Polymarket US Python SDK README — per D-024 commitment 2 — or to a fresh SDK-source fetch at code-turn time, with the citation committed inline in the module header. Placeholder slug generation for the 100-slug-per-subscription stress must be implemented without assuming slugs-that-don't-exist will be rejected gracefully — the probe outcome at H-015 will inform whether ungraceful rejection risks the service's stability.
+- **Preventive for I-016 investigation.** Reading `discovery.py` line 328 and a sample raw gateway event payload is a read-only research task — fabrication risk is low because the operator-authorized read returns ground truth. The risk is more in *interpretation*: identifying the "right" key name from gateway payload structure should be cited from the actual payload byte-content, not from memory or from documentation that may not match payload shape. If the proposed key name doesn't trace to the operator-pasted payload, surface that gap rather than guess.
 
-- **Retrospective for H-014 artifacts.** Three documents were rewritten or added this session: the README, RB-002, and research-doc §15. Each should pass a spot-check: every factual claim in the README and RB-002 traces to the probe.py code or to the D-027 DJ entry; every citation in §15 traces to the named URL + fetch-session; no fabricated file paths (the `/opt/render/project/src/` path in RB-002 §5.1 was verified at H-014 via web_search before commit).
+- **Preventive for the probe retry (live network code against real external API).** This is the H-008 risk class that H-015 saved for H-016. Every SDK symbol used must trace to the SDK README or a fresh re-fetch; the H-013 citation block in `probe.py` covers the current symbol set, but if main-sweeps gets pulled forward at H-016, fresh `markets.list()` and multi-subscription semantics work needs a SDK README re-fetch at code-turn time.
 
-Values of `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` must never enter the chat transcript — they are set via Render dashboard only. Live verified at H-014: both env vars show as `[ok] ... set` in the self-check output without any value disclosure.
+- **Retrospective for H-015 artifacts.** STATE v13, Handoff_H-015, RAID I-016. Spot-check that the I-016 description's claims about `discovery.py` line 328 and `slug_selector._passes_date_filter` lines 142-156 actually match the on-disk code (both were verified at H-015 close before filing).
+
+Values of `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` must never enter the chat transcript — they are set via Render dashboard only. H-015 did not exercise the credential path (no probe ran); discipline holds vacuously.
 
 ---
 
-*End of STATE.md — current document version: 12. Last updated: H-014.*
+*End of STATE.md — current document version: 13. Last updated: H-015.*

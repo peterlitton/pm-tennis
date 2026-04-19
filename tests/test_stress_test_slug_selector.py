@@ -276,6 +276,121 @@ def test_filter_rejects_empty_event_date(
     assert list_candidates(data_root=data_root, today=frozen_today) == []
 
 
+# -- I-016 fallback tests (H-016) -------------------------------------
+#
+# When event_date is empty or unparseable, _passes_date_filter falls
+# back to start_date_iso[:10]. This exists for backward compatibility
+# with meta.json files written before the H-016 fix to discovery.py
+# (~116 affected files at H-015 close), all of which have empty
+# event_date but populated start_date_iso. See _passes_date_filter
+# docstring and DecisionJournal D-028 for full context.
+
+
+def test_i016_fallback_empty_event_date_with_future_start_date_iso_passes(
+    data_root: Path, frozen_today: date
+) -> None:
+    """The pre-H-016 historical case: empty event_date but start_date_iso
+    populated with a future ISO timestamp. Fallback should accept."""
+    _write_meta(
+        data_root,
+        _meta(
+            event_id="historical-empty-date",
+            event_date="",
+            start_date_iso="2026-04-25T08:00:00Z",
+        ),
+    )
+    candidates = list_candidates(data_root=data_root, today=frozen_today)
+    assert len(candidates) == 1
+    assert candidates[0].event_id == "historical-empty-date"
+
+
+def test_i016_fallback_empty_event_date_with_past_start_date_iso_rejected(
+    data_root: Path, frozen_today: date
+) -> None:
+    """Fallback respects the date check — past start_date_iso is rejected."""
+    _write_meta(
+        data_root,
+        _meta(
+            event_id="historical-past-date",
+            event_date="",
+            start_date_iso="2026-01-01T08:00:00Z",  # before frozen_today
+        ),
+    )
+    assert list_candidates(data_root=data_root, today=frozen_today) == []
+
+
+def test_i016_fallback_both_fields_empty_rejected(
+    data_root: Path, frozen_today: date
+) -> None:
+    """Conservative behavior when neither field provides a date."""
+    _write_meta(
+        data_root,
+        _meta(
+            event_id="no-date-anywhere",
+            event_date="",
+            start_date_iso="",
+        ),
+    )
+    assert list_candidates(data_root=data_root, today=frozen_today) == []
+
+
+def test_i016_fallback_malformed_event_date_falls_through_to_start_date_iso(
+    data_root: Path, frozen_today: date
+) -> None:
+    """An unparseable event_date should also trigger the fallback,
+    not bail out — defensive against any future format drift."""
+    _write_meta(
+        data_root,
+        _meta(
+            event_id="malformed-event-date",
+            event_date="not-a-date",
+            start_date_iso="2026-04-25T08:00:00Z",
+        ),
+    )
+    candidates = list_candidates(data_root=data_root, today=frozen_today)
+    assert len(candidates) == 1
+    assert candidates[0].event_id == "malformed-event-date"
+
+
+def test_i016_fallback_event_date_wins_over_start_date_iso(
+    data_root: Path, frozen_today: date
+) -> None:
+    """When both fields are populated and parseable, event_date is the
+    canonical source (start_date_iso fallback only fires when the
+    primary is unusable). For meta.json written from H-016 forward,
+    both should agree; this test pins the precedence regardless."""
+    _write_meta(
+        data_root,
+        _meta(
+            event_id="both-populated",
+            event_date="2026-04-25",
+            start_date_iso="2099-01-01T08:00:00Z",  # diverging value
+        ),
+    )
+    candidates = list_candidates(data_root=data_root, today=frozen_today)
+    assert len(candidates) == 1
+    assert candidates[0].event_id == "both-populated"
+    # The candidate's event_date field stays as the meta.json's
+    # event_date value (slug_selector copies it through verbatim).
+    assert candidates[0].event_date == "2026-04-25"
+
+
+def test_i016_fallback_non_string_start_date_iso_rejected(
+    data_root: Path, frozen_today: date
+) -> None:
+    """Defensive against weird future schema drift — non-string fallback
+    value should be rejected, not raise."""
+    _write_meta(
+        data_root,
+        _meta(
+            event_id="weird-fallback",
+            event_date="",
+            start_date_iso=12345,  # type: ignore[arg-type]
+        ),
+    )
+    assert list_candidates(data_root=data_root, today=frozen_today) == []
+
+
 def test_filter_rejects_empty_moneyline_markets(
     data_root: Path, frozen_today: date
 ) -> None:

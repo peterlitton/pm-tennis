@@ -86,7 +86,14 @@ def make_raw_event(
         "closed": False,
         "ended": ended,
         "live": live,
-        "eventDate": event_date,
+        # Note: the real Polymarket gateway response does NOT include a
+        # top-level "eventDate" key — verified at H-016 against a live
+        # raw payload (event 9471). Earlier versions of this fixture
+        # included one and silently masked RAID I-016 (empty event_date
+        # in production meta.json). The fixture now matches real
+        # gateway shape: startDate is the canonical source for the
+        # date, as a full ISO timestamp; discovery.py extracts the
+        # YYYY-MM-DD form by slicing the first 10 characters.
         "startTime": "14:00",
         "startDate": f"{event_date}T14:00:00Z",
         "endDate": f"{event_date}T18:00:00Z",
@@ -365,6 +372,61 @@ class TestParseEvent:
         from datetime import datetime
         # Should parse without error
         datetime.fromisoformat(meta.discovered_at.replace("Z", "+00:00"))
+
+    # -- I-016 regression tests (H-016) --------------------------------
+    #
+    # The following three tests pin down the H-016 fix for RAID I-016
+    # (event_date empty in production meta.json). The pre-fix code at
+    # discovery.py line 328 read event.get("eventDate"), which the real
+    # gateway response does not include. The fix sources event_date from
+    # startDate[:10] instead. These tests ensure: (a) event_date is
+    # populated correctly from startDate; (b) the code does NOT regress
+    # back to reading a non-existent eventDate key; (c) a payload
+    # missing startDate degrades safely to empty rather than raising.
+
+    def test_i016_event_date_sourced_from_startDate(self):
+        """The fix: event_date is the YYYY-MM-DD prefix of startDate."""
+        raw = make_raw_event(event_date="2026-04-21")
+        # Make sure the fixture actually omits eventDate — guards
+        # against a future re-introduction masking the bug again.
+        assert "eventDate" not in raw, (
+            "fixture must NOT include eventDate; the real gateway has "
+            "no such key (verified at H-016 against event 9471)"
+        )
+        meta = disc._parse_event(raw)
+        assert meta is not None
+        assert meta.event_date == "2026-04-21"
+        assert meta.start_date_iso == "2026-04-21T14:00:00Z"
+
+    def test_i016_event_date_empty_when_startDate_missing(self):
+        """No startDate in payload → event_date is empty, no exception.
+
+        Conservative: an unparseable date is downstream-rejected by
+        slug_selector._passes_date_filter rather than crashing here.
+        """
+        raw = make_raw_event()
+        del raw["startDate"]
+        meta = disc._parse_event(raw)
+        assert meta is not None
+        assert meta.event_date == ""
+        assert meta.start_date_iso == ""
+
+    def test_i016_event_date_ignores_legacy_eventDate_key(self):
+        """If a payload happens to include both keys, startDate wins.
+
+        This pins the new behavior: event_date is sourced from
+        startDate, never from eventDate, even if a future gateway
+        change adds an eventDate key with a different value. Sources
+        of truth must be unambiguous; we have one canonical date
+        source.
+        """
+        raw = make_raw_event(event_date="2026-04-21")
+        # Plant a contradicting eventDate to ensure it's ignored.
+        raw["eventDate"] = "2099-01-01"
+        meta = disc._parse_event(raw)
+        assert meta is not None
+        assert meta.event_date == "2026-04-21"
+        assert meta.event_date != "2099-01-01"
 
 
 # ---------------------------------------------------------------------------

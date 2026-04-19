@@ -325,7 +325,23 @@ def _parse_event(event: dict) -> TennisEventMeta | None:
         round=round_str,
         sport_slug=TENNIS_SPORT_SLUG,
         series_slug=slug_str,
-        event_date=str(event.get("eventDate") or "").strip(),
+        # event_date: derived from startDate as YYYY-MM-DD.
+        #
+        # H-016 (2026-04-19) — fix for RAID I-016. Original code at this
+        # line read event.get("eventDate"), but the Polymarket gateway
+        # response has no top-level "eventDate" key — verified at H-016
+        # against a live raw payload (event 9471). The gateway carries
+        # the date in startDate as a full ISO timestamp (e.g.
+        # "2026-04-21T08:00:00Z"); the canonical YYYY-MM-DD form is the
+        # first 10 characters. Sliced here, not in downstream consumers,
+        # so meta.json's event_date schema (YYYY-MM-DD per the dataclass
+        # docstring on line 159) is preserved end-to-end.
+        #
+        # Per D-028 (H-016): operator-authorized Phase-2 touch.
+        # See also: I-016 in RAID.md, slug_selector._passes_date_filter
+        # which falls back to start_date_iso[:10] for historical
+        # meta.json files written before this fix.
+        event_date=str(event.get("startDate") or "").strip()[:10],
         start_time=str(event.get("startTime") or "").strip(),
         start_date_iso=str(event.get("startDate") or "").strip(),
         end_date_iso=str(event.get("endDate") or "").strip(),

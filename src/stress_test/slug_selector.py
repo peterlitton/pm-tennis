@@ -8,7 +8,9 @@ Design constraints:
 1. Schema source of truth is src.capture.discovery.TennisEventMeta (lines 139-193
    in discovery.py as of commit 17f44eb1). This module MUST NOT drift from that
    schema. Field names read here: event_id, moneyline_markets, active_at_discovery,
-   ended_at_discovery, live_at_discovery, discovered_at, event_date.
+   ended_at_discovery, live_at_discovery, discovered_at, event_date,
+   start_date_iso (fallback for empty event_date — see _passes_date_filter
+   docstring for the H-016 / RAID I-016 backward-compatibility context).
 
 2. Path source of truth is src.capture.discovery._meta_path. meta.json lives at
    {DATA_ROOT}/matches/{event_id}/meta.json where DATA_ROOT defaults to /data and
@@ -140,20 +142,60 @@ def _passes_status_filter(meta: dict) -> bool:
 
 
 def _passes_date_filter(meta: dict, today: date) -> bool:
-    """Require event_date to be today or future.
+    """Require the event date (today or future) to be present and parseable.
 
-    event_date is written by discovery.py as YYYY-MM-DD. An unparseable or
-    empty value is treated as failing the filter (conservative: if we can't
-    verify it's in the future, we skip it).
+    Reads event_date first; falls back to start_date_iso[:10] if
+    event_date is empty or malformed. event_date is the canonical
+    YYYY-MM-DD field; the start_date_iso fallback exists for backward
+    compatibility with meta.json files written before the H-016 fix to
+    discovery.py (RAID I-016).
+
+    Backward-compatibility context (H-016, 2026-04-19):
+
+      Phase 2 discovery.py originally extracted event_date from
+      event.get("eventDate"). The Polymarket gateway response has no
+      such top-level key; event_date was empty in every meta.json
+      written from H-007 (Phase 2 deploy) through H-016 (this fix).
+      ~116 meta.json files on disk at H-015 were affected and remain
+      so — they are immutable per discovery._write_meta. Without this
+      fallback, those historical files would never satisfy the date
+      filter and would never become probe candidates as their match
+      date approaches. start_date_iso has always been correctly
+      populated (line 330 of discovery.py reads event.get("startDate")
+      and the gateway DOES include startDate), so it is the safe
+      fallback source.
+
+      For meta.json files written from H-016 forward, both event_date
+      and start_date_iso[:10] should agree; the fallback is a no-op in
+      that case.
+
+    An unparseable or empty value in BOTH fields is treated as failing
+    the filter (conservative: if we can't verify it's in the future,
+    we skip it).
     """
+    # Try event_date first (the canonical field).
     event_date_str = meta.get("event_date", "")
-    if not isinstance(event_date_str, str) or len(event_date_str) < 10:
-        return False
-    try:
-        event_date = date.fromisoformat(event_date_str[:10])
-    except ValueError:
-        return False
-    return event_date >= today
+    if (
+        isinstance(event_date_str, str)
+        and len(event_date_str) >= 10
+    ):
+        try:
+            return date.fromisoformat(event_date_str[:10]) >= today
+        except ValueError:
+            pass  # fall through to start_date_iso fallback
+
+    # Fall back to start_date_iso[:10] (the I-016 historical-data path).
+    start_date_iso_str = meta.get("start_date_iso", "")
+    if (
+        isinstance(start_date_iso_str, str)
+        and len(start_date_iso_str) >= 10
+    ):
+        try:
+            return date.fromisoformat(start_date_iso_str[:10]) >= today
+        except ValueError:
+            return False
+
+    return False
 
 
 def _candidate_from_meta(meta: dict) -> Optional[ProbeCandidate]:

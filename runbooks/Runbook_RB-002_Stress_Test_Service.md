@@ -1,7 +1,7 @@
 # Runbook RB-002 — Stand up the `pm-tennis-stress-test` Render service
 
 **Runbook ID:** RB-002
-**Produced:** H-013 (2026-04-19); **rewritten:** H-014 (2026-04-19) per D-027
+**Produced:** H-013 (2026-04-19); **rewritten:** H-014 (2026-04-19) per D-027; **§5.1 revised:** H-016 (2026-04-19) — replaced multi-line pasted snippet with `python -m src.stress_test.list_candidates` invocation after H-015 surfaced two bracketed-paste failures in the Render Shell.
 **Status:** Active
 **Purpose:** operator-executed steps to provision the isolated Render
 service that hosts the Phase 3 attempt 2 stress-test code.
@@ -189,29 +189,44 @@ provisioning time. Documented here for reference.
 ### 5.1 — Pick a slug in the `pm-tennis-api` Shell
 
 1. Open the Render dashboard → `pm-tennis-api` service → **Shell** tab.
-2. Paste the following one-liner. It imports `slug_selector` (the repo
-   that `pm-tennis-api` has checked out contains `src/stress_test/`
-   even though `pm-tennis-api` itself doesn't use that package at
-   runtime) and lists the top 5 eligible probe candidates:
+2. Make sure you're at the repo root (Render normally drops you there;
+   if not, `cd /opt/render/project/src`):
    ```bash
-   PYTHONPATH=/opt/render/project/src python -c "
-   from src.stress_test.slug_selector import list_candidates
-   for c in list_candidates()[:5]:
-       print(f'{c.event_id}  {c.market_slug}  discovered_at={c.discovered_at}  event_date={c.event_date}  {c.title!r}')
-   "
+   cd /opt/render/project/src
    ```
-   (Adjust the `PYTHONPATH` prefix if Render mounts the repo at a
-   different path; `cd /opt/render/project/src && pwd && ls` will
-   confirm the path and that `src/stress_test/` is present.)
-3. Read the output. Each line is one candidate, freshest first. Pick
-   the topmost candidate whose `event_date` is at least 24 hours in
-   the future (gives the match time to stay pre-match through the
-   probe's ~10-second observation window).
-4. Copy the `event_id` and `market_slug` of the picked candidate.
+3. Run the candidate-listing helper. This is a single-line invocation
+   to avoid the multi-line bracketed-paste issue surfaced at H-015 (the
+   Render Shell wraps multi-line pastes in `^[[200~ ... ~` markers that
+   bash interprets as part of the first token):
+   ```bash
+   python -m src.stress_test.list_candidates
+   ```
+   The default output is the top 5 eligible candidates, one per line,
+   freshest first. To see more, pass `--limit N`. To see why each
+   meta.json was filtered (useful if the list is empty), add
+   `--show-rejected`.
+4. The output format is one candidate per line:
+   ```
+   {event_id}  {market_slug}  discovered_at={...}  event_date={...}  '{title}'
+   ```
+5. Pick the topmost candidate whose `event_date` is at least 24 hours
+   in the future (gives the match time to stay pre-match through the
+   probe's ~10-second observation window). Copy the `event_id` and
+   `market_slug`.
 
-**If the list is empty:** Phase 2 discovery has no current pre-match
-tennis events. Unusual but possible during off-peak hours. Wait an hour
-and retry, or surface to Claude for investigation.
+**If the list is empty (exit code 11):** two possibilities:
+   - **Calendar-empty:** Phase 2 discovery has no current pre-match
+     tennis events for the next ~24h. Unusual but possible during
+     off-peak hours.
+   - **Filter-rejection:** meta.json files exist on disk but are being
+     rejected by the date filter (RAID I-016, surfaced at H-015 —
+     `event_date` field empty in meta.json across the discovery output).
+
+   Run `python -m src.stress_test.list_candidates --show-rejected` to
+   see, per-file, which filter rejected each meta.json. The `event_date`
+   value is printed for each row; if every row shows `event_date=''`,
+   that's I-016 and the bug is upstream in `src/capture/discovery.py`'s
+   extraction. Surface the output to Claude for investigation.
 
 ### 5.2 — Run the probe in the `pm-tennis-stress-test` Shell
 

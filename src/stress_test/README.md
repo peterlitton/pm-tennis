@@ -1,8 +1,11 @@
 # PM-Tennis Stress-Test Service
 
 **Status:** scaffolded at H-013 (2026-04-19); D-027 supersession
-reflected in this README at H-014 (2026-04-19). Live-probe execution
-and main sweeps deferred to H-015 per operator cut at H-014 open.
+reflected in this README at H-014 (2026-04-19); helper-snippet flip
+landed at H-016 (2026-04-19) — `src/stress_test/list_candidates.py`
+added as committed entry point for the pm-tennis-api Shell candidate
+listing, replacing the multi-line pasted snippet that failed twice in
+the Render Shell at H-015.
 
 **Isolated from pm-tennis-api.** This code is deployed as a separate Render
 service (`pm-tennis-stress-test`) per D-020/Q2=(b) and D-024 commitment 1.
@@ -48,9 +51,13 @@ transport changes.
 
 - **Local development** — run the probe with no `--slug` and it falls
   back to `slug_selector` reading `PMTENNIS_DATA_ROOT/matches/*/meta.json`.
-- **pm-tennis-api Shell helper** — operator can import and call
-  `list_candidates()` from that service's Shell, where `/data` is
-  attached, to surface eligible slugs before running the probe.
+- **pm-tennis-api Shell helper** — operator runs
+  `python -m src.stress_test.list_candidates` from that service's
+  Shell, where `/data` is attached, to surface eligible slugs before
+  running the probe. (At H-014 this was a multi-line snippet pasted
+  inline in RB-002 §5.1; at H-015 the pasted form failed twice with
+  bracketed-paste markers in the Render Shell, so H-016 promoted it
+  to a committed module.)
 
 `slug_selector` is **not** called in the production probe code path on
 the Render stress-test service — the isolated service has no `/data`
@@ -159,9 +166,11 @@ once then sleeps is described in Runbook RB-002 Step 4.
 a manual, operator-driven workflow per D-027 and Runbook RB-002:
 
 1. **In the `pm-tennis-api` Shell** (where `/data/matches/` is
-   attached): operator runs a one-line Python snippet to list eligible
-   probe candidates from Phase 2's meta.json archive, then copies one
-   slug + its event_id.
+   attached): operator runs `python -m src.stress_test.list_candidates`
+   to list eligible probe candidates from Phase 2's meta.json archive,
+   then copies one slug + its event_id. (Pre-H-016 this was a
+   multi-line pasted snippet; replaced with the committed module after
+   two paste failures at H-015.)
 2. **In the `pm-tennis-stress-test` Shell** (this service's Shell):
    operator runs `python -m src.stress_test.probe --probe
    --slug=<SLUG> --event-id=<EID>`.
@@ -175,15 +184,18 @@ Runbook RB-002 is authoritative for the step-by-step procedure.
 ```bash
 PYTHONPATH=. python -m pytest \
   tests/test_stress_test_slug_selector.py \
-  tests/test_stress_test_probe_cli.py -v
+  tests/test_stress_test_probe_cli.py \
+  tests/test_stress_test_list_candidates.py -v
 ```
 
-38 tests total — 19 for slug_selector (pure on-disk fixtures) and 19
-for the probe CLI (argparse, config paths, ProbeOutcome dataclass,
-classification-to-exit-code mapping). No network, no SDK mocking. The
-probe module's live-network path is exercised at H-014 against the
-actual gateway (unit tests with heavy SDK mocking would hide the kind
-of drift that tripped H-008).
+58 tests total — 19 for slug_selector (pure on-disk fixtures), 19 for
+the probe CLI (argparse, config paths, ProbeOutcome dataclass,
+classification-to-exit-code mapping), and 20 for list_candidates
+(argparse, output formatting, exit codes, --show-rejected diagnostic
+mode, and integration against tmp_path fixtures). No network, no SDK
+mocking. The probe module's live-network path is exercised at H-014
+against the actual gateway (unit tests with heavy SDK mocking would
+hide the kind of drift that tripped H-008).
 
 ## Exit codes (probe mode)
 

@@ -1,0 +1,23 @@
+# PM-Tennis stress-test service dependencies.
+#
+# This file is for the ISOLATED pm-tennis-stress-test Render service only.
+# The main pm-tennis-api service uses /requirements.txt (repo root), which is
+# NOT modified by Phase 3 attempt 2 per D-024 commitment 1.
+#
+# Deps pinned exactly per D-024 commitment 1 + H-013 ruling on version
+# stability — the SDK is young (10 commits at H-013 fetch) and we want the
+# probe in H-014 to test against the same SDK build that the H-013 unit
+# tests pass against.
+#
+# polymarket-us 0.1.2 pulls in (verified via pip install --dry-run at H-013):
+#     httpx>=0.27.0, pynacl>=1.5.0, websockets>=12.0,
+#     plus transitives: httpcore, anyio, idna, certifi, h11,
+#                       typing_extensions, cffi, pycparser.
+# Wheels available for Linux/x86_64 + CPython 3.12; no compile required.
+
+polymarket-us==0.1.2
+
+# Test-only (pytest is used for unit tests in tests/test_stress_test_*).
+# Listed here so the Render build installs it; tests run as an acceptance-bar
+# check per D-021 testing posture.
+pytest==8.3.4

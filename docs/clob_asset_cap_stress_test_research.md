@@ -521,11 +521,154 @@ Consolidated for the code turn:
 
 ---
 
+## 14. H-016 probe-outcome addendum — the D-025 hybrid-probe-first probe ran
+
+This section is additive to v4. Written at H-016 (2026-04-19) to record the outcome of the D-025 hybrid-probe-first one-slug probe against `wss://api.polymarket.us/v1/ws/markets`. §14 was reserved at H-014 and remained empty at H-015 (probe attempt blocked on the RAID I-016 data-extraction bug in discovery.py; see §14.1). The probe actually ran at H-016 after I-016 was investigated, a fix was authorized and landed (D-028), and the service was redeployed.
+
+§14 is out-of-order in the document (written after §15) by deliberate H-014 convention: the probe outcome is its own unit of analysis, distinct from code-turn research, and the reserved-slot pattern preserves readability of the outcome-vs-implementation separation for future readers. §§1–13, §15 are unchanged by this section.
+
+### 14.1 Why the probe was deferred H-015 → H-016
+
+H-015 attempted the two-shell workflow per RB-002 §5. Step 1 (slug selection in pm-tennis-api Shell via the RB-002 §5.1 pasted snippet) returned an empty `slug_selector.list_candidates()` result. Two operator-authorized diagnostics in the pm-tennis-api Shell surfaced two co-occurring causes: (a) operator-confirmed calendar block — no eligible matches in the next ~24h regardless; and (b) RAID I-016 — 10 most-recent meta.json files all showed `event_date=""` (empty string) despite event titles encoding the date text. Because slug_selector's date filter requires `event_date >= today`, the empty field meant no candidate could ever pass the filter even when calendar-eligible matches existed. H-015 filed I-016 at sev 6 and closed with the probe unrun.
+
+H-016 investigated I-016 by reading a real raw gateway event payload from `/data/matches/9471/meta.json` in the pm-tennis-api Shell (operator-executed, Claude-directed). The payload revealed: `event_date=""`, `start_date_iso="2026-04-21T08:00:00Z"`, `start_time="2026-04-21T08:00:00Z"`, `end_date_iso="2026-04-21T23:59:00Z"`. Root cause: `src/capture/discovery.py` line 328 read `event.get("eventDate")` but the Polymarket gateway response has no top-level `eventDate` key; the canonical date source is `startDate`. Operator authorized Fix C (ruling: "c with thorough documentation"). D-028 was written, `discovery.py` was changed to source `event_date` from `startDate[:10]`, `slug_selector._passes_date_filter` was modified to fall back to `start_date_iso[:10]` when `event_date` is empty (handles ~116 historical meta.json files immutably written H-007 through H-016), and nine new tests were added. The full bundle landed in commits `d7b2bd2` (code + doc + RAID) and `83c0bf8` (DecisionJournal with D-028).
+
+A second-order H-016 finding: the H-014 RB-002 §5.1 pasted-snippet helper had failed twice at H-015 due to bracketed-paste markers in the Render Shell. H-016 flipped the convention to a committed module (`src/stress_test/list_candidates.py`) invocable as a single-line `python -m src.stress_test.list_candidates`. This is the first H-016 commit (part of `d7b2bd2`). The flip eliminates the multi-line-paste failure mode. See §14.5 for the full H-016 work summary.
+
+### 14.2 Probe input
+
+After `pm-tennis-api` redeployed with the H-016 bundle, slug selection was executed in the pm-tennis-api Shell via the new committed helper:
+
+```
+render@pm-tennis-api:~/project/src$ python -m src.stress_test.list_candidates
+9471  aec-wta-paubad-julgra-2026-04-21  discovered_at=2026-04-19T20:20:51.113080+00:00  event_date=  'Paula Badosa vs. Julia Grabher 2026-04-21'
+9470  aec-wta-beamai-jesman-2026-04-21  discovered_at=2026-04-19T20:20:51.113060+00:00  event_date=  'Beatriz Haddad Maia vs. Jessica Bouzas Maneiro 2026-04-21'
+9469  aec-wta-tatmar-lausam-2026-04-21  discovered_at=2026-04-19T20:20:51.113037+00:00  event_date=  'Tatjana Maria vs. Laura Samson 2026-04-21'
+9467  aec-wta-shuzha-evalys-2026-04-21  discovered_at=2026-04-19T20:20:51.113016+00:00  event_date=  'Shuai Zhang vs. Eva Lys 2026-04-21'
+9466  aec-wta-taytow-katbou-2026-04-21  discovered_at=2026-04-19T20:20:51.112995+00:00  event_date=  'Taylor Townsend vs. Katie Boulter 2026-04-21'
+```
+
+Notes on this output:
+- Five eligible candidates surfaced, all WTA matches on 2026-04-21 (two days from probe time).
+- Every `event_date` column is empty — these are all pre-H-016 historical meta.json files; the slug_selector fallback to `start_date_iso[:10]` is what let them pass the date filter.
+- Discovery count at H-016 probe time: **126 active tennis events** (up from 116 at H-015 and 74 at H-012; growth consistent with expected ~1-2 events/hour during normal hours).
+
+**Probe slug selected:** `aec-wta-paubad-julgra-2026-04-21` (topmost / freshest discovered_at), event_id `9471`. Paula Badosa vs. Julia Grabher, 2026-04-21. Slug was gateway-sourced via Phase 2 discovery — the intent of D-025's hybrid-probe-first design.
+
+### 14.3 Probe execution and outcome
+
+Probe was executed in the `pm-tennis-stress-test` Render Shell:
+
+```
+$ python -m src.stress_test.probe --probe --slug=aec-wta-paubad-julgra-2026-04-21 --event-id=9471
+```
+
+Observation window: 10.0 seconds (default per `PROBE_OBSERVATION_SECONDS`).
+
+**Full `ProbeOutcome` JSON (verbatim from stdout):**
+
+```json
+{
+  "probe_started_at_utc": "2026-04-19T22:20:24.550172+00:00",
+  "probe_ended_at_utc": "2026-04-19T22:20:35.824712+00:00",
+  "observation_window_seconds": 10.0,
+  "elapsed_seconds": 11.275,
+  "event_id": "9471",
+  "market_slug": "aec-wta-paubad-julgra-2026-04-21",
+  "candidate_discovered_at": "",
+  "candidate_event_date": "",
+  "eligible_candidates_count": 1,
+  "subscription_request_id": "probe-h013-1776637224",
+  "connected": true,
+  "subscribe_sent": true,
+  "first_message_latency_seconds": 1.15,
+  "message_count_by_event": {
+    "market_data": 1
+  },
+  "first_message_event": "market_data",
+  "first_message_preview": "{'requestId': 'probe-h013-1776637224', 'subscriptionType': 'SUBSCRIPTION_TYPE_MARKET_DATA', 'marketData': {'marketSlug': 'aec-wta-paubad-julgra-2026-04-21', 'bids': [{'px': {'value': '0.020', 'currency': 'USD'}, 'qty': '16000.000'}], 'offers': [{'px': {'value': '0.980', 'currency': 'USD'}, 'qty': '16000.000'}], 'state': 'MARKET_STATE_OPEN', 'stats': {'settlementPx': {'value': '0.500', 'currency': 'USD'}, 'settlementSetTime': '2026-04-19T21:00:00.015058283Z', 'notionalSetTime': '2026-04-19T21:00:",
+  "error_events": [],
+  "close_events": [],
+  "classification": "accepted",
+  "classification_reason": "subscription produced traffic: market_data=1 market_data_lite=0 trade=0 heartbeat=0",
+  "exception_type": "",
+  "exception_message": "",
+  "sdk_import_ok": true,
+  "sdk_version": "0.1.2"
+}
+```
+
+**Stderr summary:** `=== probe complete: classification=accepted elapsed=11.275s ===` / `reason: subscription produced traffic: market_data=1 market_data_lite=0 trade=0 heartbeat=0`.
+
+### 14.4 Classification, interpretation, and D-025 branch selected
+
+**Classification: `accepted`** per `_classify_outcome` in probe.py. The classification rule: a `market_data`, `market_data_lite`, `trade`, or `heartbeat` message within the observation window → accepted. The probe received one `market_data` message at `first_message_latency_seconds=1.15` (1.15 seconds after subscribe-sent), which satisfies the rule unambiguously. Exit code: 0.
+
+**D-025 branch selected:** per D-025 commitment language,
+
+> If the probe succeeds (subscription accepted, market-data messages received): the gateway-to-api slug bridge is confirmed working; the main sweeps may use either gateway-sourced or api-sourced slugs. The default in that case is api-sourced (cleanest, and the SDK's `markets.list()` provides them).
+
+The probe succeeded on all three checks: subscription accepted (no auth/bad-request/not-found error), market-data message received (one), and the message carried the correct `marketSlug` echo matching the subscribed slug. **The gateway-to-api slug bridge is confirmed working** for at least this slug; main sweeps (H-017 scope) have slug-source flexibility and will default to api-sourced per D-025's language.
+
+**Supporting observations from the probe outcome:**
+
+1. **Subscription request-id echo.** The first-message preview shows `'requestId': 'probe-h013-1776637224'` — the exact request_id the probe sent on subscribe. This is a soft confirmation that the SDK's subscribe/response pairing is working as the README documents (no request-id drift).
+
+2. **`subscriptionType` enum is correct.** First-message preview shows `'subscriptionType': 'SUBSCRIPTION_TYPE_MARKET_DATA'` — matches the enum string the probe sent (cited in probe.py header block [A]). No enum mismatch.
+
+3. **Market state is `MARKET_STATE_OPEN`.** Valid pre-match market. Wide bid/ask spread (0.02 / 0.98) is consistent with a market two days out from match time with minimal trading activity — not a bug, just quiescent. Not relevant to the probe's research question; logged as fair-price-model-relevant observation for Phase 5 design only.
+
+4. **Zero errors, zero close events, no exceptions.** Every error-surface is empty in the outcome JSON. The H-008-risk surface (live network against the Polymarket US API) was finally exercised and came up clean. Every SDK symbol cited in probe.py's [A]-[D] citation block resolved correctly against `polymarket-us==0.1.2` as installed on the stress-test Render service. No fabrication-class bugs in the probe code path.
+
+5. **`candidate_discovered_at` and `candidate_event_date` are empty** in the outcome JSON. Both fields are populated by the probe's pre-fix candidate-lookup path, which under D-027 is not exercised (slug is supplied via `--slug` directly). Per D-027 design, these fields are informational-only and expected to be empty on Render-executed probes; they would populate only if the probe were run from a local-dev environment with a populated `PMTENNIS_DATA_ROOT/matches/` fixture tree. Not a concern.
+
+6. **`eligible_candidates_count: 1`** appears in the outcome JSON but is `1` under D-027's slug-from-CLI path because the self-reported count reflects "the slug was obtained" rather than "selector found candidates." Cosmetic; not a data anomaly.
+
+### 14.5 H-016 work summary for the research record
+
+Consolidated for future readers of this document:
+
+| H-016 deliverable | Status at H-016 close |
+|---|---|
+| RB-002 §5.1 helper-snippet flip to committed module | Landed as `src/stress_test/list_candidates.py` (20 new tests) in commit `d7b2bd2`. RB-002 §5.1 and `src/stress_test/README.md` updated. |
+| RAID I-016 investigation | Completed in pm-tennis-api Shell against event 9471 meta.json. |
+| RAID I-016 fix authorization | Operator-authorized Fix C (both discovery.py update AND slug_selector fallback). |
+| D-028 (RAID I-016 fix, full text) | Committed in `83c0bf8`. |
+| Fix A (discovery.py event_date extraction) | Landed in commit `d7b2bd2`. Phase-2 code touched per D-016 commitment 2 with explicit operator authorization. |
+| Fix B (slug_selector.py fallback) | Landed in commit `d7b2bd2`. |
+| Test fixture correction (removes false `eventDate` key) | Landed in commit `d7b2bd2`. Adds regression assertion against re-introduction. |
+| New regression tests | 3 in TestParseEvent, 6 in test_stress_test_slug_selector. All passing. |
+| RAID I-016 marked Resolved | Landed in commit `d7b2bd2`. |
+| RAID I-017 added | Two pre-existing TestVerifySportSlug failures (SystemExit vs RuntimeError drift) surfaced during H-016 testing. Out of scope for D-028; H-017 disposition. |
+| Subsidiary finding: `_check_duplicate_players` silently broken in production since H-007 | Documented in D-028 and I-016 status cell. Fix automatically restores function going forward; historical 116+ files retain stale `duplicate_player_flag=False` (not retroactively correctable). |
+| Live probe execution (D-025 hybrid-probe-first) | Executed this session; classification=accepted. D-025 branch: main sweeps may use either slug source; default is api-sourced. |
+
+### 14.6 What H-017 picks up
+
+Consolidated for the next session:
+
+1. **Main sweeps per §7 Q3=(c).** Shape: 1/2/5/10 subscriptions × 100 placeholder slugs × 1/2/4 concurrent connections. ~30 minutes. Per §7 Q1=(a), no disk writes of received tick content. Per D-021 testing posture: unit tests + operator code review + smoke run constitute the acceptance bar. Code not yet written; this is H-017 code-turn work. Expected new module(s): `src/stress_test/sweeps.py` or equivalent.
+   - **Slug source per D-025 branch-selected:** api-sourced via `client.markets.list()` as default, with gateway-sourced as fallback if needed. Per H-014-Claude and H-015-Claude's emphatic notes: re-fetch `github.com/Polymarket/polymarket-us-python` README at code-turn time before using any SDK method beyond the probe's current citation block [A]-[D]; `client.markets.list()` and multi-subscription semantics on `markets_ws` are first net-new SDK surfaces.
+2. **Placeholder-slug generation strategy (for >100-slug subscriptions).** §15.5 item 3 called this a code-turn decision informed by probe outcome. Probe outcome now in hand. Decision can be made at H-017 open with probe evidence (the single real slug subscribed cleanly; §4.4's 100-slug-per-subscription cap is documented; placeholder-slug rejection behavior under real-subscription load is the open empirical question).
+3. **Main-sweeps addendum (§16 or further-additive).** Written after main sweeps complete.
+4. **RAID I-017 disposition.** Two pre-existing TestVerifySportSlug failures. Small fix either side (update tests or update code). Out of scope for H-016; surface at H-017 open.
+5. **Cleanup of stale files in repo root.** `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, and `D-028-entry-to-insert.md` were reference artifacts inadvertently committed at H-016. Can be deleted in an H-017 cleanup commit.
+6. **Teardown of the stress-test Render service** after §16 addendum is in hand.
+
+### 14.7 What §14 does not change
+
+- No claim in §§1–13 is revised.
+- §15's recording of H-013 code-turn resolutions and D-027 supersession of D-025 commitment 1 stands unchanged.
+- No plan-text revisions are cut by this section. Plan-text revisions v4.1-candidate, v4.1-candidate-2, and v4.1-candidate-3 remain queued in STATE `pending_revisions`.
+- D-025 commitments 2, 3, 4 remain in force. D-027 supersession of D-025 commitment 1 remains in force. D-028 is the new Phase-2-touching decision landing in this session.
+
+---
+
 ## 15. H-013 code-turn results and D-027 — new in H-014 additive
 
 This section is additive to v4. Written at H-014 (2026-04-19) to record: the three H-013 code-turn-research task resolutions, the Render disk-architecture finding that produced D-027, the D-027 supersession of D-025 commitment 1, the probe-scaffolding landing at `src/stress_test/`, and the H-014 correction of the known-stale artifacts committed under H-013's Option X cut. §14 is reserved for the probe-outcome addendum that will be written at H-015 after live probe execution against the Polymarket US gateway; §14 is intentionally out-of-order because the probe outcome is its own unit of analysis and this session (H-014) had no live run.
 
-v4 remains the current version. §§1–14 are unchanged (§14 does not yet exist; nothing to change). A v5 bump was considered at H-014 open and rejected in favor of this §15 additive, following the H-012 precedent for §13.
+v4 remains the current version. §§1–14 are unchanged by this section (§14 was reserved when this section was written at H-014; populated at H-016 per §14 itself). A v5 bump was considered at H-014 open and rejected in favor of this §15 additive, following the H-012 precedent for §13.
 
 ### 15.1 H-013 code-turn-research resolutions
 
@@ -635,4 +778,4 @@ Consolidated for the next session:
 
 ---
 
-*End of research document — v4, §13 H-012 additive + §15 H-014 additive. §14 reserved for H-015 probe-outcome addendum.*
+*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive.*

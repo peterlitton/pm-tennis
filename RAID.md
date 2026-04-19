@@ -1,5 +1,5 @@
 # RAID.md — PM-Tennis Risk, Assumption, Issue, Decision Log
-**Last updated:** H-009 session close (2026-04-19)
+**Last updated:** H-010 session close (2026-04-19)
 
 ---
 
@@ -56,6 +56,7 @@
 | **I-012** | **Phase 3 attempt 1 failed via fabricated Sports WS URL + fabricated `DiscoveryConfig` symbol. Option A1 revert executed at H-009; Phase 3 attempt 2 pending.** | **8** | **See D-016. Revert validated V1–V7 all passing. Phase 3 attempt 2 begins from c63f7c1d-equivalent repo state with research-first discipline per R-010.** | **Open — Phase 3 attempt 2** |
 | **I-013** | **H-008 missed session-close ritual — no handoff produced; STATE and DecisionJournal ran ahead of repo through H-009 session open.** | **7** | **Addressed at H-009: DecisionJournal backfilled D-009–D-015 as reconstructed entries; D-016 and D-017 added for H-009 decisions and H-006 plan revision respectively. STATE v7 supersedes v6. Future mitigation: R-011 (session-close discipline).** | **✅ Resolved H-009** |
 | **I-014** | **v4.1-candidate plan-text patch: Section 5.6 lists `data/baseline/` as a Render persistent disk path, but baseline files live in the repo under `baseline/`, not on disk.** | **3** | **Apply under Playbook §12 when next plan revision is cut. Tracked in STATE `pending_revisions`.** | **Open — awaiting next plan revision** |
+| **I-015** | **The plan's "150-asset pool cap" (§5.4 and §11.3) does not correspond to any documented Polymarket US limit. H-010 research against `docs.polymarket.us` found one explicit numeric cap on Markets WebSocket: 100 market slugs per subscription. 150 is inherited plan language without a cited source. The stress-test deliverable has implicitly shifted from "verify the documented cap" to "characterize undocumented connection and subscription limits."** | **3** | **Dual action. (a) Plan text: §5.4 "bounded by the soft 150-asset cap" and §11.3's related line get revised in the next plan revision to reflect the actual documented cap structure (100 slugs per subscription, undocumented concurrency). Tracked in STATE `pending_revisions` alongside I-014. (b) Phase 3 attempt 2 stress test proceeds under the reframed objective per `docs/clob_asset_cap_stress_test_research.md` v3. No immediate code change.** | **Open — awaiting next plan revision and stress-test execution** |
 
 ---
 
@@ -80,6 +81,11 @@
 | D-015 | Tennis sport slug confirmed as `tennis` with leagues `[wta, atp]` | H-007 | `TENNIS_SPORT_SLUG` default stands | Locked |
 | **D-016** | **Phase 3 attempt 1 failed; Option A1 revert to c63f7c1d-equivalent state; tripwire reclassification; research-first discipline established; H-009 produces no new Phase 3 code** | **H-009** | **Phase 3 attempt 2 begins from clean baseline with R-010 / A-008 in force. Commitment-file integrity preserved throughout.** | **Active** |
 | **D-017** | **v3→v4 plan revision (retroactive journaling of H-006 decision)** | **H-006 (journaled H-009)** | **v4 is the active build plan** | **Active** |
+| **D-018** | **Ruling 1: first deliverable of Phase 3 attempt 2 is the deferred CLOB asset-cap stress test (I-002)** | **H-010** | **Stress test runs before CLOB pool construction** | **Active** |
+| **D-019** | **Ruling 2: research-first form = standalone research document → operator review → code in a subsequent turn** | **H-010** | **Applies for duration of Phase 3 attempt 2 unless explicitly lifted** | **Active** |
+| **D-020** | **Ruling 3: definition of done for first deliverable = unit tests + operator code review + stress test runs to completion against actual gateway with actual asset count** | **H-010** | **Per-deliverable acceptance bar distinct from Phase 3 exit gate** | **Active** |
+| **D-021** | **Ruling 4: testing posture = unit tests + lightweight live smoke test per deliverable** | **H-010** | **No deliverable accepted on unit-test evidence alone** | **Active** |
+| **D-022** | **Ruling 5: commit cadence = periodic commits within a deliverable permitted; handoff required at session end** | **H-010** | **Matches Phase 2 cadence; attempt-1 problem was missed handoff not commit frequency** | **Active** |
 
 ---
 
@@ -102,7 +108,11 @@ OBSERVATION_ACTIVE soft lock: not present (pre-observation). Commitment files mo
 
 ---
 
-*RAID.md updated at H-009 session close. New items this session:*
+*RAID.md updated at H-010 session close. New items this session:*
+- *Issues I-015 (150-asset-cap inheritance finding)*
+- *Decisions D-018 through D-022 (Rulings 1–5 for Phase 3 attempt 2 scope)*
+
+*Prior updates at H-009:*
 - *Risks R-010, R-011, R-012*
 - *Assumptions A-008, A-009*
 - *Issues I-012, I-013 (resolved same session), I-014*

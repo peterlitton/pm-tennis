@@ -14,6 +14,252 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 - **Gate verdicts.** When the operator passes or fails a phase-exit gate, the verdict is logged here at the top of the session following the gate, before any new work begins. Format: `Gate verdict: [Phase N exit] — [PASS / FAIL / DEFER] — [date] — [brief rationale]`.
 - **Out-of-protocol events.** Every out-of-protocol invocation is logged here, in addition to the session handoff's self-report section. Format is given in D-004.
 - **Entry structure.** Each entry carries: date, session ID (handoff ID), type tag, the decision, what was considered, the reasoning, and the commitment the decision creates. Sub-questions that remain open are listed explicitly and resolved by a later entry or a sub-ruling.
+- **Reconstructed entries.** An entry may be marked "Reconstructed" when it was journaled in a later session from handoff sources rather than at the moment of decision. Reconstructed entries carry both a decision date and a journaling date; their Source line names the authoritative material used.
+
+---
+
+## D-017 — v3→v4 plan revision (retroactive journaling)
+
+**Date of decision:** 2026-04-18
+**Session of decision:** H-006
+**Date of journaling:** 2026-04-19
+**Session of journaling:** H-009
+**Type:** Plan revision / Retroactive entry
+
+**Source:** Reconstructed H-009 from Handoff_H-006.md §2. The decision was labeled "D-008" in H-006's handoff before the numbering conflict with the pre-existing D-008 (Section 1.5 forward references, H-002) was identified at the same session by D-012. D-012 resolved the numbering policy but did not retroactively assign a canonical ID to the plan-revision decision itself. D-017 closes that gap per Playbook §12.3 step 6, which requires a DecisionJournal entry for every plan revision.
+
+**Decision:** Produce v4 of the PM-Tennis Build Plan; premise shift from mispricing-test to instrument-vs-intuition test.
+
+**Motivating evidence:** Baseline analysis of 71 Polymarket US iPhone screenshots (502 cash events, 131 resolved tennis contracts excluding STENAP/TRISCH) showing operator ROI of +8.5% overall and +14.3% on swing trades, with effective swing win rate of 55.9% (vs 58.2% breakeven, p=0.697, statistically indistinguishable from breakeven). Analysis performed in an adjacent chat session on 2026-04-18.
+
+**Chain of authorship:** Analysis adjacent → premise shift directed by operator → source artifacts (Premise Brief, Baseline Summary v2, Hypothesis Set v2, Injection Instruction v2) produced adjacent → v4 produced in H-006 under Playbook §12.
+
+**Rationale for v4 rather than v3.x:** A premise-level shift requires one clean reading. Mixing v3's mispricing framing with v4 amendments would burden all downstream phases.
+
+**Commitment:** v4 is the active build plan. v3 is preserved in git history. `STATE.project.plan_document.current_version = v4`.
+
+**Downstream consequences (from H-006):**
+- D-009 (H3 hypothesis dropped) — scope implication of the revised research question.
+- D-010 (conviction scoring + exit context ship together at Phase 5) — new instrument features introduced by v4.
+- D-011 (pilot-then-freeze deferred to Phase 7) — reserved decision slot carried forward from v3.
+- D-012 (decision numbering corrected) — resolves the conflict that motivated this retroactive entry.
+
+**Retroactive-journaling note:** This entry is dated 2026-04-19 (journaling date) but records a decision made 2026-04-18 (decision date). The dual dating is intentional per Playbook §1.5.2's reconstruction discipline.
+
+---
+
+## D-016 — Phase 3 attempt 1 failed; revert main to pre-attempt state and begin Phase 3 attempt 2
+
+**Date:** 2026-04-19
+**Session:** H-009
+**Type:** Recovery / Governance
+
+### What happened
+
+Between H-007 session close and the beginning of H-009, a session occurred (labeled H-008 for handoff-sequence integrity, though no handoff was ever produced) in which Phase 3 capture components were authored, tested, committed to the repo on main, and deployed. The commits are visible in git history, timestamped 2026-04-19 02:11:12Z through 02:18:56Z:
+
+- `677016c1` — src/capture/clob_pool.py (10.9 KB)
+- `a10486b3` — src/capture/correlation.py (12.2 KB)
+- `00282260` — src/capture/sports_ws.py (18.1 KB)
+- `bab716ef` — src/capture/handicap.py (8.6 KB)
+- `d319e09e` — main.py rewritten (12.0 KB) to wire all components
+- `8bdc3859` — tests/test_capture_phase3.py (23.4 KB)
+- `40973377` — pytest.ini (asyncio_mode=auto)
+
+After deployment, the code began failing in live operation. Per operator's explanation at session H-009: *"Claude failed to read the documentation thoroughly and made up a placeholder URL for live Sports WS. Trying to correct it in that session just made it worse."* The session ended without producing a handoff document or an updated STATE.md. The operator subsequently deleted the session transcript.
+
+### The fabrication pattern
+
+During H-009 revert validation (V4 log scan), Render runtime logs surfaced a second fabrication from the failed session: `main.py` at `d319e09e` contained the import `from src.capture.discovery import DiscoveryLoop, DiscoveryConfig`. The `DiscoveryConfig` class does not exist in `discovery.py` (which was unchanged from H-007). Claude assumed a symbol existed in an unmodified file. The service crash-looped with `ImportError: cannot import name 'DiscoveryConfig' from 'src.capture.discovery'` from 03:10:11Z through 03:13:20Z (six documented ImportError events during the delete phase of the revert transaction).
+
+Two fabrications in one failed session, of different kinds:
+1. An external endpoint URL (Sports WS) fabricated rather than researched against documentation.
+2. An internal module symbol (`DiscoveryConfig`) assumed to exist in an existing-but-unmodified file.
+
+The common failure mode is: writing code that references names Claude never verified exist.
+
+### What is recoverable and what is not
+
+Recoverable: the code itself (present in git history), the commit timestamps and messages, the order of commits, the general shape of what was attempted, the ImportError evidence from Render logs.
+
+Not recoverable: the exact fabricated Sports WS URL, what it was "corrected" to during the attempted fixes, the specific failure signatures beyond the ImportError, the reasoning at each decision point during the session, and any intermediate diagnostic output.
+
+### Root causes (as stated and as observed)
+
+Stated by operator: Claude fabricated an endpoint URL for the live Sports WebSocket rather than researching the actual endpoint from Sportradar or Polymarket US documentation. Attempting to correct the URL in-session without returning to documentation compounded the failure.
+
+Observed during H-009 revert validation: also an internal-symbol fabrication (`DiscoveryConfig`). This is the same failure class as the URL fabrication — writing code that presumes a name exists without verifying it does.
+
+Both are direct violations of build plan §1.5.4 ("Claude shall not silently adapt to unexpected findings") and of the research-first discipline that should govern any external-API integration work or cross-module coupling.
+
+### Ruling by operator at H-009
+
+1. **Option A1 adopted.** Revert main to its state at commit `c63f7c1d` (the last commit before the Phase 3 attempt, dated 2026-04-19 01:46:44Z, message "fix: discovery task catches all exceptions and retries"). Remove the five new Phase 3 files (clob_pool.py, sports_ws.py, correlation.py, handicap.py, test_capture_phase3.py) and pytest.ini; restore main.py to its c63f7c1d content. Approach executed through GitHub web UI, walked through with Claude step by step.
+
+2. **Tripwire classification:**
+   - **Tripwire 1** (integrity discrepancy between STATE/handoff and repo): real, caused by missed session-close ritual at H-008. No governance breach in the commits themselves; STATE v6 and handoff H-007 are stale because H-008 never produced its handoff.
+   - **Tripwire 2** (out-of-session commits per Playbook §10): false positive, withdrawn. Commits were legitimate in-session outputs of H-008.
+   - **Tripwire 3** (DecisionJournal gap D-009 through D-015): real, predates H-008, independent of the failure. Addressed in H-009 via reconstruction from handoff sources (D-009 through D-012 from H-006; D-013 through D-015 from H-007), each entry flagged as reconstructed per Playbook §1.5.2.
+
+3. **Commit-message variance note.** The five delete commits in the revert transaction were committed with GitHub's default `"Delete <filename>"` messages (plus a free-form `"Claude fuck up"` tag added by the operator) rather than the structured `"revert: remove failed Phase 3 <file> (N/7)"` format Claude had drafted. The `main.py` restore commit (`17f44eb1`) used the structured format. The seven-commit revert transaction remains unambiguously identifiable in the git log by timestamp cluster (03:08:45Z–03:17:11Z) and by the "(7/7)" tag on the main.py restore. No action needed; noted for future-Claude reading the log.
+
+### Revert validation outcomes (H-009)
+
+Seven validation checks were performed after the revert commits landed:
+
+- **V1** — 38 `meta.json` files present on persistent disk. ✓
+- **V2** — `meta.json` well-formed, contains expected fields and `PENDING_PHASE3` stubs. ✓ (with two documentation notes: participant type observed is `PARTICIPANT_TYPE_TEAM` not `PARTICIPANT_TYPE_PLAYER` as H-007 claimed; `sportradar_game_id` empty across all 38 events, consistent with no-live-matches context.)
+- **V3** — discovery delta stream being written, daily raw-poll archive being written. ✓ (with one informational note: raw-poll archive grows ~290 MB/day uncompressed, which has runway implications before Phase 4 compression arrives.)
+- **V4** — No ERROR / WARN / Traceback in Render logs after the 03:18:49Z revert deploy. ✓
+- **V5** — Build log confirms `pip install -r requirements.txt` installed full dependency set (fastapi, uvicorn, pandas, numpy, pyarrow, requests, scipy, httpx). ✓
+- **V6** — Environment variables minimal and expected (ENVIRONMENT, LOG_LEVEL, PM_TENNIS_TOKEN). No failed-attempt leftovers. ✓
+- **V7** — `/data` mounted as real persistent volume (`/dev/nvme2n1`, 9.8 GB, ~35 MB used). ✓
+
+### Commitments created by this decision
+
+1. **Phase 3 attempt 2 begins from c63f7c1d-equivalent repo state.** No code from the failed attempt carries forward into attempt 2. Phase 3 design choices do not inherit from attempt 1.
+
+2. **Research-first discipline for all external APIs and cross-module references.** Before any code is written for Phase 3 attempt 2 that (a) calls an external endpoint, or (b) imports a symbol from a module that is not being concurrently modified, Claude produces a short research summary citing the actual documentation source (for endpoints) or the actual module definition (for symbols). Fabrication of URLs, endpoint shapes, message formats, authentication schemes, module names, class names, or function signatures is a tripwire. This applies at minimum to the Sports WebSocket endpoint (the specific URL failure point), the CLOB WebSocket subscription format, correlation metadata shape, and any symbol imported from `src.capture.discovery` or other pre-existing modules.
+
+3. **Session-close ritual discipline.** The missed handoff at H-008 is the proximate cause of the governance debris H-009 cleaned up. Future sessions that end before Claude can produce a handoff voluntarily apply Playbook §2.5.2: Claude proactively offers to produce the handoff when the session seems near close, rather than waiting for explicit close request. If a session ends abruptly mid-task, the next session treats the prior session's missed handoff as a Failure-mode-1.5.2 lost-handoff event and reconstructs per §9.3.
+
+4. **H-009 produces no new Phase 3 code.** Its entire output is the revert transaction, the DecisionJournal reconstruction (D-009 through D-015) plus this entry (D-016) plus the retroactive plan-revision entry (D-017), STATE v7, RAID updates, and handoff H-009. Phase 3 attempt 2 begins in H-010 or later.
+
+### What this session does not decide
+
+This entry does not prescribe the technical approach for Phase 3 attempt 2. Sub-deliverable sequencing, module structure, testing strategy, first deliverable — all remain open for operator direction at the start of the next Phase 3 session.
+
+---
+
+## D-015 — Tennis sport slug confirmed as "tennis"
+
+**Date of decision:** 2026-04-19
+**Session of decision:** H-007
+**Date of journaling:** 2026-04-19
+**Session of journaling:** H-009
+**Type:** Technical verification / Reconstructed
+
+**Source:** Reconstructed H-009 from Handoff_H-007.md §2.
+
+**Decision:** The Polymarket US gateway uses sport slug `"tennis"` with leagues `["wta", "atp"]`. The default value in `TENNIS_SPORT_SLUG` is correct and requires no override.
+
+**Confirmed by:** Live gateway response at startup during H-007, logged at INFO level. Re-confirmed during the 03:18:49Z revert deploy startup in H-009: `✓ MATCH — sport slug='tennis' name='Tennis' leagues=['wta', 'atp']`.
+
+**Commitment:** Discovery module's tennis-slug default stands. No override file needed.
+
+---
+
+## D-014 — Discovery loop runs inside pm-tennis-api, not as a separate service
+
+**Date of decision:** 2026-04-19
+**Session of decision:** H-007
+**Date of journaling:** 2026-04-19
+**Session of journaling:** H-009
+**Type:** Architecture / Deviation from plan / Reconstructed
+
+**Source:** Reconstructed H-009 from Handoff_H-007.md §2.
+
+**Decision:** The discovery background task runs as an asyncio task inside the FastAPI process on pm-tennis-api, not as a separate Render background worker service.
+
+**Rationale:** Render persistent disks are per-service and cannot be shared between services. Running discovery inside the API service ensures both read and write access to the same `/data` disk. A separate background worker service was created and deleted during H-007 after this constraint was discovered empirically.
+
+**Consequence:** pm-tennis-api serves two roles: HTTP API (Phase 4 will expand this) and continuous discovery worker. Represents an architectural deviation from the build plan's implied service separation, justified by the disk-sharing constraint.
+
+**Commitment:** Capture worker and API share a process. Phase 3 attempt 2 and later phases inherit this architecture.
+
+---
+
+## D-013 — Polymarket US gateway is the correct API target
+
+**Date of decision:** 2026-04-19
+**Session of decision:** H-007
+**Date of journaling:** 2026-04-19
+**Session of journaling:** H-009
+**Type:** Technical / Scope / Reconstructed
+
+**Source:** Reconstructed H-009 from Handoff_H-007.md §2.
+
+**Decision:** The discovery module polls `gateway.polymarket.us` (Polymarket US public API), not `gamma-api.polymarket.com` (offshore Polymarket). These are separate products with separate API structures.
+
+**Rationale:** Build plan Section 1.2 is explicit that the offshore Polymarket product is out of scope. The Polymarket US public gateway requires no authentication for read operations.
+
+**Endpoints confirmed:**
+- `GET /v2/sports` — enumerate sports, verify tennis slug
+- `GET /v2/sports/{slug}/events` — paginated event discovery
+
+**Commitment:** All Polymarket endpoints used by this project come from `gateway.polymarket.us` (read) and, when trading actions are eventually needed, from `api.polymarket.us`. Offshore URLs are out of scope permanently.
+
+---
+
+## D-012 — Decision numbering corrected
+
+**Date of decision:** 2026-04-18
+**Session of decision:** H-006
+**Date of journaling:** 2026-04-19
+**Session of journaling:** H-009
+**Type:** Governance / Bookkeeping / Reconstructed
+
+**Source:** Reconstructed H-009 from Handoff_H-006.md §2.
+
+**Decision:** The Injection Instruction's references to "D-002 pilot-then-freeze" and "D-003 Sports WS gate" were build-plan internal labels, not canonical RAID/STATE decision IDs. Canonical numbering (D-001 through D-007 per STATE.md) is authoritative. The v3→v4 revision and related decisions are assigned D-008 through D-011 in H-006 (with D-017 later retroactively journaling the plan-revision decision itself).
+
+**Reasoning:** Prevents ambiguity between in-document cross-references and canonical DecisionJournal IDs.
+
+**Commitment:** All future DecisionJournal IDs derive from this journal, not from plan-internal references.
+
+---
+
+## D-011 — Pilot-then-freeze protocol deferred to Phase 7
+
+**Date of decision:** 2026-04-18
+**Session of decision:** H-006
+**Date of journaling:** 2026-04-19
+**Session of journaling:** H-009
+**Type:** Pre-commitment / Scheduling / Reconstructed
+
+**Source:** Reconstructed H-009 from Handoff_H-006.md §2.
+
+**Decision:** The pilot-then-freeze protocol for `signal_thresholds.json` is a Phase 7 decision. v4 notes it as a placeholder. Full specification and formal ID assignment at Phase 7.
+
+**Reasoning:** Operator comfortable with deferral; no content yet to commit. The pilot protocol is itself a pre-commitment artifact and must be written before any pilot data is inspected.
+
+**Commitment:** Phase 7's exit gate adds a requirement for a pilot protocol document. This entry reserves the decision slot.
+
+---
+
+## D-010 — Conviction scoring and exit context ship together at Phase 5
+
+**Date of decision:** 2026-04-18
+**Session of decision:** H-006
+**Date of journaling:** 2026-04-19
+**Session of journaling:** H-009
+**Type:** Scope / Scheduling / Reconstructed
+
+**Source:** Reconstructed H-009 from Handoff_H-006.md §2.
+
+**Decision:** Build plan Sections 4.6 (Conviction Scoring) and 4.7 (Exit Context) are parallel instrument features, both shipping at Phase 5. No staged rollout.
+
+**Reasoning:** Both derived from the same fair-price computation; they serve the same operator-decision moment.
+
+**Commitment:** Phase 5 deliverables include both features simultaneously. Neither may ship without the other.
+
+---
+
+## D-009 — H3 hypothesis dropped
+
+**Date of decision:** 2026-04-18
+**Session of decision:** H-006
+**Date of journaling:** 2026-04-19
+**Session of journaling:** H-009
+**Type:** Scope / Research question / Reconstructed
+
+**Source:** Reconstructed H-009 from Handoff_H-006.md §2.
+
+**Decision:** The hold-strategy rehabilitation hypothesis (H3) is permanently dropped from v4 and all future plan documents.
+
+**Reasoning:** Operator direction. Not to be raised again.
+
+**Commitment:** v4 tests H1 and H2 only. H3 is not a candidate for reinstatement.
 
 ---
 
@@ -151,5 +397,5 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
-*End of DecisionJournal.md — formal rebuild, H-003.*
-*Next entry will be D-009 or a gate verdict, whichever comes first.*
+*End of DecisionJournal.md — updated at H-009 session close.*
+*Next entry will be D-018 or a gate verdict, whichever comes first.*

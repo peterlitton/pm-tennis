@@ -1,13 +1,14 @@
-# CLOB asset-cap stress test — research document (v3)
+# CLOB asset-cap stress test — research document (v4)
 
 **Deliverable:** Phase 3 attempt 2, first deliverable (Ruling 1(e), H-010).
-**Author:** Claude, session H-010.
+**Authors:** Claude, sessions H-010 (v1–v3) and H-012 (v4).
 **Version history:**
-- v1 (this session, earlier turn): initial document. Surfaced §2 ambiguity, §4 as set of unanswered questions, §7 as three operator decisions.
-- v2 (this session, earlier turn): §4 answered via operator-authorized web_fetch research. §2 ambiguity resolved. §3, §5, §7 updated against cited documentation. §11 added naming what research surfaced that changes v1's model.
-- v2.1 (this session, earlier turn): operator follow-up 1 on v2 review. §4.3 code block re-verified as verbatim from the Markets WebSocket page. §4.3.1 added surfacing a case-style inconsistency between the WebSocket Overview page and the Markets WebSocket page that v2 did not note.
-- **v3 (this session, current turn): operator ruling Q5=(a). Polymarket US Python SDK README fetched and read. §4.3.1 resolved in favor of Markets WebSocket page's camelCase wire shape. §4.7 resolved: SDK uses a single slug namespace across REST and WebSocket on `api.polymarket.us`; bridging gateway slugs remains unverified but a cleaner path is now visible (§4.7.1). §12 added summarizing SDK-vs-hand-rolled code decision now surfaced. Scope tightened: v3 does not re-open any section not directly affected by the SDK read.**
-**Status:** Draft for operator review. No code has been written. No endpoint, subscription format, module path, class name, or function signature has been committed to code based on this document. Every external fact in §4 is cited with URL and excerpt per Ruling 2(a) and Tripwire 1.
+- v1 (H-010, earlier turn): initial document. Surfaced §2 ambiguity, §4 as set of unanswered questions, §7 as three operator decisions.
+- v2 (H-010, earlier turn): §4 answered via operator-authorized web_fetch research. §2 ambiguity resolved. §3, §5, §7 updated against cited documentation. §11 added naming what research surfaced that changes v1's model.
+- v2.1 (H-010, earlier turn): operator follow-up 1 on v2 review. §4.3 code block re-verified as verbatim from the Markets WebSocket page. §4.3.1 added surfacing a case-style inconsistency between the WebSocket Overview page and the Markets WebSocket page that v2 did not note.
+- v3 (H-010, later turn): operator ruling Q5=(a). Polymarket US Python SDK README fetched and read. §4.3.1 resolved in favor of Markets WebSocket page's camelCase wire shape. §4.7 resolved: SDK uses a single slug namespace across REST and WebSocket on `api.polymarket.us`; bridging gateway slugs remains unverified but a cleaner path is now visible (§4.7.1). §12 added summarizing SDK-vs-hand-rolled code decision now surfaced. Scope tightened: v3 does not re-open any section not directly affected by the SDK read.
+- **v4 (H-012): three H-012 rulings resolved and the §6 meta.json survey executed. §13 added capturing (a) the ruling on POD-H010-§12 = SDK (D-024), (b) the ruling on POD-H010-Q5′ = hybrid probe-first (D-025), (c) the authorization and execution of POD-H010-§6-survey (D-026), (d) the survey findings, (e) the probe-slug default for the Q5′=(c′) probe. v4 is additive only: §§1–12 are unchanged from v3. §5's "actual asset count we expect" estimate (≈38 at H-009 close) and §7's placeholder-bracket discussion are explicitly not revised; §13 cross-references them and notes the updated N=74 baseline instead, preserving v3's operator-accepted text.**
+**Status:** Draft for operator review. No code has been written. No endpoint, subscription format, module path, class name, or function signature has been committed to code based on this document. Every external fact in §4 is cited with URL and excerpt per Ruling 2(a) and Tripwire 1. §13 findings are from a read-only in-session survey of the `pm-tennis-api` Render persistent disk; no writes, no mutation.
 
 ---
 
@@ -439,3 +440,84 @@ The SDK read in v3 surfaced an architectural decision that v1 and v2 did not vis
 ---
 
 *End of research document — v3, session H-010.*
+
+---
+
+## 13. H-012 rulings and §6 survey findings — new in v4
+
+This section closes out three of the four H-010 PODs in a single H-012 session and records the §6 meta.json survey results. §§1–12 are unchanged from v3.
+
+### 13.1 H-012 rulings summary
+
+Three operator rulings at H-012. Each is a full DecisionJournal entry; this section cross-references them and records their effect on this document.
+
+**POD-H010-§12 → D-024: SDK (option a).** The stress-test code is built on the official Polymarket US Python SDK (`polymarket-us`, `github.com/Polymarket/polymarket-us-python`). Ships fastest, minimal Tripwire 1 exposure, one new dependency. Does not commit the Phase 3 full deliverable (CLOB pool with 15-min recycle + 90-sec liveness) to SDK-based construction — that architectural choice is re-evaluated after stress-test results are in hand.
+
+**POD-H010-Q5′ → D-025: hybrid probe-first (option c′).** The stress test runs a one-slug probe as its first runtime action after authentication: one gateway-sourced slug from Phase 2's `meta.json` archive is subscribed via the SDK against `wss://api.polymarket.us/v1/ws/markets`; probe outcome determines slug source for the main sweeps. Probe-outcome-dependent branch for the main sweeps: api-sourced (`markets.list()`) by default, with gateway-sourced as an option if the bridge is confirmed working and the operator wants to continue exercising it. The probe is ~30 seconds of code; its outcome is itself data captured in a later addendum.
+
+**POD-H010-§6-survey → D-026: authorized and executed in-session.** Render-shell walkthrough completed at 2026-04-19T16:22:29Z. §13.2 below records findings.
+
+With D-024/D-025/D-026 logged, the three H-012 PODs that blocked the code turn are resolved. The code turn is no longer blocked on operator decisions — it is blocked only on the code-turn-research items flagged in D-023 (byte-level Ed25519 signing via SDK; timestamp-unit cross-check against `docs.polymarket.us/api-reference/authentication`).
+
+### 13.2 §6 meta.json survey findings
+
+Survey executed as a single consolidated bash script on the `pm-tennis-api` Render shell at 2026-04-19T16:22:29Z. Script content is reproduced in Handoff_H-012 §4; reproduced here only by its five-section outputs.
+
+**Section 1 — Inventory.**
+- `/data/matches/` exists as the per-match meta.json directory (correcting the research-doc v3 casual reference to "/data/events/"; `/data/events/` is the raw-poll-snapshot JSONL directory per `src/capture/discovery.py` `_events_snapshot_dir()`, not the per-match meta directory).
+- Total `meta.json` files on disk: **74**. STATE v9 `discovery.meta_json_files_written` records 38 as of H-009 close; the 74 figure reflects ~36 hours of continuous Phase 2 discovery adding new events to the immutable archive since H-009. The growth is expected behavior — `_write_meta` never overwrites (discovery.py line 371).
+
+**Section 2 — Schema verification.** Sample `meta.json` contents match the `TennisEventMeta` dataclass in `src/capture/discovery.py` lines 139–193 exactly. Top-level `moneyline_markets` is an array; each element has `market_id`, `market_slug`, `active`, `closed`. The sample slug is `"aec-atp-digsin-meralk-2026-04-21"` — lowercase, hyphen-separated, with an `aec-` prefix observed consistently across all 40 surveyed slugs in Section 5. The `aec-` prefix is a Polymarket US convention; v4 does not attempt to interpret it. Participant type observed is `PARTICIPANT_TYPE_TEAM`, consistent with STATE `discovery.participant_type_confirmed` and A-009.
+
+**Section 3 — N baseline.** **Total market slug count across all 74 events: 74.** One moneyline market per event.
+
+**Section 4 — Distribution.** Perfectly uniform: 74 events × 1 moneyline market each. No multi-moneyline events in the current population.
+
+**Section 5 — Status and probe candidates.** All 40 events shown (of 74 total; `head -40` applied) are `active=True ended=False live=False`. Discovery timestamps range from 2026-04-19T01:47:35Z (earliest surveyed) to 2026-04-19T14:04:52Z (most recent). All observed slugs are for match dates 2026-04-19 through 2026-04-21.
+
+### 13.3 How §13 relates to §5 and §7 in v3
+
+**§5 "actual asset count we expect" — still reads ≈38, not revised in v4.** That figure was explicitly as-of H-009 close. The current figure is 74, and the v3 §5 slam-week projection of 128 is still the applicable upper bound. Neither the sweep shapes in §7 Q3 nor the bracketing logic in §5 needs to be rewritten — they were designed to *exceed* real N with placeholder slugs, and 74 continues to fit under a single subscription (100-slug cap per §4.4).
+
+**§7 Q3 sweep bracketing — unchanged.** The sweep (1, 2, 5, 10 subscriptions per connection × 100 placeholder slugs each) is still the right shape. Real-slug-only sweeps would top out at 74 in one subscription, which does not exercise per-subscription limits. The placeholder strategy from §7 Q3 remains the mechanism for probing the multiplexing and concurrent-connection limits.
+
+### 13.4 Probe-slug default for Q5′=(c′)
+
+The Q5′=(c′) probe (D-025 commitment 1) requires one gateway-sourced slug as its input. Default selection, recorded here for traceability:
+
+- **Event ID:** `9392`
+- **Slug:** `aec-atp-digsin-meralk-2026-04-21`
+- **Match:** Digvijaypratap Singh vs Mert Alkaya, 2026-04-21 (ATP)
+- **Discovery timestamp:** 2026-04-19T14:04:52Z (most recent poll tick; among the freshest meta.json files on disk at survey time)
+- **Status at survey:** active=True, ended=False, live=False
+
+**Rationale:** picked from the most-recently-discovered batch (2026-04-19T14:04:52Z discovery timestamp, 4 candidates total in that batch). Most recent discovery is preferred because the event is least likely to have ended between survey time and probe execution. This specific slug was also the Section 2 sample, which means the survey has already verified its `meta.json` is well-formed — one less unknown when the probe code reads it.
+
+**Disclaimer — explicit:** This default is for the **addendum record only**. The actual probe slug at code-turn time must be re-selected by reading `/data/matches/*/meta.json` again at that moment — candidates may have ended, new ones will have been written, and the survey snapshot is ~hours to ~days old by then. The default is a pointer, not a commitment. The code turn selects fresh.
+
+### 13.5 What the code turn inherits from v4
+
+Consolidated for the code turn:
+
+1. **Dependency:** `polymarket-us` SDK (D-024 commitment 1). Added to a new, isolated Render service per D-020 / Q2=(b); not added to `pm-tennis-api`.
+2. **Credentials:** `POLYMARKET_US_API_KEY_ID` and `POLYMARKET_US_API_SECRET_KEY` via `os.environ` (D-023). SDK authentication flow consumes these.
+3. **First runtime action:** Q5′=(c′) probe (D-025 commitment 1). One gateway-sourced slug, SDK subscribe, ~10-second observation window, record outcome.
+4. **Main sweeps:** §7 Q3=(c) — both per-subscription count sweep and concurrent-connection count sweep. Shape: 1, 2, 5, 10 subscriptions per connection × 100 placeholder slugs; 1, 2, 4 concurrent connections. ~30 minutes total. Per §7 Q1=(a), pure connection-level test — no disk writes of received tick content.
+5. **Slug source for main sweeps:** probe-outcome-dependent (D-025). API-sourced (`markets.list()`) by default; gateway-sourced as an option if bridge is confirmed.
+6. **Code-turn research tasks** (from D-023, scoped through SDK per D-024 commitment 4):
+   - Byte-level Ed25519 signing: collapses to "SDK owns this" unless a signing surface is exposed to user code.
+   - Timestamp-unit cross-check against `docs.polymarket.us/api-reference/authentication` to verify the "30 seconds of server time" language aligns with the millisecond unit Polymarket's usage instructions specified (D-023 subsidiary finding 1). The SDK may or may not expose the timestamp it sends; cross-check is against documentation, not SDK behavior.
+7. **N baseline for stress-test sweep sanity checks:** 74 market slugs across 74 events at H-012 close (§13.2). Slam-week projection ≈128 from v3 §5.
+8. **Probe slug default:** event 9392, `aec-atp-digsin-meralk-2026-04-21` — for addendum traceability only; fresh selection at code-turn time required.
+
+### 13.6 What v4 does not change
+
+- No claim in §4 is revised. The external citations to `docs.polymarket.us` and the Polymarket US Python SDK README stand as v3 recorded them.
+- §12's tradeoff table and Claude's recommendation stand — operator ruled (a), so the SDK option is now commitment rather than recommendation, but the analysis v3 presented is unchanged.
+- §7 Q1, Q2, Q3, Q4, Q5 are unchanged. Q5′ is resolved in §13.1. §12 is resolved in §13.1.
+- §11 findings (1, 2, 3) stand.
+- No plan-text revisions are cut by this document; plan-text revisions v4.1-candidate, v4.1-candidate-2, and v4.1-candidate-3 remain queued in STATE `pending_revisions`.
+
+---
+
+*End of research document — v4, session H-012.*

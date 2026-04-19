@@ -44,15 +44,18 @@ project:
       - id: v4.1-candidate-3
         sections: ["discovery.py line 37 / line 120 code comments"]
         summary: "Line 37 and line 120 code comments in src/capture/discovery.py state that side.identifier is the 'asset/token ID for CLOB subscription.' Polymarket US Markets WebSocket's documented subscription unit is market_slug, not side.identifier. Comments are misleading against actual Polymarket US behavior. Cosmetic comment-level patch; no code-behavior change. Surfaced by H-010 research in docs/clob_asset_cap_stress_test_research.md v3 §11 point 3. Apply under Playbook §12 when next plan revision is cut, alongside I-014 and v4.1-candidate-2."
+      - id: v4.1-candidate-4
+        sections: ["Section 1.5.3", "Section 1.5.4"]
+        summary: "Plan §1.5.3 and §1.5.4 revision candidate to reflect D-029 — Claude pushes to `claude-staging` branch, operator merges to `main`. D-029 landed at H-016 as a DJ entry (operator ruled 'PAT, no expiration'). Revised text: §1.5.3 'The operator shall: [...] review and merge Claude's pushes to the claude-staging branch at the operator's cadence, per Playbook §13; [...]'; §1.5.4 addition 'Claude pushes code and documentation changes to the claude-staging branch using a non-expiring GitHub PAT stored as a Render env var. Claude does not merge to main, does not force-push, does not push to any branch other than claude-staging.' Apply under Playbook §12 at next plan-revision cadence alongside -1, -2, -3."
   state_document:
-    current_version: 13
+    current_version: 14
     last_updated: 2026-04-19
-    last_updated_by_session: H-015
+    last_updated_by_session: H-016
 
 # ---- Phase and work package ----
 phase:
-  current: phase-3-attempt-2-probe-blocked-on-calendar
-  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). H-015 attempted live-probe execution per RB-002 §5 two-shell workflow but probe was blocked: `slug_selector.list_candidates()` returned empty in the pm-tennis-api Shell. Diagnostic A confirmed Phase 2 discovery is healthy (116 event dirs on disk, up from 74 at H-012 — monotonic growth as expected). Diagnostic B revealed root cause: 10 most-recent meta.json files (event_ids 9440–9449) all have `event_date=\"\"` despite event titles encoding the date as text (e.g., 'Elmer Moeller vs. Hugo Gaston 2026-04-20'). Operator confirmed the surfaced events are future games and that no eligible matches exist in the next ~24h. Two findings: (a) calendar-empty for ~24h means probe genuinely had nothing to run against today; (b) `event_date` extraction in src/capture/discovery.py line 328 is reading a wrong-named gateway field — filed as RAID I-016 (severity 6). H-016 picks up: (1) investigate I-016 in src/capture/discovery.py and the gateway raw event payload to identify the correct date key (Phase-2-touching change requires explicit operator authorization separate from Phase 3 work package); (2) live probe execution per RB-002 §5 (either after I-016 is fixed, or via the title-date workaround documented in I-016 if the Phase-2 fix is not authorized in time, or by retry once calendar populates if neither blocks); (3) §14 addendum (probe outcome); (4) main sweeps deferred again to H-017."
+  current: phase-3-attempt-2-probe-executed
+  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). H-016 completed: (1) helper-snippet flip landed (`src/stress_test/list_candidates.py` + 20 tests; RB-002 §5.1 and README updated) in commit d7b2bd2; (2) RAID I-016 investigated against a live gateway payload (event 9471 meta.json read in pm-tennis-api Shell) and fixed per D-028 — discovery.py line 328 now sources event_date from startDate[:10], and slug_selector._passes_date_filter falls back to start_date_iso[:10] for ~116 historical meta.json files; committed in d7b2bd2 (code + RAID) and 83c0bf8 (D-028); (3) live probe executed in pm-tennis-stress-test Shell against gateway-sourced slug `aec-wta-paubad-julgra-2026-04-21` (event 9471) — classification accepted, first_message_latency_seconds=1.15, one market_data message received, D-025 hybrid-probe-first question resolved: gateway-to-api slug bridge is confirmed working; main sweeps may use either slug source with api-sourced as default; (4) §14 probe-outcome addendum written into docs/clob_asset_cap_stress_test_research.md in commit e28e390. H-017 picks up: (a) main sweeps per §7 Q3=(c) (1/2/5/10 subscriptions × 100 placeholder slugs × 1/2/4 concurrent connections); (b) placeholder-slug generation strategy decision informed by probe evidence; (c) §16 main-sweeps addendum; (d) RAID I-017 disposition (two pre-existing TestVerifySportSlug failures); (e) stale-file cleanup (3 artifacts inadvertently committed at H-016); (f) D-029 deployment-procedure revision (drafts produced this session; deferred pending operator ruling on auth mechanism)."
   work_package_started_session: null  # starts next session
   last_gate_passed:
     name: "Phase 2 exit gate"
@@ -73,9 +76,9 @@ phase:
 
 # ---- Session accounting ----
 sessions:
-  last_handoff_id: H-015
-  next_handoff_id: H-016
-  sessions_count: 15
+  last_handoff_id: H-016
+  next_handoff_id: H-017
+  sessions_count: 16
   most_recent_session_date: 2026-04-19
   out_of_protocol_events_cumulative: 0
   out_of_protocol_events_since_last_gate: 0
@@ -215,9 +218,9 @@ discovery:
   leagues_confirmed: ["wta", "atp"]
   first_poll_date: 2026-04-19
   first_poll_events_discovered: 38  # historical: first-poll count at H-007; preserved for provenance
-  meta_json_files_written: 74  # H-012 §6 survey at 2026-04-19T16:22:29Z; up from 38 at H-009 due to ~36h of continuous discovery; _write_meta never overwrites per discovery.py line 371
-  current_event_count: 74  # H-012 §6 survey snapshot; all 74 active_at_discovery=True ended_at_discovery=False at survey time
-  current_slug_count: 74  # N baseline for stress-test sweeps per research-doc v4 §13.2; one moneyline per event, distribution uniform
+  meta_json_files_written: 126  # H-016 post-redeploy observation at 2026-04-19T22:18:18Z; up from 116 at H-015. Events 9301-9471. Events 9301 through ~9466-9471 were discovered pre-H-016-fix (all have empty event_date — the I-016 symptom; slug_selector now handles via start_date_iso fallback per D-028). Events discovered after commit d7b2bd2 deploy will have correct event_date.
+  current_event_count: 126  # H-016 probe-time snapshot
+  current_slug_count: 126  # one moneyline per event, distribution uniform per H-012 D-026 survey
   delta_stream_path: "/data/events/discovery_delta.jsonl"
   daily_raw_archive_path: "/data/events/2026-04-19.jsonl"
   daily_raw_archive_size_mb: 33.7  # at H-009 close, growing ~12 MB/hour
@@ -236,37 +239,41 @@ open_items:
   raid_entries_by_severity:
     sev_8: 3   # R-008, R-009, I-012
     sev_7: 9   # R-010, I-003, I-004, I-005, I-006, I-007, I-008 (and 2 others)
-    sev_6: 4   # I-009, I-010, I-011, I-016 (new H-015)
+    sev_6: 3   # I-009, I-010, I-011 (I-016 resolved H-016 per D-028)
     sev_5: 0
-    sev_4_and_below: 3  # I-002 (severity 2), I-014 (severity 3), I-015 (severity 3)
-    issues_open: 14   # 16 total issues; I-001 resolved H-005 and I-013 resolved H-009; I-016 added H-015
+    sev_4_and_below: 4  # I-002 (severity 2), I-014 (severity 3), I-015 (severity 3), I-017 (severity 4, added H-016)
+    issues_open: 14   # 17 total issues; I-001 resolved H-005, I-013 resolved H-009, I-016 resolved H-016; I-017 added H-016
     assumptions_unvalidated: 6  # A-001, A-002, A-003, A-004, A-006, A-008
-  pending_operator_decisions: []  # H-015 had no PODs reach DJ-entry threshold; all rulings were on method/convention. No operator decisions blocking H-016.
+  pending_operator_decisions: []  # POD-H016-deployment-flow resolved at session close via D-029 — operator ruled 'PAT, no expiration.' D-029 landed as a DJ entry; Playbook §13 added.
   resolved_operator_decisions_current_session:
-    # Pruned to current-session (H-015) entries only per the H-014-settled
-    # stricter-reading convention. H-014 entries are preserved in
-    # Handoff_H-014 §2/§3 and STATE v12's prose; this field reflects only
+    # Pruned to current-session (H-016) entries only per the H-014-settled
+    # stricter-reading convention. H-015 entries are preserved in
+    # Handoff_H-015 §2/§3 and STATE v13's prose; this field reflects only
     # the current session's in-session rulings.
-    - id: H-015-cut-point
-      resolved_session: H-015
+    - id: H-016-helper-snippet-flip
+      resolved_session: H-016
       resolved_by_decision: in-session ruling (not a DJ entry)
-      resolution_summary: "Probe + §14 addendum this session; main-sweeps deferred to H-016. Consistent with H-014-Claude's default offer in the addendum notes; consistent with H-010/H-011/H-012/H-013/H-014 pacing discipline. Cut held even after probe blocked — session did not extend silently into investigation work; surfaced finding as RAID I-016 and closed cleanly."
-    - id: H-015-section-14-stays-reserved
-      resolved_session: H-015
-      resolved_by_decision: in-session ruling (not a DJ entry)
-      resolution_summary: "§14 of research doc remains reserved (option a) rather than receiving a placeholder for the H-015 attempt (option b). Rationale: §14 should mean 'probe outcome from a probe that ran.' H-015 attempt + calendar block + I-016 finding documented in Handoff_H-015 §3 and STATE v13 (correct location for session-specific events per the prose-vs-YAML discipline). H-016 writes §14 when an actual probe runs."
-    - id: H-015-diagnostic-execution
-      resolved_session: H-015
-      resolved_by_decision: operator ruling mid-session (not a DJ entry)
-      resolution_summary: "Operator authorized Diagnostic A (count + list event dirs) and Diagnostic B (sample meta.json metadata) in pm-tennis-api Shell to confirm the system-vs-calendar attribution for the empty list_candidates() result. Diagnostic A: 116 dirs, healthy growth from H-012's 74. Diagnostic B (after heredoc workaround for bracketed-paste): 10 events, all active=True ended=False live=False, all event_date='', titles include 2026-04-20 dates. Surfaced I-016 finding."
-    - id: H-015-RAID-vs-DJ-classification-of-I-016
-      resolved_session: H-015
-      resolved_by_decision: operator ruling at session close (not a DJ entry)
-      resolution_summary: "I-016 (empty event_date in meta.json) goes to RAID; not a DJ entry. Operator ruling: the finding cannot be validated for some time (depends on Phase-2 raw payload inspection), so RAID is the right home; DJ stays at 27 entries with no H-015 additions. Consistent with the pruning convention's spirit — DJ for project-shape commitments, RAID for risks/issues, STATE for session-method rulings."
-    - id: H-015-helper-snippet-friction-surface
-      resolved_session: H-015
-      resolved_by_decision: in-session note (not a DJ entry; not requiring operator ruling)
-      resolution_summary: "First operator use of the H-014 sub-ruling pasted-snippet helper convention (RB-002 §5.1) produced two failed pastes due to bracketed-paste markers in the Render Shell environment. Diagnostic B also failed for same reason; heredoc workaround succeeded. Stronger evidence than H-014 had for converting to a committed src/stress_test/list_candidates.py helper file. Surfaced for H-016 explicit consideration; not flipped in H-015 to honor the cut."
+      resolution_summary: "Operator ruled 'resolve shell errors' at session open — affirmative on the helper-snippet flip. New committed module `src/stress_test/list_candidates.py` replaces the pasted snippet in RB-002 §5.1 that failed twice at H-015. 20 new tests. No Phase-2 touch."
+    - id: H-016-I-016-fix-authorization
+      resolved_session: H-016
+      resolved_by_decision: operator ruling mid-session (culminated in DJ entry D-028)
+      resolution_summary: "Operator authorized Fix C — both discovery.py event_date extraction AND slug_selector fallback — with 'thorough documentation.' Fix applied via D-028 (full DJ entry). Phase-2 code touched per D-016 commitment 2 with explicit authorization. Commits: d7b2bd2 (code), 83c0bf8 (D-028)."
+    - id: H-016-commit-as-one-bundle
+      resolved_session: H-016
+      resolved_by_decision: operator ruling (not a DJ entry)
+      resolution_summary: "Operator ruled 'one commit' for the H-016 bundle (helper-snippet flip + I-016 fix). Landed as commit d7b2bd2. In practice, the DJ (D-028) was omitted from that first commit and added in follow-up commit 83c0bf8; the stale artifacts `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, and `D-028-entry-to-insert.md` were inadvertently committed and remain in the repo until an H-017 cleanup commit."
+    - id: H-016-commit-first-then-probe
+      resolved_session: H-016
+      resolved_by_decision: operator ruling (not a DJ entry)
+      resolution_summary: "Operator ruled 'Commit the bundle and then run the probe in this session' — expanding H-016 scope beyond the H-015 handoff's conservative suggestion. Execution: commit bundle → wait for Render redeploy → slug selection → probe → §14 addendum."
+    - id: H-016-publish-convention-flip
+      resolved_session: H-016
+      resolved_by_decision: in-session note (Claude-authored commitment; not a DJ entry)
+      resolution_summary: "Mid-session, Claude produced `D-028-entry-to-insert.md` as a splice-into-existing-file artifact rather than a full replacement of DecisionJournal.md. Operator surfaced this as a process deviation: 'for every deploy in other sessions I've ALWAYS been instructed to replace.' Claude acknowledged the error and committed going forward to the 'always replace, never patch' convention. Logged as commitment for future sessions; baked into D-029 as commitment 3."
+    - id: H-016-deployment-flow-PAT-no-expiration
+      resolved_session: H-016
+      resolved_by_decision: operator ruling at session close (formalized as DJ entry D-029)
+      resolution_summary: "Operator ruled 'PAT, no expiration' at session close. D-029 landed as a DJ entry naming a non-expiring fine-grained GitHub PAT scoped to peterlitton/pm-tennis repository, stored as a Render env var. Playbook §13 (staging-push-and-merge ritual) added. Plan §1.5.3/§1.5.4 revision queued as v4.1-candidate-4 in pending_revisions. Implementation sequencing: operator generates PAT → stores in Render env var → creates claude-staging branch → reports back at H-017 open. Claude does a test push to staging at H-017 before first real use."
   phase_3_attempt_2_notes:
     - "Research-first discipline in force per D-016 commitment 2 and R-010 — no fabrication of URLs or module symbols. H-013 exercised it three times in preventive mode without firing a tripwire."
     - "H-010: research document produced at docs/clob_asset_cap_stress_test_research.md, three versions this session (v1, v2, v2.1, v3). v3 accepted."
@@ -297,6 +304,16 @@ open_items:
     - "H-015 finding: empty event_date is a real Phase-2 data-extraction issue, separate from the calendar block. Root cause likely at src/capture/discovery.py line 328: `event_date=str(event.get('eventDate') or '').strip()` — Polymarket gateway responses likely don't have a top-level `eventDate` key. slug_selector._passes_date_filter (lines 142-156) correctly rejects empty event_date as defensive behavior. Filed as RAID I-016 (severity 6). Per operator ruling at H-015 close: RAID, not DJ — finding cannot be validated for some time."
     - "H-015: Helper-snippet bracketed-paste friction — second observed instance this session (helper snippet + Diagnostic B both failed; heredoc workaround succeeded for Diagnostic B). Stronger evidence than H-014 for converting the H-014 sub-ruling pasted-snippet helper to a committed src/stress_test/list_candidates.py file. Surfaced for H-016 explicit consideration; not flipped in H-015 to honor the cut."
     - "H-015 close: zero PODs. Probe blocked on calendar + I-016. RAID I-016 filed (sev 6). DJ unchanged (27 entries). H-016 opens with: (1) investigate I-016 in src/capture/discovery.py and gateway raw event payload — Phase-2-touching change requires explicit operator authorization; (2) probe retry (after I-016 fix, or via title-date workaround per I-016, or once calendar populates); (3) §14 addendum (probe outcome); (4) main sweeps deferred to H-017."
+    - "H-016 open: full reading completed per handoff + operator direction (Handoff_H-015 + addendum, STATE v13, Orientation, Playbook §§1-5 + §§9-12, RAID including I-016, DJ D-016 through D-027, discovery.py extraction + TennisEventMeta + _check_duplicate_players, slug_selector._passes_date_filter, probe.py header/citations, RB-002 in full). Retrospective fabrication check: git log confirmed H-015 commit bundle integrity (402c05e + 274cd09); I-016 claims against discovery.py line 328 and slug_selector lines 142-156 verified against on-disk code; 38/38 baseline stress-test tests pass against pinned deps in clean venv."
+    - "H-016 helper-snippet flip: per operator ruling 'resolve shell errors' at session open, flipped RB-002 §5.1 pasted snippet to committed module src/stress_test/list_candidates.py. 20 new unit tests added. RB-002 §5.1 and src/stress_test/README.md updated to reference the new invocation. No Phase-2 touch. Landed in commit d7b2bd2."
+    - "H-016 I-016 investigation: operator-executed in pm-tennis-api Render Shell. Read /data/matches/9471/meta.json (event 9471 = WTA Paula Badosa vs Julia Grabher 2026-04-21). Confirmed: gateway response has NO eventDate key; canonical date source is startDate as full ISO timestamp (2026-04-21T08:00:00Z); start_date_iso is populated correctly; event_date is empty. H-015-Claude's inferential hypothesis confirmed. ~116 historical meta.json files all have same shape (empty event_date + populated start_date_iso)."
+    - "H-016 I-016 fix per D-028 (Fix C, operator-authorized 'c with thorough documentation'): (a) discovery.py line 328 changed from event.get('eventDate') to event.get('startDate')[:10] with comprehensive comment citing D-028 + I-016; (b) slug_selector._passes_date_filter modified to fall back to start_date_iso[:10] when event_date empty/malformed (handles the ~116 historical meta.json files); (c) test fixture in tests/test_discovery.py corrected to remove false eventDate key (was silently masking the bug); (d) 9 new tests added (3 regression in TestParseEvent + 6 fallback in test_stress_test_slug_selector); (e) subsidiary finding: _check_duplicate_players silently broken in production since H-007 due to empty event_date short-circuit on line 424 — restored automatically by the fix going forward, historical files not backfilled. Landed in commits d7b2bd2 (code + RAID + manifest artifacts) and 83c0bf8 (DecisionJournal with D-028)."
+    - "H-016 subsidiary RAID find: I-017 added (sev 4) for two pre-existing TestVerifySportSlug test failures — baseline tests expected SystemExit but production code raises RuntimeError. Existed on main at H-016 open; not introduced by H-016 work. Out of scope for D-028; H-017 disposition."
+    - "H-016 live probe execution per D-025 + D-027: pm-tennis-api auto-deployed after commit; 126 active tennis events at probe time (up from 116 at H-015). Slug selected via python -m src.stress_test.list_candidates: event_id 9471, slug aec-wta-paubad-julgra-2026-04-21. Probe invoked in pm-tennis-stress-test Shell: python -m src.stress_test.probe --probe --slug=aec-wta-paubad-julgra-2026-04-21 --event-id=9471. Outcome: classification=accepted, connected=true, subscribe_sent=true, first_message_latency_seconds=1.15, message_count_by_event={market_data:1}, error_events=[], close_events=[], exception_type=''. D-025 hybrid-probe-first branch: main sweeps may use either gateway-sourced or api-sourced slugs with api-sourced as default."
+    - "H-016 §14 addendum: full probe-outcome writeup added to docs/clob_asset_cap_stress_test_research.md as §14 (reserved slot populated). 7 subsections: H-015 deferral rationale, probe input, probe outcome JSON verbatim, classification + D-025 branch selected, H-016 work summary, H-017 pickup, what §14 does not change. Landed in commit e28e390."
+    - "H-016 commit-flow deviations: (a) first H-016 commit d7b2bd2 omitted DecisionJournal.md (operator error) and included 3 stale artifacts (COMMIT_MANIFEST.md, CHECKSUMS.txt, D-028-entry-to-insert.md); (b) follow-up commit 83c0bf8 added the DJ; (c) stale artifacts remain in repo pending H-017 cleanup. Claude's Process error: produced D-028-entry-to-insert.md as splice-into-existing-file instead of complete DJ replacement — deviation from established 'always replace' convention. Operator surfaced this explicitly; Claude committed to 'always replace, never patch' convention going forward; baked into D-029 draft as commitment 3."
+    - "H-016 D-029 deployment-procedure revision landed. Operator ruled 'PAT, no expiration' at session close. Commitment: Claude pushes code/docs to `claude-staging` branch using a non-expiring fine-grained GitHub PAT scoped to peterlitton/pm-tennis, stored as a Render env var; operator merges staging to main as the single human-in-the-loop gate. Playbook §13 (staging-push-and-merge ritual) added with 8 failure modes. Plan §1.5.3/§1.5.4 revision queued as v4.1-candidate-4. Implementation sequencing: operator generates PAT with no expiration → stores in Render env var → creates claude-staging branch → reports back at H-017 open → Claude test-pushes before first real use. First real use: H-017 non-trivial commit."
+    - "H-016 close: DJ at 29 entries (D-028 and D-029 added). RAID: 14 open issues (I-016 closed, I-017 opened). Phase 3 attempt 2 stress-test probe COMPLETE per D-025 commitments 1-4. Main sweeps remain for H-017. Governance: D-029 landed (staging-push-and-merge workflow). Three stale files need cleanup at H-017 (separate from D-029)."
 
 # ---- Runbooks inventory ----
 runbooks:
@@ -382,29 +399,31 @@ costs:
 scaffolding_files:
   STATE_md:
     status: accepted
-    current_version: 13
-    committed_to_repo: pending  # v13 produced this session
-    committed_session: H-015
-    note: "v13 reflects H-015 probe attempt + block, RAID I-016 finding filing, and pruning of resolved_operator_decisions to H-015 entries only per the H-014-settled convention."
+    current_version: 14
+    committed_to_repo: pending  # v14 produced this session
+    committed_session: H-016
+    note: "v14 reflects H-016 work: helper-snippet flip (d7b2bd2), RAID I-016 investigated and fixed per D-028 (d7b2bd2 + 83c0bf8), live probe executed with classification=accepted, §14 probe-outcome addendum written (e28e390), I-017 added (sev 4, TestVerifySportSlug drift), D-029 deployment-flow revision landed at session close (operator ruled 'PAT, no expiration'; Playbook §13 added; v4.1-candidate-4 queued). 29 DJ entries at close."
   Orientation_md:
     status: accepted
     committed_to_repo: true
   Playbook_md:
     status: accepted
-    committed_to_repo: true
+    committed_to_repo: pending  # §13 staging-push-and-merge ritual added this session per D-029
+    committed_session: H-016
+    note: "§13 (staging-push-and-merge ritual) added at H-016 per D-029. §§1-12 unchanged. Table of rituals updated. Footer updated. Preserves all §§1-12 original content verbatim."
   SECRETS_POLICY_md:
     status: accepted
     committed_to_repo: true
   DecisionJournal_md:
     status: accepted
-    committed_to_repo: true  # D-027 + D-025 footer landed in H-013 commit b208144; no changes this session
-    committed_session: H-013
+    committed_to_repo: pending  # D-029 added this session; D-028 landed earlier this session in commit 83c0bf8
+    committed_session: H-016
     pending_entries: []
   RAID_md:
     status: accepted
-    committed_to_repo: pending  # I-016 added this session; sev_6 count and issues_open count both bumped
-    committed_session: H-015
-    note: "H-015 added I-016 (empty event_date in meta.json — sev 6) per operator ruling. Header 'Last updated' line bumped to H-015 close 2026-04-19."
+    committed_to_repo: true  # updated at H-016: I-016 resolved per D-028, I-017 added
+    committed_session: H-016
+    note: "H-016: I-016 marked Resolved with reference to D-028; I-017 added (sev 4, two pre-existing TestVerifySportSlug failures surfaced during H-016 testing); header 'Last updated' bumped to H-016 close; footer changelog updated. Landed in commit d7b2bd2."
   PreCommitmentRegister_md:
     status: accepted
     committed_to_repo: true
@@ -412,10 +431,10 @@ scaffolding_files:
     status: accepted
     path: "docs/clob_asset_cap_stress_test_research.md"
     current_version: 4
-    committed_to_repo: true  # §15 additive committed in H-014 commit af5885e
-    committed_session: H-014
+    committed_to_repo: true  # §14 H-016 addendum landed in e28e390
+    committed_session: H-016
     renamed_session: H-011
-    note: "v4 remains the current version. §13 added at H-012 (H-012 rulings + survey); §15 additive added at H-014 (H-013 code-turn-research resolutions + D-027 supersession + scaffolding note + stale-artifact-corrected note + H-015 forward look). §14 is reserved for the H-016 probe-outcome addendum (originally reserved for H-015 but probe blocked on calendar + I-016). v5 bump was considered at H-014 and rejected in favor of §15 additive, following H-012 precedent. No changes at H-015."
+    note: "v4 remains the current version. §13 added at H-012 (H-012 rulings + survey); §15 additive added at H-014 (H-013 code-turn-research resolutions + D-027 supersession + scaffolding note + stale-artifact-corrected note + H-015 forward look); §14 added at H-016 as the probe-outcome addendum (reserved slot populated). §14 content: the D-025 hybrid-probe-first probe ran and was classified accepted; gateway-to-api slug bridge confirmed working. Document now complete through §15; no sections reserved. v5 bump was not needed — additive-to-v4 convention preserved."
   Handoff_H010_md:
     status: accepted
     path: "Handoff_H-010.md"
@@ -445,8 +464,13 @@ scaffolding_files:
   Handoff_H015_md:
     status: accepted
     path: "Handoff_H-015.md"
-    committed_to_repo: pending  # produced this session
+    committed_to_repo: true  # landed in H-015 commit 274cd09
     committed_session: H-015
+  Handoff_H016_md:
+    status: accepted
+    path: "Handoff_H-016.md"
+    committed_to_repo: pending  # produced this session
+    committed_session: H-016
   data_dictionary_md:
     status: not-started
     note: "Phase 3 deliverable"
@@ -528,72 +552,79 @@ phase_2_files:
 
 ### Where the project is right now
 
-Phase 2 remains complete and operational. The service at `pm-tennis-api.onrender.com` continues to run the reverted Phase 2 `main.py` (SHA `ceeb5f29…`, 2,989 bytes, 87 lines). Discovery loop polls `gateway.polymarket.us/v2/sports/tennis/events` every 60 seconds. No Phase 2 code was modified this session. Discovery archive continues to grow monotonically — H-015 Diagnostic A confirmed 116 event directories on disk, up from 74 at H-012 (~24h growth). `_write_meta` immutability holds.
+Phase 2 remains complete and operational — with a material fix landed this session. The service at `pm-tennis-api.onrender.com` continues to run the Phase 2 `main.py` unchanged (SHA `ceeb5f29…`, 2,989 bytes, 87 lines), but `src/capture/discovery.py` line 328 was modified at H-016 per D-028 to fix RAID I-016 (empty `event_date` extraction). Discovery loop continues polling `gateway.polymarket.us/v2/sports/tennis/events` every 60 seconds. At the post-H-016-deploy observation (2026-04-19T22:18Z), 126 active events were in discovery (up from 116 at H-015 and 74 at H-012). `_write_meta` immutability holds — historical meta.json files written with empty `event_date` remain on disk; slug_selector's fallback (also landed at H-016) handles them transparently via the populated `start_date_iso` field.
 
-**Phase 3 attempt 2 stress-test service remains live as of H-014.** `pm-tennis-stress-test` at `https://pm-tennis-stress-test.onrender.com` continues to self-check green per H-014's verified provisioning. No code changes this session; no SDK calls made; no live probe executed.
+**Phase 3 attempt 2 stress-test service remains live.** `pm-tennis-stress-test` at `https://pm-tennis-stress-test.onrender.com` verified at H-014, self-check green, H-016 executed the first live probe against it successfully.
 
-**H-015 attempted live probe execution per RB-002 §5 two-shell workflow but probe was blocked.** Step 1 (slug selection in pm-tennis-api Shell) returned an empty `list_candidates()` result. Two diagnostics were operator-authorized: Diagnostic A (`ls /data/matches/`) confirmed the system is healthy with 116 event directories, monotonic growth from H-012's 74. Diagnostic B (sample of 10 most-recent meta.json files, after a heredoc workaround for bracketed-paste markers) revealed two co-occurring conditions: (a) operator-confirmed: no eligible matches in the next ~24h regardless (the surfaced events are future games dated 2026-04-20+); and (b) all 10 meta.json files have empty `event_date` fields despite the date being encoded in the title text. The probe was blocked today by (a); but (b) is a separate Phase-2 data-extraction issue that would block a probe retry tomorrow if not investigated, and is filed as RAID I-016.
+**The D-025 hybrid-probe-first research question is answered: gateway-to-api slug bridge confirmed working.** H-016 ran the probe end-to-end with gateway-sourced slug `aec-wta-paubad-julgra-2026-04-21` (event 9471, WTA). Classification: `accepted`. First message latency 1.15 seconds. One `market_data` message received in the 10-second window. Zero errors, zero close events, no exceptions. Per D-025 commitment language, main sweeps (H-017 scope) may use either gateway-sourced or api-sourced slugs with api-sourced as the default (cleanest; via SDK's `client.markets.list()`).
 
-**RAID I-016 (sev 6) filed at H-015 close.** Likely root cause: `src/capture/discovery.py` line 328 uses `event.get("eventDate")` to extract the date, but Polymarket gateway responses appear to use a different key name. `slug_selector._passes_date_filter` correctly rejects empty `event_date` as defensive behavior — the issue is upstream extraction, not selector logic. H-016's first action is to investigate the gateway raw event payload (a one-time read from `/data/events/2026-04-19.jsonl` or equivalent) and identify the correct key. **Phase 2 code is preserved per D-016**; any actual fix to `discovery.py` is a Phase-2-touching change requiring explicit operator authorization separate from the Phase 3 work package. A workaround for the probe-retry path that bypasses `discovery.py` (parsing the date from event titles in `slug_selector` only) is documented in I-016.
+**RAID I-016 resolved via D-028.** The investigation read a live gateway payload from `/data/matches/9471/meta.json` in the pm-tennis-api Shell, confirming that the gateway response has NO `eventDate` key — the canonical date source is `startDate` (full ISO timestamp). Fix C applied (both `discovery.py` forward-going fix AND `slug_selector.py` backward-compatible fallback). 9 new tests added. Subsidiary finding: `_check_duplicate_players` has been silently broken in production since H-007 (always returned `False` due to the empty-event_date short-circuit); restored automatically going forward by the fix, historical 116+ files retain stale `duplicate_player_flag=False`.
 
-**The H-014 sub-ruling pasted-snippet helper convention surfaced friction in production use.** Two of the three multi-line snippet pastes operator attempted in the pm-tennis-api Render Shell this session were corrupted by bracketed-paste escape markers (`^[[200~ ... ~`), making bash interpret the whole expression as a non-existent filename. The simpler single-line invocation (without `PYTHONPATH=` prefix, since operator was already at the right cwd) and the heredoc-wrapped Diagnostic B both worked. This is meaningful empirical data that the H-014 sub-ruling — chosen at H-014 under delegated authority on the basis that "Shell-pasted form is transparent and self-documenting" — has a real cost in this Shell environment. H-015 did not flip the convention to honor the cut-point ruling. **Strong recommendation surfaced for H-016 explicit consideration:** convert to a committed `src/stress_test/list_candidates.py` helper file invokable as `python -m src.stress_test.list_candidates`, removing the multi-line-paste failure mode entirely.
+**RAID I-017 added (sev 4).** Two pre-existing test failures in `TestVerifySportSlug` surfaced during H-016 testing: both expect `SystemExit` but production code raises `RuntimeError`. Not introduced by H-016 work; existed on main at session open. Out of scope for D-028; H-017 disposition.
 
-**D-027 remains active.** D-025 commitment 1 is superseded; commitments 2/3/4 stand. D-024 commitment 1 (pm-tennis-api/requirements.txt untouched) is actively reinforced. D-020/Q2=(b) isolation is preserved.
+**D-029 deployment-procedure revision landed at H-016 close.** Multiple recurring failure modes in the current drag-and-drop commit workflow motivated the design (H-014 missed STATE v11, H-015 bracketed-paste failures, H-016 missing DJ + stale artifacts + Claude's splice-file process deviation). Operator ruled "PAT, no expiration" at session close. Commitment: Claude pushes code and documentation to the `claude-staging` branch using a non-expiring fine-grained GitHub PAT scoped to the repository, stored as a Render environment variable; operator merges staging → main as the single human-in-the-loop gate. Playbook §13 (the staging-push-and-merge ritual, 8 failure modes enumerated) was added. Plan §1.5.3/§1.5.4 revision queued as v4.1-candidate-4 for next plan-revision cadence per Playbook §12. **Implementation:** operator generates PAT → stores in Render env var → creates claude-staging branch → reports back at H-017 open → Claude test-pushes before first real use.
 
-**What the H-016 session inherits:**
+**D-027 remains active.** D-025 commitment 1 is superseded; commitments 2/3/4 stand. D-024 commitment 1 (pm-tennis-api/requirements.txt untouched) is actively reinforced. D-020/Q2=(b) isolation is preserved. D-028 is new at H-016 (Phase-2 fix + slug_selector fallback). D-029 is new at H-016 (deployment-procedure revision; staging-push-and-merge workflow).
 
-- Repo with the full H-013 + H-014 + H-015 bundle: STATE v13, DJ unchanged at 27 entries (no H-015 additions per operator ruling), Handoff_H-015, RAID with new I-016 entry (sev 6, total open issues 14).
-- Live `pm-tennis-stress-test` service with credentials + no disk; self-check verified at H-014 and not regressed at H-015 (no code changes touching the service this session).
-- Live `pm-tennis-api` service with 116 event dirs on disk and growing.
-- Empty `event_date` finding (I-016) waiting for investigation as H-016 first action.
-- Helper-snippet convention flip waiting for H-016 explicit consideration.
-- §14 of research doc still reserved for the probe-outcome addendum (now an H-016 deliverable).
-- Three plan-text revisions queued in STATE `pending_revisions` (unchanged).
+**What the H-017 session inherits:**
+
+- Repo with the full H-013 + H-014 + H-015 + H-016 bundle: STATE v14 (this doc), DJ at 29 entries (D-028 + D-029 added), Handoff_H-016, RAID with I-016 resolved + I-017 new (14 open issues, 17 total), Playbook with §13 added.
+- Three stale artifacts in repo root from the H-016 commit that need cleanup: `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, `D-028-entry-to-insert.md`.
+- Live `pm-tennis-api` service with I-016 fix deployed; 126+ events at H-016 close; event_date now correctly populated for newly-discovered events.
+- Live `pm-tennis-stress-test` service; self-check green; one live probe successfully executed and classified accepted.
+- D-029 deployment-procedure revision LANDED: operator-ruled 'PAT, no expiration'. Awaiting operator-side setup (generate PAT → store in Render env var → create claude-staging branch → report at H-017 open). First real staging-push use at H-017 non-trivial commit.
+- §14 of research-doc populated; §16 is the next natural slot for main-sweeps addendum.
+- Four plan-text revisions queued in STATE `pending_revisions`: v4.1-candidate (Section 5.6 baseline path), -2 (Section 5.4 and §11.3 asset-cap language), -3 (discovery.py comments), -4 (§1.5.3/§1.5.4 for D-029).
 - Zero pending operator decisions.
-- Six consecutive sessions (H-010 through H-015) closed without firing a tripwire or invoking OOP.
+- Seven consecutive sessions (H-010 through H-016) closed without firing a tripwire or invoking OOP.
 
-### What changed in H-015
+### What changed in H-016
 
-**Probe attempt blocked, surfaced cleanly.** Two-shell workflow attempted per RB-002 §5; Step 1 (slug selection) returned empty. Operator-confirmed calendar block + I-016 finding. No probe ever executed. No SDK calls made. No `pm-tennis-stress-test` Shell invoked. The H-014-Claude addendum-flagged "highest fabrication-risk surface since H-008" was not exercised this session — saved for H-016.
+**Phase 3 attempt 2 stress-test probe COMPLETE.** The first Polymarket US API Markets WebSocket live-network call in the project's history executed cleanly. D-025 hybrid-probe-first question answered. Main sweeps remain for H-017; the probe itself is done.
 
-**RAID I-016 filed.** Empty `event_date` field in meta.json. Sev 6 (material; not critical because the discovery service itself is operational and the bug is in a derived field). Per operator ruling at session close: RAID, not DJ — finding cannot be validated for some time and the right home is the issue log.
+**RAID I-016 resolved.** D-028 landed with Fix C — forward-going fix to discovery.py AND backward-compatible fallback in slug_selector. 9 new tests. Phase-2 code modified with explicit operator authorization per D-016 commitment 2. Subsidiary finding: `_check_duplicate_players` was silently broken in production since H-007; automatic restoration for new events going forward.
 
-**STATE bumped v12 → v13.** Material changes: session counters advanced (sessions_count 14→15, last_handoff_id H-014→H-015, next_handoff_id H-015→H-016); `phase.current` bumped from `phase-3-attempt-2-service-provisioned` to `phase-3-attempt-2-probe-blocked-on-calendar`; `phase.current_work_package` rewritten to reflect H-015 attempt and outcome; `raid_entries_by_severity.sev_6` 3→4 and `issues_open` 13→14; `resolved_operator_decisions_current_session` pruned per H-014 settled convention and replaced with H-015's 5 in-session rulings; `phase_3_attempt_2_notes` +9 entries for H-015; `scaffolding_files`: H-014 entries (Handoff_H-014, README, RB-002, research-doc) flipped pending→true with commit SHAs; STATE v13 + Handoff_H-015 + RAID v15 added as pending. Prose sections refreshed.
+**Helper-snippet flip landed.** `src/stress_test/list_candidates.py` as a committed module replaces the multi-line pasted snippet from RB-002 §5.1 that failed twice at H-015. 20 new unit tests. Includes `--show-rejected` diagnostic mode that would have surfaced I-016 more directly had it existed at H-015.
 
-**DecisionJournal: no changes this session.** H-015 had no PODs open and none of its in-session rulings reached DJ-entry threshold (all were on method/convention, not project-shape commitments). Counter stays at 27. RAID I-016 went to RAID per operator ruling, not DJ.
+**§14 probe-outcome addendum written to research-doc.** The reserved slot is populated; research-doc is now complete through §15 with no reserved sections.
 
-**Tripwires: none fired.** Three preventive-mode disciplines exercised without firing: (1) the H-008 fabrication-class danger zone was kept saved for H-016 by honoring the cut-point even after the probe was blocked (no extension into "let me just investigate I-016 a little while we're here"); (2) Diagnostic B was not silently re-attempted after bracketed-paste failure — surfaced the friction and offered the operator a heredoc workaround with explicit reasoning; (3) the I-016 finding was surfaced sharply rather than silently rationalizing the empty-list as "calendar empty, fine, move on" — diagnostic B revealed something the operator could not have known from calendar knowledge alone.
+**DJ +2: D-028 and D-029 added.** Counter now 29. D-028 is the RAID I-016 fix with thorough documentation per operator direction. D-029 is the deployment-procedure revision with operator ruling 'PAT, no expiration' — Playbook §13 added, plan §1.5.3/§1.5.4 revision queued as v4.1-candidate-4. RAID I-017 added (sev 4, pre-existing TestVerifySportSlug failures out of D-028 scope).
 
-**OOP events: 0 this session.** Counters remain at 0 cumulative, 0 since last gate.
+**STATE bumped v13 → v14.** Material changes: `phase.current` bumped from `phase-3-attempt-2-probe-blocked-on-calendar` to `phase-3-attempt-2-probe-executed`; `phase.current_work_package` rewritten to reflect H-016 completions and H-017 pickups; sessions_count 15→16; raid_entries_by_severity reshuffled (sev_6 4→3, sev_4_and_below 3→4, issues_open 14→14 with one close + one open); pending_operator_decisions empty (POD-H016-deployment-flow resolved via D-029 landing); resolved_operator_decisions_current_session pruned per settled convention and replaced with H-016's 6 in-session rulings; phase_3_attempt_2_notes +10 entries; pending_revisions +1 (v4.1-candidate-4 for D-029); scaffolding_files: H-015 entries flipped pending→true with commit SHAs, DecisionJournal and RAID and research-doc marked committed_session=H-016, Playbook flipped to pending (D-029 §13 addition), STATE v14 + Handoff_H-016 added as pending; discovery counts refreshed (74→126).
 
-**One sub-ruling under delegated authority (H-015-Claude):** when operator said "for B please present script," I read it as "show the script content for the operator to run via heredoc workaround" rather than "commit a helper file to the repo," and explicitly surfaced the two readings before acting. Operator's subsequent action (running the heredoc) confirmed reading 1 was correct. Documenting because delegated-authority calls are exactly what the H-014 helper-snippet flag was about — surface before acting, even if the smaller cut feels obvious.
+**Tripwires: none fired.** Zero OOP events. Seven consecutive sessions (H-010 through H-016) with clean discipline.
 
-### H-016 starting conditions
+**Process finding — Claude-authored deviation surfaced mid-session:** Claude produced `D-028-entry-to-insert.md` as a splice-into-existing-file artifact rather than a full replacement of DecisionJournal.md, deviating from the established "Claude produces complete replacements; operator uploads" convention. Combined with the drag-and-drop workflow's silent-missing-file failure mode (operator upload missed the spliced DJ, included 3 stale reference artifacts), this produced a partially-wrong first H-016 commit (d7b2bd2) that required a follow-up commit (83c0bf8) to remediate. Operator surfaced the process deviation explicitly. Claude committed to 'always replace, never patch' convention going forward and baked it into the D-029 draft (commitment 3). No governance artifact change needed beyond D-029 itself; the drafts capture the failure mode and its remediation.
+
+### H-017 starting conditions
 
 When the next session opens, Claude will find:
 
-- Repo on `main` with the full H-013 + H-014 + H-015 bundle: STATE v13, DecisionJournal unchanged at 27 entries (last entry D-027), Handoff_H-015, RAID with I-016 newly filed (sev 6, total open 14).
-- Discovery service `pm-tennis-api.onrender.com` running `main.py` at `0.1.0-phase2`, healthy. Event count 116+ at H-015 close (continues to grow at ~1-2 events/hour during normal hours).
-- Stress-test service `pm-tennis-stress-test.onrender.com` live, Auto-Deploy Off, no persistent disk, both credential env vars set, self-check expected to remain green (no code changes this session).
-- I-016 (empty event_date) waiting for investigation as the first action.
-- The pasted-snippet helper convention from H-014 is still in force per RB-002 §5.1; H-015's empirical friction data is documented for H-016 to consider flipping to a committed file.
-- Zero pending operator decisions.
-- Three plan-text pending revisions in STATE unchanged (v4.1-candidate, -2, -3).
+- Repo on `main` with the full H-016 bundle: STATE v14, DJ at 28 entries (last D-028), Handoff_H-016, RAID with I-016 resolved + I-017 new, research-doc with §14 populated, `src/stress_test/list_candidates.py` module, 9 new tests for I-016 regression + fallback, 20 new tests for list_candidates.
+- Three stale artifacts in repo root needing cleanup: `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, `D-028-entry-to-insert.md`.
+- `pm-tennis-api` service running with I-016 fix deployed; 126+ events discovered; event_date correctly populated for new events.
+- `pm-tennis-stress-test` service live with credentials; one successful probe in its history.
+- One pending operator decision: POD-H016-deployment-flow (D-029 authentication mechanism choice).
+- §16 as the natural next section of research-doc for main-sweeps addendum.
+- Four plan-text pending revisions in STATE (v4.1-candidate-4 conditional on D-029).
 - Research-first discipline in force per D-016, D-019.
 - Pruning convention for `resolved_operator_decisions_current_session`: stricter reading, settled.
+- Drag-and-drop commit workflow with 'always replace, never patch' discipline in force until D-029 lands.
 
 ### Validation posture going forward
 
-At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode. At H-016 open, the check has three application surfaces:
+At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode. At H-017 open, the check has four application surfaces:
 
-- **Preventive for I-016 investigation.** Reading `discovery.py` line 328 and a sample raw gateway event payload is a read-only research task — fabrication risk is low because the operator-authorized read returns ground truth. The risk is more in *interpretation*: identifying the "right" key name from gateway payload structure should be cited from the actual payload byte-content, not from memory or from documentation that may not match payload shape. If the proposed key name doesn't trace to the operator-pasted payload, surface that gap rather than guess.
+- **Retrospective for H-016 artifacts.** STATE v14, Handoff_H-016, DecisionJournal D-028, RAID I-016/I-017 updates, `list_candidates.py`, the discovery.py/slug_selector.py fixes, the research-doc §14 addendum. Spot-check that claims about commit SHAs, line numbers, and test counts match on-disk reality. H-016 artifacts are unusually rich; focus on the highest-leverage items (the discovery.py line 328 fix, the D-028 entry text, the §14 probe outcome verbatim JSON).
 
-- **Preventive for the probe retry (live network code against real external API).** This is the H-008 risk class that H-015 saved for H-016. Every SDK symbol used must trace to the SDK README or a fresh re-fetch; the H-013 citation block in `probe.py` covers the current symbol set, but if main-sweeps gets pulled forward at H-016, fresh `markets.list()` and multi-subscription semantics work needs a SDK README re-fetch at code-turn time.
+- **Preventive for main sweeps code-turn.** Main sweeps (§7 Q3=(c), the H-017 scope) is the first net-new SDK surface beyond probe.py's citation block [A]-[D]. Fabrication-risk surface: `client.markets.list()` and multi-subscription semantics on `markets_ws`. Re-fetch `github.com/Polymarket/polymarket-us-python` README at code-turn time per H-014-Claude and H-015-Claude emphatic notes. No exceptions.
 
-- **Retrospective for H-015 artifacts.** STATE v13, Handoff_H-015, RAID I-016. Spot-check that the I-016 description's claims about `discovery.py` line 328 and `slug_selector._passes_date_filter` lines 142-156 actually match the on-disk code (both were verified at H-015 close before filing).
+- **Preventive for D-029 implementation.** If the authentication mechanism is resolved at H-017 open and D-029 implementation begins, re-verify the MCP registry for GitHub (may have been added since H-016 search) and re-read the current Playbook/plan text before editing. The draft governance artifacts are starting points, not commit-ready files — they should be refined against the current state of the governance documents at H-017 open, not treated as frozen.
 
-Values of `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` must never enter the chat transcript — they are set via Render dashboard only. H-015 did not exercise the credential path (no probe ran); discipline holds vacuously.
+- **Preventive for I-017 disposition.** Small code fix either side (update tests to expect RuntimeError, OR update code to raise SystemExit). Read the actual verify_sport_slug function at H-017 before deciding which side to fix; don't rely on I-017's description as the full picture.
+
+Values of `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` must never enter the chat transcript — they are set via Render dashboard only. H-016 exercised the credential path during the probe; discipline held (credentials never entered chat, all auth done via the SDK's internal handling of env-var-named credentials per D-023).
 
 ---
 
-*End of STATE.md — current document version: 13. Last updated: H-015.*
+*End of STATE.md — current document version: 14. Last updated: H-016.*

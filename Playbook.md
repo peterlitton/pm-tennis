@@ -37,6 +37,7 @@ Some rituals have short entries in some sections (e.g., "preconditions: none" fo
 10. [Out-of-session commit ritual](#10-out-of-session-commit-ritual)
 11. [Pending-operator-decision escalation ritual](#11-pending-operator-decision-escalation-ritual)
 12. [Plan-document revision ritual](#12-plan-document-revision-ritual)
+13. [Staging-push-and-merge ritual](#13-staging-push-and-merge-ritual)
 
 ---
 
@@ -771,6 +772,88 @@ The plan document (`PM-Tennis_Build_Plan_vN.docx` at the current version) is the
 - Session handoff: files-modified list includes the plan document; decisions summary includes the revision entry reference.
 - The plan's own change log: updated at the front of the document, listing every revision.
 
+## 13. Staging-push-and-merge ritual
+
+### 13.1 Name and scope
+
+The staging-push-and-merge ritual governs how Claude's code and documentation changes reach the repository. Per D-029, Claude pushes changes to a dedicated `claude-staging` branch during sessions; operator merges staging to `main` as the single human-in-the-loop gate. This ritual applies to every code or documentation change produced during a session — multi-file bundles, single-file fixes, STATE updates, handoffs, everything.
+
+This ritual supersedes the prior workflow in which operator manually uploaded Claude-produced files via GitHub's web-UI drag-and-drop interface. The prior workflow's documented failure modes (H-014 missed-file-in-bundle, H-015 multi-line-paste failures, H-016 missing DJ plus stale artifacts committed) motivated the revision.
+
+### 13.2 Preconditions
+
+- The `claude-staging` branch exists in the `peterlitton/pm-tennis` repository, branched from `main` (initially) or kept in sync with `main` at session open.
+- Claude has authentication configured: either a GitHub PAT stored as a Render environment variable accessible to Claude's working environment, or the GitHub MCP connector authorized for the repository. Per D-023 / SECRETS_POLICY §A.6, secret values never appear in the chat transcript.
+- The operator has ruled on session cut/scope for the current session per the session-open ritual (§1).
+
+### 13.3 Procedure
+
+1. **Claude:** during session work, accumulates changes locally (in-session scratchpad) until a logical unit of work is complete — e.g., a fix + its tests, a handoff + its STATE update, a research-doc addendum. Pushes logical units to staging with descriptive commit messages, not single-file micro-commits.
+
+2. **Claude:** before pushing, runs the minimum validation set:
+   - **Tests in clean venv against pinned deps.** The standard test-pass evidence.
+   - **Path-correctness list.** Every file being pushed, the path it is being pushed to, an assertion that the path is intended.
+   - **Schema/coupling check.** If a commitment file is touched, the SHA change is named. If doc-code coupling applies (per Orientation §8), the paired documentation update is named.
+   - **Stale-artifact check.** Any working artifacts Claude produced during the session that are NOT intended for the repo (manifests, checksums, draft files, etc.) are explicitly excluded from the push.
+
+3. **Claude:** pushes to the `claude-staging` branch using the configured authentication mechanism. Push uses the `peterlitton/pm-tennis` remote at the `claude-staging` refspec; no force-push; no push to any other branch.
+
+4. **Claude:** produces a push-summary visible to the operator in chat, containing at minimum:
+   - Commit SHA on staging (after push)
+   - Commit message
+   - List of files changed (path + action: added / modified / deleted)
+   - Test-run summary (pass count, fail count, any pre-existing failures listed as such)
+   - Validation steps completed (path check, schema check, stale-artifact check)
+   - Explicit merge-request language: "Ready for your review and merge when you are."
+
+5. **Operator:** reviews the staging branch's diff via GitHub's web UI (compare view or PR view). Review depth is operator's choice per the spot-check discipline in Orientation §8 (Layer 4 — operator spot-checks); minimum viable review is the file list and commit message.
+
+6. **Operator:** one of three rulings:
+   - **Merge.** Operator merges staging → main via GitHub's merge UI. This is the gate. Render auto-deploys `pm-tennis-api` from main.
+   - **Request changes.** Operator names what needs to change. Claude addresses and re-pushes to staging (same ritual from step 2). No limit on iteration cycles.
+   - **Defer merge.** Operator chooses not to merge this session — perhaps the session produced partial work that should not reach main yet. Staging branch retains the work; next session picks up either by extending staging further or by operator merging first and Claude starting fresh.
+
+7. **Claude:** logs the push to the session handoff's files-modified list. If the session closes with changes in staging that operator has not merged, handoff explicitly names this state.
+
+8. **Claude:** if operator merges during the session, the post-merge state is noted in the handoff. STATE's scaffolding-files inventory reflects the merged state (committed_to_repo: true with the merge commit SHA).
+
+### 13.4 Postconditions
+
+- All session work exists as commits on `claude-staging`.
+- Push-summary visible in session transcript for each push.
+- Operator has explicitly merged, requested changes, or deferred.
+- Session handoff names the final state of staging (merged / pending merge / changes requested).
+- No orphaned or stale artifacts on main as a result of the session.
+
+### 13.5 Failure modes
+
+**13.5.1 Claude pushes to a branch other than `claude-staging`.** Procedure: this is a tripwire per Playbook §4. Claude stops, surfaces the misdirection, and waits for operator direction. The errant branch is not merged; operator deletes or ignores it.
+
+**13.5.2 Claude pushes a file to the wrong path.** The path-correctness check at step 2 is designed to catch this before push. If it escapes (path check wrong, or Claude's internal map drifted from repo reality), operator catches it at diff review. Procedure: Claude pushes a corrective commit to staging moving the file to the correct path; operator reviews and merges when satisfied.
+
+**13.5.3 Claude pushes stale artifacts (manifests, checksums, working files) intended for the bundle-assembly process but not for the repo.** The stale-artifact check at step 2 is designed to catch this. If it escapes, operator catches it at diff review. Procedure: Claude pushes a corrective commit to staging removing the stale artifacts; operator merges when satisfied. This is the specific failure mode H-016 produced under the old workflow.
+
+**13.5.4 Authentication fails mid-session.** Claude's push is rejected by GitHub (PAT revoked, expired, or scoped wrong; or MCP connector deauthorized). Procedure: Claude surfaces the failure to operator. Operator rotates/re-auths the credential per SECRETS_POLICY §A.6. Claude retries the push. No change leaks to main — the push simply fails.
+
+**13.5.5 Operator merges a push that had a pre-existing test failure.** Pre-existing failures (failures that exist on main before Claude's changes and persist through Claude's changes — see RAID I-017 for an example) should be named in the push summary and treated as informational, not gating. Procedure: push summary explicitly lists pre-existing failures with "not introduced by this push" annotation; operator merges with that context. If a new failure (introduced by this push) is present, Claude does not request merge — Claude either fixes or surfaces for operator ruling before push.
+
+**13.5.6 Claude attempts to push during an active observation window.** If the push would modify a commitment file (`signal_thresholds.json`, `fees.json`, `breakeven.json`, `data/sackmann/build_log.json`), Claude refuses at the behavior layer — same as the pre-D-029 rule. The commit mechanism does not change the lock's scope. Non-commitment-file pushes during observation are allowed (operator-attention dependency, not a file-level lock).
+
+**13.5.7 Operator has not yet set up authentication at session open.** The staging workflow is not yet available. Procedure: session reverts to the pre-D-029 drag-and-drop flow for the duration of that session. Claude produces files for manual upload; operator uploads per the old procedure. At next session, retry the setup. This is transitional and expected only during the D-029 implementation window.
+
+**13.5.8 Operator wants Claude to bypass the merge gate.** OOP does not suspend the merge gate. Procedure: Claude refuses per Playbook §5.5.2's class of refusal (OOP cannot override unconditional governance). If operator genuinely needs a push direct to main, the procedure is to open a separate session, close the current work to staging, and handle the direct-to-main situation in a targeted future session — not to relax the gate mid-session.
+
+### 13.6 Logging requirements
+
+- Each push: push-summary in session transcript. Files-changed list in session handoff.
+- Merge events: logged in STATE's scaffolding-files inventory (committed_session and commit SHA). No separate DJ entry required for routine merges.
+- Iterations (Claude push → operator request changes → Claude re-push): named in session handoff's self-report. Multiple iterations per session are fine; they are the ritual working as intended.
+- Failures (13.5.1 through 13.5.8): logged to DecisionJournal per the failure mode's severity.
+- Deferred merges (work left on staging at session close): handoff §10 next-action statement explicitly names "operator to merge staging" as a next-action item.
+
 ---
 
-*End of Playbook.md at end of session H-002.*
+
+---
+
+*End of Playbook.md — original sections §§1–12 at session H-002; §13 added at H-016 per D-029.*

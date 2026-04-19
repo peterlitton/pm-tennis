@@ -18,6 +18,132 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-029 — Deployment procedure revision: Claude pushes to a staging branch; operator merges to `main`
+
+**Date:** 2026-04-19
+**Session:** H-016
+**Type:** Governance / Process / Supersedes plan §1.5.3 language
+
+**Source:** Operator direction at H-016 close ("I also want to modify the deployment procedures as this session has simply underscored the need for") following an in-session exchange about the risks of the current drag-and-drop upload flow. Motivated by concrete recurring failure modes observed across H-012 through H-016:
+
+- **H-014:** STATE v11 omitted from H-013 commit bundle (operator error at upload time). H-014-Claude had to surface the discrepancy before any substantive work and receive the missing file out-of-band.
+- **H-015:** two multi-line pasted snippets in the Render Shell failed due to bracketed-paste markers. Separate from commit flow but same class of manual-interaction fragility.
+- **H-016:** on the same bundle upload, (a) `DecisionJournal.md` was not included in the first commit (operator had to make a follow-up commit to add it), and (b) three reference artifacts (`COMMIT_MANIFEST.md`, `CHECKSUMS.txt`, `D-028-entry-to-insert.md`) were inadvertently committed. The `D-028-entry-to-insert.md` artifact was itself a Claude-originated process error — mid-session Claude produced a splice-into-existing-file instruction rather than a complete replacement file, deviating from the established "Claude produces full replacements; operator uploads" convention. The combination of Claude's process error and the drag-and-drop workflow's silent-missing-file failure mode produced a partially-wrong commit that required detection and remediation mid-session.
+
+The pattern across these events: the current workflow's failure modes are not in the authoring (Claude's code/docs are generally correct) but in the transfer from chat to repository. The friction of "operator manually assembles the bundle" is not adding safety; it is adding a class of mechanical errors that silently corrupt commits.
+
+**Decision:** Adopt a two-stage deployment model:
+
+1. **Claude pushes code and documentation changes to a dedicated staging branch (`claude-staging`).** Claude uses a non-expiring GitHub personal access token (PAT) with write access scoped to the `peterlitton/pm-tennis` repository only. The PAT value is stored as a Render environment variable (e.g., `GITHUB_PAT`) on the working service; values never enter the chat transcript per SECRETS_POLICY §A.6.
+
+2. **Operator merges the staging branch to `main` on explicit approval.** The merge is the human-in-the-loop checkpoint that replaces the current upload step. Operator reviews the staging branch's diff in the GitHub web UI before merging. The merge is the single action that promotes code to production.
+
+This supersedes the plan's §1.5.3 language "Claude writes code and documentation; operator reviews and commits but does not author" with a revised version that reads: "Claude writes code and documentation and pushes to a staging branch; operator reviews and merges staging to main." The single-authoring-channel principle is preserved — Claude is still the sole author of code and docs — but the commit mechanism changes.
+
+**Considered:**
+
+- **(a) Keep current workflow.** Rejected. Three sessions of failure modes document the real cost; H-016's specific compound error (missing DJ + stale artifacts committed) demonstrated the drag-and-drop flow's risk exceeds its benefit as an oversight mechanism.
+- **(b) Claude pushes directly to `main`.** Rejected. Removes the human-in-the-loop checkpoint entirely. H-008 is a cautionary tale: if Claude had pushed directly at H-008, the fabricated Sports WS URL would have hit production with no pause for operator review. Even with strong research-first discipline, the merge gate has independent safety value.
+- **(c) Claude pushes to a feature branch per session, operator merges per-branch.** Similar to (d) but with per-session branch names (`h-016-staging`, `h-017-staging`, etc.). Rejected as marginally more complex than a single `claude-staging` branch with no corresponding benefit; per-session branches would accumulate in the repo, and session boundaries are already tracked via handoffs and STATE.
+- **(d) Claude pushes to a single persistent `claude-staging` branch, operator merges to `main`.** **Selected.** Single branch, clear merge path, diff-review built into GitHub's PR/merge UI, history preserved in git.
+
+Selected: (d). Operator ruling.
+
+**Rationale:**
+
+1. **The failure modes are real and recurring.** Three separate sessions (H-014, H-015, H-016) produced upload-flow failures of different kinds. The current workflow's safety value depends on operator scrutiny of files before upload, which is not happening in practice — the operator has stated explicitly "I'm already blindly just taking your files and uploading them to Git without scrutinizing them." The drag-and-drop step is therefore not contributing to safety; it is only contributing to failure rate.
+
+2. **The staging-branch model preserves what matters about the current flow.** The human-in-the-loop checkpoint — operator sees what's landing before it lands — moves from "operator looks at filenames in a drag-and-drop dialog" to "operator reviews a diff in GitHub's PR/merge UI." The latter is strictly more informative. The former was already not being exercised.
+
+3. **Claude-led validation on deployed-but-not-merged code catches a class of bugs the current flow cannot catch.** Tests that run in Claude's sandbox run against Claude's filesystem layout and Python version. Tests that run on the deployed staging branch (via a Render preview environment or a GitHub Action) run against the actual Render Python version, the actual filesystem layout, and the actual deployed dependency set. This is qualitatively stronger coverage. Claude can add staging-branch validation steps (run tests, lint, check paths, smoke-deploy to a preview Render service) as pre-merge evidence.
+
+4. **The failure mode the staging approach newly introduces is bounded.** If Claude pushes wrong content to staging, it lives in the staging branch until operator merges. Operator reviews the diff before merge. A bad push to staging is auto-contained; it does not affect `main` or any deployed service. Recovery is: Claude pushes a fix to staging, operator re-reviews, merges when satisfied. Cost: ~nothing.
+
+5. **The authentication material is already well-governed.** SECRETS_POLICY §A.6 already prohibits secret values from entering the chat. D-023 demonstrated the pattern for Polymarket credentials (Render env vars, read by name, never in repo). The same pattern applies to a GitHub PAT or MCP token: stored in the platform's credential interface, never in chat, never in repo.
+
+6. **The H-008 objection is addressed by the merge gate, not by the push mechanism.** H-008's failure was research-first discipline, not commit mechanics. Research-first (D-016 commitment 2, R-010) remains fully in force under this revision. The merge gate in the staging model provides an additional independent safety layer — even if Claude's research-first discipline slipped, the bad push would sit in staging for operator review before reaching main.
+
+**Commitment:**
+
+1. **A `claude-staging` branch exists in the `peterlitton/pm-tennis` repository.** It tracks `main` at session open and receives Claude's pushes during the session. Per session, Claude pushes all changes to staging; operator merges staging → main once per session (or less frequently, batching multiple sessions into one merge if appropriate). The merge is the gate.
+
+2. **Claude authenticates to GitHub via a non-expiring, fine-grained Personal Access Token (PAT).** Operator generates the PAT via GitHub settings → Developer settings → Personal access tokens → Fine-grained tokens. Scope: single repository (`peterlitton/pm-tennis`), read/write on Contents, no admin, **expiration set to "No expiration"**. PAT value stored as a Render environment variable (e.g., `GITHUB_PAT`) on the working service. Value never enters the chat transcript per SECRETS_POLICY §A.6. Rotation is operator-initiated at any time (revoke in GitHub settings, generate new, update Render env var); not scheduled.
+
+   **Rationale for no expiration:** generic "rotate every 60-90 days" security advice is oriented toward multi-person teams and broader-scope credentials. For this project specifically — single operator, solo project, PAT scoped to one repository with write-only permission, stored in the same env-var system that already holds Polymarket credentials — the failure mode the expiry guards against (indefinite exposure from a leaked credential) is narrow. The failure mode no-expiry guards against (rotation-miss friction at a rotation date) is proportionally larger. Non-expiring is the right tradeoff for this project's threat model. Operator may rotate voluntarily at any cadence.
+
+   **MCP connector alternative explicitly not selected.** At H-016 investigation, Claude searched the Anthropic MCP registry and found GitLab, Microsoft Learn, and other connectors listed, but not GitHub. The MCP-connector option Claude had initially recommended in-session was therefore not available at decision time. Future Claude sessions may re-check the MCP registry; if GitHub MCP is added later and operator prefers to migrate, that migration is its own (small) DJ entry and does not require superseding D-029.
+
+3. **Claude's push discipline on the staging branch:**
+   - Claude pushes logically coherent units of work (e.g., "helper-snippet flip", "I-016 fix", "§14 addendum") rather than single-file pushes. A typical session produces 1–5 pushes to staging.
+   - Each push has a descriptive commit message identifying the H-NNN session, the scope, and any referenced DJ/RAID items.
+   - Claude pushes the complete replacement of every changed file. No patch files, no splice-into-existing instructions, no "paste this section in." This was the rule pre-D-029 and remains the rule post-D-029 — D-028's preparation artifact (`D-028-entry-to-insert.md`) was a Claude-authored deviation from the established convention that should not recur.
+   - Pre-existing files on `main` that Claude is not touching in a given session are NOT pushed to staging redundantly. The staging branch reflects main's state plus Claude's per-session changes; it does not drift from main on files Claude hasn't touched.
+
+4. **Validation Claude runs before requesting merge:**
+   - **Full test suite in clean venv against pinned deps.** Same posture as the current in-session sandbox test run, now cited in the merge request.
+   - **Path-correctness verification.** Claude lists every file it pushed, the path it pushed it to, and an assertion that the path matches the intended location. This catches the class of bugs where a file was produced but placed at the wrong repo path.
+   - **Schema/coupling check where applicable.** If Claude touched a commitment file, the SHA change is named. If Claude touched a file whose behavior is documented elsewhere (doc-code-coupling rule per Orientation §8), the paired documentation update is named.
+   - **Summary presented to operator with explicit merge-request language:** "Staging push complete. NN files changed (list). Tests: pass. Ready for your review and merge when you are." No ambiguity about whether Claude has finished.
+
+5. **Operator merge-gate discipline:**
+   - Operator reviews the diff in GitHub's web UI (compare branch view or PR view) before merging. Spot-check scope is operator's choice — at minimum, the file list and commit message, ideally skim of any critical-path changes (commitment files, STATE, DecisionJournal, build plan).
+   - Merge is explicit: squash-merge or merge-commit, operator preference. No auto-merge.
+   - Operator may request changes before merge. Claude addresses and re-pushes to staging; operator re-reviews. No limit on iteration cycles.
+   - If operator discovers a problem post-merge, the problem is logged as a DJ entry, the fix goes through the same staging workflow (Claude pushes fix to staging, operator merges).
+
+6. **Observation-active soft lock is not weakened by this revision.** Claude refuses to modify any commitment file or any file during an active observation window regardless of the commit mechanism. The staging branch does not receive pushes to locked files during observation. The lock is enforced in Claude's behavior, not in the commit mechanism.
+
+7. **Out-of-protocol invocations (Playbook §5) are not affected.** OOP can suspend specific rituals for a specific task; the merge-gate is not itself an OOP-suspendable step because it is the single operator-authority moment in the workflow. An OOP request that would push directly to main (bypassing the merge gate) is refused, same as an OOP request to modify a commitment file during observation is refused.
+
+8. **Session-close handoff production and STATE update are unchanged.** Both remain Claude-authored, pushed to staging, merged with the rest of the session's output. The handoff and STATE updates are part of the per-session bundle.
+
+**Scope and carve-outs:**
+
+- **Pre-existing operator-authored commits are not retroactively remediated.** The stale artifacts committed at H-016 (`COMMIT_MANIFEST.md`, `CHECKSUMS.txt`, `D-028-entry-to-insert.md`) remain in the repo until an H-017 cleanup commit removes them. No retroactive rewriting of history.
+
+- **Operator-initiated mechanical actions remain permitted per Playbook §10.** Creating a branch, merging a PR, deleting a misplaced file in the web UI — these remain operator-permitted actions and do not require opening a session. Playbook §10's permitted-actions list is unchanged.
+
+- **The `main` branch remains the source of truth for deploy.** Render's `pm-tennis-api` continues to auto-deploy from `main`. Staging pushes do not trigger a deploy of production services. Staging may optionally be configured to deploy to a preview Render environment for Claude-led validation; that is a setup decision at D-029 implementation time.
+
+**Effect on other decisions and governance artifacts:**
+
+- **Plan §1.5.3** (single-authoring-channel): requires revision. Queued as `v4.1-candidate-4` in STATE `pending_revisions`. Target text: "Claude writes code and documentation and pushes to the `claude-staging` branch; operator reviews and merges staging to `main`. Claude is the sole author of code and documentation; operator is the sole committer to `main`." To be applied in the next plan revision per Playbook §12.
+
+- **Playbook §10** (out-of-session commit ritual): no change. Its scope is "operator making an edit directly between sessions" — distinct from the staging-branch workflow. §10 still governs the "operator-authored commit outside a session" failure mode.
+
+- **Playbook §13** (new): the staging-push-and-merge ritual. Created as part of this commitment. Covers: ritual name and scope, preconditions, procedure, postconditions, failure modes, logging requirements. Follows the standard Playbook structure.
+
+- **SECRETS_POLICY §A.2 / §B.2**: implicitly extended to cover the GitHub PAT or MCP token if applicable. Existing language already names GitHub personal access tokens as a secret class; this revision uses one but does not change policy about it.
+
+- **D-016 commitment 2** (research-first discipline): fully preserved. Claude's obligation to cite external API shapes, module symbols, etc. against authoritative sources is unchanged. The staging mechanism does not relax any authoring-side discipline.
+
+- **OBSERVATION_ACTIVE soft lock**: fully preserved. Enforced in Claude's refusal behavior, not in commit mechanism. Pushing to staging is still refused for locked files.
+
+**What this decision does not decide:**
+
+- **Branch protection rules on `main`.** Setting up branch protection (requiring PR review, blocking force-push) is a GitHub-level operator action that complements this decision but is not required by it. Recommended at setup time.
+- **Preview environment for staging.** Deploying the staging branch to a preview Render service is a setup-time option, valuable if main-sweeps or similar work benefits from live-on-Render test runs pre-merge. Not required.
+- **Scope of Claude-led validation.** D-029 names the minimum validation (tests, paths, schema, summary). Additional validations (linting, typechecking, deploy smoke) are added as specific deliverables warrant, logged as decisions when they reach DJ-entry threshold.
+- **Future MCP migration.** If GitHub MCP connector becomes available in the Anthropic registry later and operator prefers it, migration is its own (small) DJ entry at that time. D-029 stands as-is until superseded.
+
+**Implementation sequencing:**
+
+1. **Operator generates the PAT.** GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. Scope: repository access = only `peterlitton/pm-tennis`; repository permissions = Contents (read+write); expiration = "No expiration." Copy the generated token (GitHub shows it once).
+2. **Operator adds the PAT to Render.** Dashboard → the service Claude will push from (likely `pm-tennis-api` or a dedicated service — either works) → Environment → add `GITHUB_PAT` (or similar name) with the token value. Render masks after save per D-023 subsidiary finding 3. **Do not paste the PAT value into chat per SECRETS_POLICY §A.6.**
+3. **Operator creates the `claude-staging` branch** from current `main` in the GitHub web UI. Optional but recommended: configure main-branch protection in GitHub settings (require merge commit, block force-push, no direct-push-to-main). These settings supplement D-029 by making the merge gate structurally enforced rather than just policy-enforced.
+4. **Operator reports back to Claude at next session open:** "D-029 auth ready, env var name is `GITHUB_PAT`, staging branch exists." Claude verifies via a small test push to staging.
+5. **First real use** of the staging flow: first non-trivial commit of H-017 or later.
+6. **Plan §1.5.3 and §1.5.4 revision** (`v4.1-candidate-4`) applied at the next plan-revision cadence per Playbook §12.
+
+**Evidence trail:**
+
+- H-014 handoff §9 and Handoff_H-014 notes: STATE v11 missed from commit bundle.
+- H-015 handoff §3.2 and §6: two multi-line paste failures in Render Shell (distinct from commit flow but same fragility class).
+- H-016 chat transcript: operator "I've already committed the zip file content" → Claude verification → finding that `DecisionJournal.md` was absent from the first commit and stale artifacts were present. Operator subsequent commit `83c0bf8` to add the DJ. Operator explicit statement: "DJ was not in the bundle just the entry to insert (BAD execution choice—too much manual error risk. for every deploy in other sessions I've ALWAYS been instructed to replace)".
+- Extended H-016 exchange on the tradeoffs between direct-push-to-main, staging-push, current-flow, with operator surfacing the specific failure modes the current flow had produced.
+
+---
+
 ## D-028 — RAID I-016 fix: source `event_date` from `startDate`, with `slug_selector` fallback for historical meta.json
 
 **Date:** 2026-04-19

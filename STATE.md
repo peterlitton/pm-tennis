@@ -48,14 +48,14 @@ project:
         sections: ["Section 1.5.3", "Section 1.5.4"]
         summary: "Plan §1.5.3 and §1.5.4 revision candidate to reflect D-029 — Claude pushes to `claude-staging` branch, operator merges to `main`. D-029 landed at H-016 as a DJ entry (operator ruled 'PAT, no expiration'). Revised text: §1.5.3 'The operator shall: [...] review and merge Claude's pushes to the claude-staging branch at the operator's cadence, per Playbook §13; [...]'; §1.5.4 addition 'Claude pushes code and documentation changes to the claude-staging branch using a non-expiring GitHub PAT stored as a Render env var. Claude does not merge to main, does not force-push, does not push to any branch other than claude-staging.' Apply under Playbook §12 at next plan-revision cadence alongside -1, -2, -3."
   state_document:
-    current_version: 14
+    current_version: 15
     last_updated: 2026-04-19
-    last_updated_by_session: H-016
+    last_updated_by_session: H-017
 
 # ---- Phase and work package ----
 phase:
   current: phase-3-attempt-2-probe-executed
-  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). H-016 completed: (1) helper-snippet flip landed (`src/stress_test/list_candidates.py` + 20 tests; RB-002 §5.1 and README updated) in commit d7b2bd2; (2) RAID I-016 investigated against a live gateway payload (event 9471 meta.json read in pm-tennis-api Shell) and fixed per D-028 — discovery.py line 328 now sources event_date from startDate[:10], and slug_selector._passes_date_filter falls back to start_date_iso[:10] for ~116 historical meta.json files; committed in d7b2bd2 (code + RAID) and 83c0bf8 (D-028); (3) live probe executed in pm-tennis-stress-test Shell against gateway-sourced slug `aec-wta-paubad-julgra-2026-04-21` (event 9471) — classification accepted, first_message_latency_seconds=1.15, one market_data message received, D-025 hybrid-probe-first question resolved: gateway-to-api slug bridge is confirmed working; main sweeps may use either slug source with api-sourced as default; (4) §14 probe-outcome addendum written into docs/clob_asset_cap_stress_test_research.md in commit e28e390. H-017 picks up: (a) main sweeps per §7 Q3=(c) (1/2/5/10 subscriptions × 100 placeholder slugs × 1/2/4 concurrent connections); (b) placeholder-slug generation strategy decision informed by probe evidence; (c) §16 main-sweeps addendum; (d) RAID I-017 disposition (two pre-existing TestVerifySportSlug failures); (e) stale-file cleanup (3 artifacts inadvertently committed at H-016); (f) D-029 deployment-procedure revision (drafts produced this session; deferred pending operator ruling on auth mechanism)."
+  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). H-016 completed: (1) helper-snippet flip landed (`src/stress_test/list_candidates.py` + 20 tests; RB-002 §5.1 and README updated) in commit d7b2bd2; (2) RAID I-016 investigated against a live gateway payload (event 9471 meta.json read in pm-tennis-api Shell) and fixed per D-028 — discovery.py line 328 now sources event_date from startDate[:10], and slug_selector._passes_date_filter falls back to start_date_iso[:10] for ~116 historical meta.json files; committed in d7b2bd2 (code + RAID) and 83c0bf8 (D-028); (3) live probe executed in pm-tennis-stress-test Shell against gateway-sourced slug `aec-wta-paubad-julgra-2026-04-21` (event 9471) — classification accepted, first_message_latency_seconds=1.15, one market_data message received, D-025 hybrid-probe-first question resolved: gateway-to-api slug bridge is confirmed working; main sweeps may use either slug source with api-sourced as default; (4) §14 probe-outcome addendum written into docs/clob_asset_cap_stress_test_research.md in commit e28e390. H-017 accomplished: (α) self-audit surfaced that Handoff_H-016.md was missing from main (66def97 contained DJ/Playbook/STATE only); operator committed it at e6c4deb. (β) D-029 first-use validation surfaced an architectural gap; D-030 landed naming the gap, adopting the drag-and-drop-to-staging interim flow per Playbook §13.5.7, opening POD-H017-D029-mechanism, and preserving D-029 unchanged (operator ruled Option β-i: default, no per-session re-ratification). (γ) Render side of D-029 verified by operator (Auto-Deploy='On commit', Branch='main'); merge-gate is structurally enforced. (δ) Three stale H-016 artifacts (CHECKSUMS.txt, COMMIT_MANIFEST.md, D-028-entry-to-insert.md) verified safe to delete (none referenced by code, tests, or docs); deletions queued in the H-017 commit bundle for operator action on claude-staging. (ε) Comprehensive re-read of governance corpus after Claude's mid-session present_files error was caught by operator — full Playbook (incl. §§3, 6, 7, 8, 9, 10, 11, 12 unread at session open), full SECRETS_POLICY, RAID Risks/Assumptions/Decisions, DJ D-016 through D-027 carefully, PCR introduction. H-018 picks up: (a) main sweeps per §7 Q3=(c) — first net-new SDK surface beyond probe.py's [A]-[D] citations; re-fetch polymarket-us-python README at code-turn time per H-016 preventive-fabrication standing instruction (no exceptions); (b) §16 research-doc addendum (research-first per D-019; operator review precedes code turn); (c) RAID I-017 disposition (sev 4; small fix); (d) surface POD-H017-D029-mechanism per D-030 Resolution path."
   work_package_started_session: null  # starts next session
   last_gate_passed:
     name: "Phase 2 exit gate"
@@ -76,9 +76,9 @@ phase:
 
 # ---- Session accounting ----
 sessions:
-  last_handoff_id: H-016
-  next_handoff_id: H-017
-  sessions_count: 16
+  last_handoff_id: H-017
+  next_handoff_id: H-018
+  sessions_count: 17
   most_recent_session_date: 2026-04-19
   out_of_protocol_events_cumulative: 0
   out_of_protocol_events_since_last_gate: 0
@@ -244,36 +244,21 @@ open_items:
     sev_4_and_below: 4  # I-002 (severity 2), I-014 (severity 3), I-015 (severity 3), I-017 (severity 4, added H-016)
     issues_open: 14   # 17 total issues; I-001 resolved H-005, I-013 resolved H-009, I-016 resolved H-016; I-017 added H-016
     assumptions_unvalidated: 6  # A-001, A-002, A-003, A-004, A-006, A-008
-  pending_operator_decisions: []  # POD-H016-deployment-flow resolved at session close via D-029 — operator ruled 'PAT, no expiration.' D-029 landed as a DJ entry; Playbook §13 added.
+  pending_operator_decisions:
+    - id: POD-H017-D029-mechanism
+      opened_session: H-017
+      opened_by_decision: D-030
+      summary: "How should D-029's push mechanism actually work given Claude.ai's sandbox environment has no access to Render env vars? D-029 Commitment §2 specifies authentication via a GitHub PAT stored as a Render env var, but that presumes a working environment (a Python process on the Render service) that Claude.ai's sandbox is not. D-030 adopted the interim drag-and-drop-to-staging flow per Playbook §13.5.7 so the project can continue operating; this POD tracks the open question of how D-029 should be properly implemented. Not urgent; no deadline; project operates correctly under the interim flow. Surfaced at each session-open per D-030 Resolution path. Possible resolutions sketched in D-030 include: GitHub MCP connector becoming available in Anthropic's registry; operator preferences shifting (e.g., per-session PAT paste, which would require a SECRETS_POLICY §A.6 revision DJ entry); a shim-service architecture; or something not yet imagined."
+      urgency: "low — project operates correctly under the interim flow per D-030"
   resolved_operator_decisions_current_session:
-    # Pruned to current-session (H-016) entries only per the H-014-settled
-    # stricter-reading convention. H-015 entries are preserved in
-    # Handoff_H-015 §2/§3 and STATE v13's prose; this field reflects only
+    # Pruned to current-session (H-017) entries only per the H-014-settled
+    # stricter-reading convention. H-016 entries are preserved in
+    # Handoff_H-016 §2 and STATE v14's prose; this field reflects only
     # the current session's in-session rulings.
-    - id: H-016-helper-snippet-flip
-      resolved_session: H-016
-      resolved_by_decision: in-session ruling (not a DJ entry)
-      resolution_summary: "Operator ruled 'resolve shell errors' at session open — affirmative on the helper-snippet flip. New committed module `src/stress_test/list_candidates.py` replaces the pasted snippet in RB-002 §5.1 that failed twice at H-015. 20 new tests. No Phase-2 touch."
-    - id: H-016-I-016-fix-authorization
-      resolved_session: H-016
-      resolved_by_decision: operator ruling mid-session (culminated in DJ entry D-028)
-      resolution_summary: "Operator authorized Fix C — both discovery.py event_date extraction AND slug_selector fallback — with 'thorough documentation.' Fix applied via D-028 (full DJ entry). Phase-2 code touched per D-016 commitment 2 with explicit authorization. Commits: d7b2bd2 (code), 83c0bf8 (D-028)."
-    - id: H-016-commit-as-one-bundle
-      resolved_session: H-016
-      resolved_by_decision: operator ruling (not a DJ entry)
-      resolution_summary: "Operator ruled 'one commit' for the H-016 bundle (helper-snippet flip + I-016 fix). Landed as commit d7b2bd2. In practice, the DJ (D-028) was omitted from that first commit and added in follow-up commit 83c0bf8; the stale artifacts `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, and `D-028-entry-to-insert.md` were inadvertently committed and remain in the repo until an H-017 cleanup commit."
-    - id: H-016-commit-first-then-probe
-      resolved_session: H-016
-      resolved_by_decision: operator ruling (not a DJ entry)
-      resolution_summary: "Operator ruled 'Commit the bundle and then run the probe in this session' — expanding H-016 scope beyond the H-015 handoff's conservative suggestion. Execution: commit bundle → wait for Render redeploy → slug selection → probe → §14 addendum."
-    - id: H-016-publish-convention-flip
-      resolved_session: H-016
-      resolved_by_decision: in-session note (Claude-authored commitment; not a DJ entry)
-      resolution_summary: "Mid-session, Claude produced `D-028-entry-to-insert.md` as a splice-into-existing-file artifact rather than a full replacement of DecisionJournal.md. Operator surfaced this as a process deviation: 'for every deploy in other sessions I've ALWAYS been instructed to replace.' Claude acknowledged the error and committed going forward to the 'always replace, never patch' convention. Logged as commitment for future sessions; baked into D-029 as commitment 3."
-    - id: H-016-deployment-flow-PAT-no-expiration
-      resolved_session: H-016
-      resolved_by_decision: operator ruling at session close (formalized as DJ entry D-029)
-      resolution_summary: "Operator ruled 'PAT, no expiration' at session close. D-029 landed as a DJ entry naming a non-expiring fine-grained GitHub PAT scoped to peterlitton/pm-tennis repository, stored as a Render env var. Playbook §13 (staging-push-and-merge ritual) added. Plan §1.5.3/§1.5.4 revision queued as v4.1-candidate-4 in pending_revisions. Implementation sequencing: operator generates PAT → stores in Render env var → creates claude-staging branch → reports back at H-017 open. Claude does a test push to staging at H-017 before first real use."
+    - id: H-017-D029-mechanism-gap-interim-flow
+      resolved_session: H-017
+      resolved_by_decision: operator ruling at session open (formalized as DJ entry D-030)
+      resolution_summary: "First-use validation of D-029 at H-017 open surfaced an architectural gap: D-029 §2's PAT-via-Render-env-var mechanism presumes a working environment Claude.ai's sandbox does not have. Operator ruled Option β (new DJ entry) + β-i (default, no per-session re-ratification). D-030 landed naming the gap, adopting the drag-and-drop-to-staging interim flow per Playbook §13.5.7, opening POD-H017-D029-mechanism, and preserving D-029 unchanged. Render side of D-029 separately verified at H-017: pm-tennis-api Auto-Deploy='On commit', Branch='main'; the merge-gate safety property is structurally available."
   phase_3_attempt_2_notes:
     - "Research-first discipline in force per D-016 commitment 2 and R-010 — no fabrication of URLs or module symbols. H-013 exercised it three times in preventive mode without firing a tripwire."
     - "H-010: research document produced at docs/clob_asset_cap_stress_test_research.md, three versions this session (v1, v2, v2.1, v3). v3 accepted."
@@ -314,6 +299,10 @@ open_items:
     - "H-016 commit-flow deviations: (a) first H-016 commit d7b2bd2 omitted DecisionJournal.md (operator error) and included 3 stale artifacts (COMMIT_MANIFEST.md, CHECKSUMS.txt, D-028-entry-to-insert.md); (b) follow-up commit 83c0bf8 added the DJ; (c) stale artifacts remain in repo pending H-017 cleanup. Claude's Process error: produced D-028-entry-to-insert.md as splice-into-existing-file instead of complete DJ replacement — deviation from established 'always replace' convention. Operator surfaced this explicitly; Claude committed to 'always replace, never patch' convention going forward; baked into D-029 draft as commitment 3."
     - "H-016 D-029 deployment-procedure revision landed. Operator ruled 'PAT, no expiration' at session close. Commitment: Claude pushes code/docs to `claude-staging` branch using a non-expiring fine-grained GitHub PAT scoped to peterlitton/pm-tennis, stored as a Render env var; operator merges staging to main as the single human-in-the-loop gate. Playbook §13 (staging-push-and-merge ritual) added with 8 failure modes. Plan §1.5.3/§1.5.4 revision queued as v4.1-candidate-4. Implementation sequencing: operator generates PAT with no expiration → stores in Render env var → creates claude-staging branch → reports back at H-017 open → Claude test-pushes before first real use. First real use: H-017 non-trivial commit."
     - "H-016 close: DJ at 29 entries (D-028 and D-029 added). RAID: 14 open issues (I-016 closed, I-017 opened). Phase 3 attempt 2 stress-test probe COMPLETE per D-025 commitments 1-4. Main sweeps remain for H-017. Governance: D-029 landed (staging-push-and-merge workflow). Three stale files need cleanup at H-017 (separate from D-029)."
+    - "H-017 open: full reading completed (Handoff_H-016 in full, STATE v14, Orientation, Playbook §1/§2/§4/§5/§13, RAID header + Issues section, DecisionJournal D-029 entry, SECRETS_POLICY §A.2/§A.5/§A.6/§A.7, the three stale artifacts). Self-audit surfaced one discrepancy: Handoff_H-016.md was missing from main at session open (commit 66def97 contained DJ + Playbook + STATE only; the H-016 handoff was not included in the bundle). Operator committed it at e6c4deb during H-017 — discrepancy resolved without Claude action."
+    - "H-017 D-030 landed (this session): D-029 first-use validation surfaced an architectural gap — D-029 §2's PAT-via-Render-env-var mechanism presumes a working environment Claude.ai's sandbox does not have (no access to Render env vars). Operator-validated Render config (Auto-Deploy='On commit', Branch='main') confirms the merge-gate safety property is structurally available. Drag-and-drop-to-staging interim flow adopted per Playbook §13.5.7, with no per-session re-ratification (β-i). POD-H017-D029-mechanism opened (low urgency; project operates correctly). D-029 preserved unchanged. Verified D-030's claims against SECRETS_POLICY §A.6 and Playbook §5.5.4 — both support the option-(c) rejection."
+    - "H-017 stale-artifact cleanup queued: CHECKSUMS.txt, COMMIT_MANIFEST.md, D-028-entry-to-insert.md verified safe to delete (none referenced by code, tests, or documentation; D-028-entry-to-insert.md content fully preserved in DecisionJournal D-028 committed at 83c0bf8 since H-016). Deletions are operator actions on claude-staging during the H-017 commit-bundle merge, not Claude actions."
+    - "H-017 process-recovery: mid-session, Claude called present_files on DecisionJournal.md and STATE.md as a draft availability gesture. Operator correctly read this as a discipline signal — files presented for upload imply session output ready, but the session was not closed and the substantive scope (I-017, main sweeps) had not been addressed. Claude acknowledged the error rather than rationalizing. Operator authorized a comprehensive re-read of the governance corpus before further work. Claude completed the re-read (full Playbook including §§3, 6, 7, 8, 9, 10, 11, 12 unread at session open; full SECRETS_POLICY; RAID Risks/Assumptions/Decisions; DJ D-016 through D-027 carefully). Recalibrations from the read are in Handoff_H-017 §3."
 
 # ---- Runbooks inventory ----
 runbooks:
@@ -399,26 +388,27 @@ costs:
 scaffolding_files:
   STATE_md:
     status: accepted
-    current_version: 14
-    committed_to_repo: pending  # v14 produced this session
-    committed_session: H-016
-    note: "v14 reflects H-016 work: helper-snippet flip (d7b2bd2), RAID I-016 investigated and fixed per D-028 (d7b2bd2 + 83c0bf8), live probe executed with classification=accepted, §14 probe-outcome addendum written (e28e390), I-017 added (sev 4, TestVerifySportSlug drift), D-029 deployment-flow revision landed at session close (operator ruled 'PAT, no expiration'; Playbook §13 added; v4.1-candidate-4 queued). 29 DJ entries at close."
+    current_version: 15
+    committed_to_repo: pending  # v15 produced this session
+    committed_session: H-017
+    note: "v15 reflects H-017 progress so far: D-030 landed (D-029 authentication-mechanism architectural gap surfaced at first-use; drag-and-drop-to-staging interim flow adopted per Playbook §13.5.7; POD-H017-D029-mechanism opened; D-029 preserved unchanged). 30 DJ entries at v15 production. Render side of D-029 verified (Auto-Deploy=On commit, Branch=main). H-017 remaining scope carried forward in phase.current_work_package. v14 reflected H-016 close."
   Orientation_md:
     status: accepted
     committed_to_repo: true
   Playbook_md:
     status: accepted
-    committed_to_repo: pending  # §13 staging-push-and-merge ritual added this session per D-029
+    committed_to_repo: true  # H-016 §13 staging-push-and-merge ritual landed at commit 66def97
     committed_session: H-016
-    note: "§13 (staging-push-and-merge ritual) added at H-016 per D-029. §§1-12 unchanged. Table of rituals updated. Footer updated. Preserves all §§1-12 original content verbatim."
+    note: "§13 (staging-push-and-merge ritual) added at H-016 per D-029. §§1-12 unchanged. Table of rituals updated. Footer updated. Preserves all §§1-12 original content verbatim. Landed on main at commit 66def97. Note at H-017: §13 text stands unchanged despite D-030 adopting §13.5.7 as the effective default (rather than a transitional case). D-030 explicitly defers any §13 text revision until the resolution path for the D-029 mechanism gap is clearer."
   SECRETS_POLICY_md:
     status: accepted
     committed_to_repo: true
   DecisionJournal_md:
     status: accepted
-    committed_to_repo: pending  # D-029 added this session; D-028 landed earlier this session in commit 83c0bf8
-    committed_session: H-016
+    committed_to_repo: pending  # D-030 added this session at H-017; D-029 previously landed at H-016 close in commit 66def97
+    committed_session: H-017
     pending_entries: []
+    note: "At H-016 close, D-029 landed on main in commit 66def97 (together with STATE v14 and Playbook §13). At H-017, D-030 is added at the top of the file; replacement produced in this session awaits operator merge via the drag-and-drop-to-staging interim flow adopted in D-030 itself. 30 DJ entries total."
   RAID_md:
     status: accepted
     committed_to_repo: true  # updated at H-016: I-016 resolved per D-028, I-017 added
@@ -469,8 +459,15 @@ scaffolding_files:
   Handoff_H016_md:
     status: accepted
     path: "Handoff_H-016.md"
-    committed_to_repo: pending  # produced this session
+    committed_to_repo: true  # operator committed at e6c4deb (post-H-016, pre-H-017-substantive-work) after H-017 surface noted it was missing from 66def97
     committed_session: H-016
+    note: "Handoff_H-016.md was produced at H-016 close but was not included in the H-016 session-close commit (66def97, which contained DecisionJournal.md, Playbook.md, STATE.md only). H-017 self-audit surfaced the gap; operator committed the handoff to main as commit e6c4deb during H-017. 332 lines."
+  Handoff_H017_md:
+    status: accepted
+    path: "Handoff_H-017.md"
+    committed_to_repo: pending  # produced this session as part of session-close bundle
+    committed_session: H-017
+    note: "Produced at H-017 session close per Playbook §2. Bundle includes DecisionJournal.md (with D-030 added), STATE.md v15, this handoff, and three deletions (CHECKSUMS.txt, COMMIT_MANIFEST.md, D-028-entry-to-insert.md) on claude-staging."
   data_dictionary_md:
     status: not-started
     note: "Phase 3 deliverable"
@@ -552,79 +549,83 @@ phase_2_files:
 
 ### Where the project is right now
 
-Phase 2 remains complete and operational — with a material fix landed this session. The service at `pm-tennis-api.onrender.com` continues to run the Phase 2 `main.py` unchanged (SHA `ceeb5f29…`, 2,989 bytes, 87 lines), but `src/capture/discovery.py` line 328 was modified at H-016 per D-028 to fix RAID I-016 (empty `event_date` extraction). Discovery loop continues polling `gateway.polymarket.us/v2/sports/tennis/events` every 60 seconds. At the post-H-016-deploy observation (2026-04-19T22:18Z), 126 active events were in discovery (up from 116 at H-015 and 74 at H-012). `_write_meta` immutability holds — historical meta.json files written with empty `event_date` remain on disk; slug_selector's fallback (also landed at H-016) handles them transparently via the populated `start_date_iso` field.
+Phase 2 remains complete and operational. The service at `pm-tennis-api.onrender.com` continues to run the Phase 2 `main.py` unchanged (SHA `ceeb5f29…`, 2,989 bytes, 87 lines). `src/capture/discovery.py` was modified at H-016 per D-028 to fix RAID I-016 (empty `event_date` extraction). Discovery loop continues polling `gateway.polymarket.us/v2/sports/tennis/events` every 60 seconds. As of H-016 close, 126 active events were in discovery.
 
-**Phase 3 attempt 2 stress-test service remains live.** `pm-tennis-stress-test` at `https://pm-tennis-stress-test.onrender.com` verified at H-014, self-check green, H-016 executed the first live probe against it successfully.
+**Phase 3 attempt 2 stress-test service remains live.** `pm-tennis-stress-test` at `https://pm-tennis-stress-test.onrender.com` verified at H-014, self-check green, H-016 executed the first live probe against it successfully (classification: accepted).
 
-**The D-025 hybrid-probe-first research question is answered: gateway-to-api slug bridge confirmed working.** H-016 ran the probe end-to-end with gateway-sourced slug `aec-wta-paubad-julgra-2026-04-21` (event 9471, WTA). Classification: `accepted`. First message latency 1.15 seconds. One `market_data` message received in the 10-second window. Zero errors, zero close events, no exceptions. Per D-025 commitment language, main sweeps (H-017 scope) may use either gateway-sourced or api-sourced slugs with api-sourced as the default (cleanest; via SDK's `client.markets.list()`).
+**The D-025 hybrid-probe-first research question is answered.** Gateway-to-api slug bridge confirmed working at H-016. Per D-025 commitment language, main sweeps (H-017 remaining scope) may use either gateway-sourced or api-sourced slugs with api-sourced as the default.
 
-**RAID I-016 resolved via D-028.** The investigation read a live gateway payload from `/data/matches/9471/meta.json` in the pm-tennis-api Shell, confirming that the gateway response has NO `eventDate` key — the canonical date source is `startDate` (full ISO timestamp). Fix C applied (both `discovery.py` forward-going fix AND `slug_selector.py` backward-compatible fallback). 9 new tests added. Subsidiary finding: `_check_duplicate_players` has been silently broken in production since H-007 (always returned `False` due to the empty-event_date short-circuit); restored automatically going forward by the fix, historical 116+ files retain stale `duplicate_player_flag=False`.
+**RAID I-016 resolved via D-028 (H-016).** Subsidiary finding: `_check_duplicate_players` was silently broken in production since H-007 (always returned `False` due to the empty-event_date short-circuit); restored automatically going forward by the fix.
 
-**RAID I-017 added (sev 4).** Two pre-existing test failures in `TestVerifySportSlug` surfaced during H-016 testing: both expect `SystemExit` but production code raises `RuntimeError`. Not introduced by H-016 work; existed on main at session open. Out of scope for D-028; H-017 disposition.
+**RAID I-017 added (sev 4) at H-016.** Two pre-existing test failures in `TestVerifySportSlug`; not introduced by H-016 work; H-017 disposition still pending.
 
-**D-029 deployment-procedure revision landed at H-016 close.** Multiple recurring failure modes in the current drag-and-drop commit workflow motivated the design (H-014 missed STATE v11, H-015 bracketed-paste failures, H-016 missing DJ + stale artifacts + Claude's splice-file process deviation). Operator ruled "PAT, no expiration" at session close. Commitment: Claude pushes code and documentation to the `claude-staging` branch using a non-expiring fine-grained GitHub PAT scoped to the repository, stored as a Render environment variable; operator merges staging → main as the single human-in-the-loop gate. Playbook §13 (the staging-push-and-merge ritual, 8 failure modes enumerated) was added. Plan §1.5.3/§1.5.4 revision queued as v4.1-candidate-4 for next plan-revision cadence per Playbook §12. **Implementation:** operator generates PAT → stores in Render env var → creates claude-staging branch → reports back at H-017 open → Claude test-pushes before first real use.
+**D-029 deployment-procedure revision landed at H-016 close.** First-use validation at H-017 surfaced a gap (covered immediately below).
 
-**D-027 remains active.** D-025 commitment 1 is superseded; commitments 2/3/4 stand. D-024 commitment 1 (pm-tennis-api/requirements.txt untouched) is actively reinforced. D-020/Q2=(b) isolation is preserved. D-028 is new at H-016 (Phase-2 fix + slug_selector fallback). D-029 is new at H-016 (deployment-procedure revision; staging-push-and-merge workflow).
+**D-030 landed at H-017.** D-029's authentication mechanism (PAT stored as a Render env var) presumes a working environment Claude.ai's sandbox does not have — Claude.ai cannot read Render env vars. Operator-validated Render config (Auto-Deploy='On commit', Branch='main') confirms the merge-gate safety property is structurally available; only the "Claude pushes" automation benefit is deferred. D-030 adopts a drag-and-drop-to-staging interim flow per Playbook §13.5.7 as the default for H-017 and all subsequent sessions until D-029's authentication mechanism is fixed by a future DJ entry. β-i: no per-session re-ratification required. D-029 itself is preserved unchanged. POD-H017-D029-mechanism opened (low urgency; project operates correctly under the interim flow). The D-030 commit bundle is the first concrete use of the interim flow — three stale H-016 artifacts (`CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, `D-028-entry-to-insert.md`) are queued for deletion in the same bundle as operator actions on claude-staging.
 
-**What the H-017 session inherits:**
+**D-027 remains active.** D-025 commitment 1 is superseded; commitments 2/3/4 stand. D-024 commitment 1 (pm-tennis-api/requirements.txt untouched) is actively reinforced. D-020/Q2=(b) isolation is preserved. D-028 and D-029 from H-016 remain active. D-030 is new at H-017 and immediately operative.
 
-- Repo with the full H-013 + H-014 + H-015 + H-016 bundle: STATE v14 (this doc), DJ at 29 entries (D-028 + D-029 added), Handoff_H-016, RAID with I-016 resolved + I-017 new (14 open issues, 17 total), Playbook with §13 added.
-- Three stale artifacts in repo root from the H-016 commit that need cleanup: `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, `D-028-entry-to-insert.md`.
-- Live `pm-tennis-api` service with I-016 fix deployed; 126+ events at H-016 close; event_date now correctly populated for newly-discovered events.
-- Live `pm-tennis-stress-test` service; self-check green; one live probe successfully executed and classified accepted.
-- D-029 deployment-procedure revision LANDED: operator-ruled 'PAT, no expiration'. Awaiting operator-side setup (generate PAT → store in Render env var → create claude-staging branch → report at H-017 open). First real staging-push use at H-017 non-trivial commit.
-- §14 of research-doc populated; §16 is the next natural slot for main-sweeps addendum.
+**What the H-018 session inherits:**
+
+- Repo with the H-017 bundle merged (assuming operator completes the staging upload + deletions + merge): STATE v15. DJ at 30 entries (D-030 added). Handoff_H-016 (committed at e6c4deb during H-017 self-audit catch-up). Handoff_H-017 (this session's). RAID with I-016 resolved + I-017 still open (14 open issues, 17 total). Playbook with §13 unchanged from H-016. Three stale H-016 artifacts deleted.
+- If operator defers some H-017 commit-bundle actions (e.g., uploads files but defers deletions, or defers the entire bundle): H-018 self-audit will surface the discrepancy between STATE's claims and on-disk repo state, and Claude proceeds per §1.5.4 (surface, await operator ruling).
+- Live `pm-tennis-api` service with I-016 fix deployed.
+- Live `pm-tennis-stress-test` service; one successful probe in its history.
+- One pending operator decision: `POD-H017-D029-mechanism` (low urgency).
+- §14 of research-doc populated; §16 is the natural next slot for the H-018 main-sweeps addendum.
 - Four plan-text revisions queued in STATE `pending_revisions`: v4.1-candidate (Section 5.6 baseline path), -2 (Section 5.4 and §11.3 asset-cap language), -3 (discovery.py comments), -4 (§1.5.3/§1.5.4 for D-029).
-- Zero pending operator decisions.
-- Seven consecutive sessions (H-010 through H-016) closed without firing a tripwire or invoking OOP.
+- D-030 interim flow is the default deployment mechanism. Staging branch (`claude-staging`) exists; merge gate is real (Render Auto-Deploy from `main` only).
+- Eight consecutive sessions (H-010 through H-017) closed without firing a tripwire or invoking OOP. The H-017 mid-session present_files event was a Claude error caught and corrected within the session, not a tripwire.
 
-### What changed in H-016
+### What changed in H-017
 
-**Phase 3 attempt 2 stress-test probe COMPLETE.** The first Polymarket US API Markets WebSocket live-network call in the project's history executed cleanly. D-025 hybrid-probe-first question answered. Main sweeps remain for H-017; the probe itself is done.
+**D-030 landed.** First-use validation of D-029 surfaced an architectural gap between D-029 §2's drafted authentication mechanism (PAT in Render env var) and Claude.ai's sandbox environment (no access to Render env vars). The decision adopts the drag-and-drop-to-staging interim flow per Playbook §13.5.7 as the default until D-029 is properly implementable. D-029 itself is preserved unchanged. POD-H017-D029-mechanism opened to track the resolution question.
 
-**RAID I-016 resolved.** D-028 landed with Fix C — forward-going fix to discovery.py AND backward-compatible fallback in slug_selector. 9 new tests. Phase-2 code modified with explicit operator authorization per D-016 commitment 2. Subsidiary finding: `_check_duplicate_players` was silently broken in production since H-007; automatic restoration for new events going forward.
+**Self-audit recovered a missing artifact.** Handoff_H-016.md was not in the H-016 session-close commit (`66def97` contained DecisionJournal.md, Playbook.md, STATE.md only). H-017 self-audit surfaced the gap; operator committed the handoff to main as `e6c4deb` during H-017. Discrepancy resolved without Claude action; this is a §10-permitted operator action (committing a Claude-produced file).
 
-**Helper-snippet flip landed.** `src/stress_test/list_candidates.py` as a committed module replaces the multi-line pasted snippet from RB-002 §5.1 that failed twice at H-015. 20 new unit tests. Includes `--show-rejected` diagnostic mode that would have surfaced I-016 more directly had it existed at H-015.
+**Render side of D-029 verified.** Operator confirmed at H-017 that `pm-tennis-api` Auto-Deploy is set to "On commit" with Branch set to `main`. Pushes to `claude-staging` are ignored by auto-deploy; the merge-gate is structurally enforced. This narrows D-030's scope to exactly the authentication mechanism, not the deployment topology.
 
-**§14 probe-outcome addendum written to research-doc.** The reserved slot is populated; research-doc is now complete through §15 with no reserved sections.
+**Stale-artifact deletions queued in D-030 commit bundle.** Three artifacts inadvertently committed at H-016 verified safe to delete (none referenced by code, tests, or documentation; D-028-entry-to-insert.md content fully preserved in DecisionJournal D-028 since `83c0bf8`): `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, `D-028-entry-to-insert.md`. Deletions are operator actions on claude-staging during the bundle merge.
 
-**DJ +2: D-028 and D-029 added.** Counter now 29. D-028 is the RAID I-016 fix with thorough documentation per operator direction. D-029 is the deployment-procedure revision with operator ruling 'PAT, no expiration' — Playbook §13 added, plan §1.5.3/§1.5.4 revision queued as v4.1-candidate-4. RAID I-017 added (sev 4, pre-existing TestVerifySportSlug failures out of D-028 scope).
+**Mid-session process recovery.** Claude called `present_files` on draft DecisionJournal.md and STATE.md mid-session as a draft-availability gesture. Operator correctly read this as a discipline signal — files presented for upload imply session-output ready, but the session was not closed and substantive scope was incomplete. Claude acknowledged the error rather than rationalizing. Operator authorized comprehensive re-read of governance corpus before further work. Claude completed the re-read (full Playbook including §§3, 6, 7, 8, 9, 10, 11, 12 unread at session open; full SECRETS_POLICY; RAID Risks/Assumptions/Decisions; DJ D-016 through D-027 carefully). Recalibrations from the read documented in Handoff_H-017 §3.
 
-**STATE bumped v13 → v14.** Material changes: `phase.current` bumped from `phase-3-attempt-2-probe-blocked-on-calendar` to `phase-3-attempt-2-probe-executed`; `phase.current_work_package` rewritten to reflect H-016 completions and H-017 pickups; sessions_count 15→16; raid_entries_by_severity reshuffled (sev_6 4→3, sev_4_and_below 3→4, issues_open 14→14 with one close + one open); pending_operator_decisions empty (POD-H016-deployment-flow resolved via D-029 landing); resolved_operator_decisions_current_session pruned per settled convention and replaced with H-016's 6 in-session rulings; phase_3_attempt_2_notes +10 entries; pending_revisions +1 (v4.1-candidate-4 for D-029); scaffolding_files: H-015 entries flipped pending→true with commit SHAs, DecisionJournal and RAID and research-doc marked committed_session=H-016, Playbook flipped to pending (D-029 §13 addition), STATE v14 + Handoff_H-016 added as pending; discovery counts refreshed (74→126).
+**DJ +1: D-030 added.** Counter now 30. STATE bumped v14 → v15.
 
-**Tripwires: none fired.** Zero OOP events. Seven consecutive sessions (H-010 through H-016) with clean discipline.
+**Tripwires: none fired.** Zero OOP events. Eight consecutive sessions (H-010 through H-017) with clean discipline. The mid-session present_files event was a Claude error caught and corrected within the session, not a tripwire firing.
 
-**Process finding — Claude-authored deviation surfaced mid-session:** Claude produced `D-028-entry-to-insert.md` as a splice-into-existing-file artifact rather than a full replacement of DecisionJournal.md, deviating from the established "Claude produces complete replacements; operator uploads" convention. Combined with the drag-and-drop workflow's silent-missing-file failure mode (operator upload missed the spliced DJ, included 3 stale reference artifacts), this produced a partially-wrong first H-016 commit (d7b2bd2) that required a follow-up commit (83c0bf8) to remediate. Operator surfaced the process deviation explicitly. Claude committed to 'always replace, never patch' convention going forward and baked it into the D-029 draft (commitment 3). No governance artifact change needed beyond D-029 itself; the drafts capture the failure mode and its remediation.
+**What did NOT happen this session, deferred to H-018:** main sweeps per §7 Q3=(c); §16 research-doc addendum; RAID I-017 disposition. All explicitly in scope for H-018 per the Path A cut at session close.
 
-### H-017 starting conditions
+### H-018 starting conditions
 
-When the next session opens, Claude will find:
+When the next session opens, Claude will find (assuming operator completes the H-017 commit-bundle merge):
 
-- Repo on `main` with the full H-016 bundle: STATE v14, DJ at 28 entries (last D-028), Handoff_H-016, RAID with I-016 resolved + I-017 new, research-doc with §14 populated, `src/stress_test/list_candidates.py` module, 9 new tests for I-016 regression + fallback, 20 new tests for list_candidates.
-- Three stale artifacts in repo root needing cleanup: `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, `D-028-entry-to-insert.md`.
-- `pm-tennis-api` service running with I-016 fix deployed; 126+ events discovered; event_date correctly populated for new events.
-- `pm-tennis-stress-test` service live with credentials; one successful probe in its history.
-- One pending operator decision: POD-H016-deployment-flow (D-029 authentication mechanism choice).
+- Repo on `main` with the H-017 bundle merged: STATE v15, DJ at 30 entries (last D-030), Handoff_H-017, three stale H-016 artifacts deleted from repo root.
+- `pm-tennis-api` service running with I-016 fix deployed.
+- `pm-tennis-stress-test` service live; one successful probe in its history.
+- One pending operator decision: `POD-H017-D029-mechanism` — surface at H-018 open per D-030 Resolution path; check whether GitHub MCP connector has appeared in Anthropic's registry, or any other relevant change. No urgency.
 - §16 as the natural next section of research-doc for main-sweeps addendum.
-- Four plan-text pending revisions in STATE (v4.1-candidate-4 conditional on D-029).
+- RAID I-017 disposition still pending (carried forward from H-016 → H-017 → H-018).
+- Four plan-text pending revisions in STATE.
 - Research-first discipline in force per D-016, D-019.
-- Pruning convention for `resolved_operator_decisions_current_session`: stricter reading, settled.
-- Drag-and-drop commit workflow with 'always replace, never patch' discipline in force until D-029 lands.
+- D-030 interim flow is the default deployment mechanism.
+- Drag-and-drop-to-staging discipline in force; `main` is never pushed to directly; merge gate is operator-only.
+
+If operator merge has not happened by H-018 open, Claude's self-audit will surface the discrepancy (STATE claims merged state; repo shows pre-merge state) and seek operator ruling per Playbook §1.5.4 before proceeding.
 
 ### Validation posture going forward
 
-At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode. At H-017 open, the check has four application surfaces:
+At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode. At H-018 open, the check has these application surfaces:
 
-- **Retrospective for H-016 artifacts.** STATE v14, Handoff_H-016, DecisionJournal D-028, RAID I-016/I-017 updates, `list_candidates.py`, the discovery.py/slug_selector.py fixes, the research-doc §14 addendum. Spot-check that claims about commit SHAs, line numbers, and test counts match on-disk reality. H-016 artifacts are unusually rich; focus on the highest-leverage items (the discovery.py line 328 fix, the D-028 entry text, the §14 probe outcome verbatim JSON).
+- **Retrospective for H-017 artifacts.** D-030 entry text, STATE v15 changes (POD opened, scaffolding flips, prose updates), the three deletions. Spot-check that claims about commit SHAs and counts match on-disk reality.
 
-- **Preventive for main sweeps code-turn.** Main sweeps (§7 Q3=(c), the H-017 scope) is the first net-new SDK surface beyond probe.py's citation block [A]-[D]. Fabrication-risk surface: `client.markets.list()` and multi-subscription semantics on `markets_ws`. Re-fetch `github.com/Polymarket/polymarket-us-python` README at code-turn time per H-014-Claude and H-015-Claude emphatic notes. No exceptions.
+- **Preventive for main sweeps code-turn (still pending; deferred from H-017).** Main sweeps remains the first net-new SDK surface beyond probe.py's citation block [A]-[D]. Re-fetch `github.com/Polymarket/polymarket-us-python` README at code-turn time. No exceptions. (Same instruction as in H-016 → H-017 handoff; not yet exercised.)
 
-- **Preventive for D-029 implementation.** If the authentication mechanism is resolved at H-017 open and D-029 implementation begins, re-verify the MCP registry for GitHub (may have been added since H-016 search) and re-read the current Playbook/plan text before editing. The draft governance artifacts are starting points, not commit-ready files — they should be refined against the current state of the governance documents at H-017 open, not treated as frozen.
+- **Preventive for I-017 disposition.** Small code fix either side (update tests to expect `RuntimeError`, OR update code to raise `SystemExit`). Read the actual `verify_sport_slug` function at H-018 before deciding which side to fix.
 
-- **Preventive for I-017 disposition.** Small code fix either side (update tests to expect RuntimeError, OR update code to raise SystemExit). Read the actual verify_sport_slug function at H-017 before deciding which side to fix; don't rely on I-017's description as the full picture.
+- **Surface POD-H017-D029-mechanism per D-030 Resolution path.** Brief check: GitHub MCP connector in Anthropic registry yet? Other sandbox-accessible secret-injection mechanisms? Operator preference change? If any change material, becomes its own targeted DJ entry.
 
-Values of `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` must never enter the chat transcript — they are set via Render dashboard only. H-016 exercised the credential path during the probe; discipline held (credentials never entered chat, all auth done via the SDK's internal handling of env-var-named credentials per D-023).
+Values of `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` must never enter the chat transcript — they are set via Render dashboard only. H-016 exercised the credential path during the probe; discipline held. H-017 explicitly rejected (per D-030) the option of pasting a GitHub PAT into chat under OOP, citing SECRETS_POLICY §A.6 and Playbook §5.5.4.
 
 ---
 
-*End of STATE.md — current document version: 14. Last updated: H-016.*
+*End of STATE.md — current document version: 15. Last updated: H-017.*

@@ -18,6 +18,100 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-030 — D-029 authentication mechanism: architectural gap at first-use; interim flow adopted per Playbook §13.5.7
+
+**Date:** 2026-04-19
+**Session:** H-017
+**Type:** Governance / Process / Operational carve-out on D-029 implementation
+
+**Source:** First-use validation of D-029 at H-017 session open. D-029 landed at H-016 close with an implementation sequence (§Implementation sequencing): operator generates PAT → stores on Render env var → creates claude-staging branch → Claude test-pushes at H-017 open. Execution of this sequence at H-017 surfaced a gap between D-029's drafted mechanism and the actual working environment.
+
+**Finding 1 — the gap.** D-029 Commitment §2 and Playbook §13.2 both specify that Claude authenticates via a GitHub PAT stored as a Render environment variable. This presumes a working environment in which Claude can read Render env vars. Claude.ai's sandbox (`/home/claude`) has no such access — Render env vars are readable only by processes running on the Render service itself, not by the Claude.ai chat environment where Claude authors files. The PAT-on-Render-env-var pattern as drafted in D-029 §2 is therefore not directly usable from Claude's actual working environment.
+
+**Finding 2 — what is working.** The Render side of D-029 is sound, verified at H-017 via operator-performed dashboard inspection: `pm-tennis-api` Auto-Deploy is set to "On commit" with Branch set to `main`. Pushes to `claude-staging` are ignored by auto-deploy; code only reaches the production service via a merge to `main`. The `claude-staging` branch exists on remote (operator-created from `main` at commit `66def97` per H-016 close). The merge-gate safety property that D-029 was primarily designed to create is structurally available.
+
+**Finding 3 — Playbook §13.5.7 is the correct anchor.** Playbook §13.5.7 ("Operator has not yet set up authentication at session open") was drafted as a transitional failure mode for session-level setup lag, but its text applies equally to this architectural gap: "the staging workflow is not yet available. Procedure: session reverts to the pre-D-029 drag-and-drop flow for the duration of that session." The interim flow described below is an invocation of §13.5.7, extended in scope (from "this session" to "every session until the authentication gap is resolved") but not in substance.
+
+**Decision:** Adopt the interim flow described below for H-017 and all subsequent sessions, until D-029's authentication mechanism is fixed by a future DJ entry. D-029 itself is preserved unchanged; D-030 records that D-029's Commitment §2 is architecturally incomplete and how the project operates in the meantime.
+
+**The interim flow:**
+
+1. Claude produces complete-replacement files in the sandbox working environment (`/home/claude`), per the "always replace, never patch" convention established at H-016.
+2. Claude presents files to the operator via the `present_files` tool (or equivalent download surface) at points where the session naturally produces a reviewable unit of work.
+3. Operator uploads via GitHub web UI to the `claude-staging` branch — not `main`. Per Playbook §13, never push directly to `main` outside of a merge action.
+4. Operator reviews the diff via GitHub's compare or PR interface (staging vs. main).
+5. When satisfied, operator merges `claude-staging` → `main`. Render auto-deploys from `main`.
+
+**What this interim flow preserves from D-029:**
+
+- **Merge-gate.** Operator is the sole committer to `main` via the staging → main merge. ✅
+- **Single-authoring-channel.** Claude is still the sole author of code and documentation. ✅
+- **Always-replace discipline.** Claude never produces splice-into-file artifacts. ✅ (H-016 commitment, baked into D-029 §3, carried forward here.)
+- **No secret values in chat.** The PAT-to-sandbox gap is acknowledged; the interim flow avoids it entirely by not requiring Claude to push. ✅
+
+**What this interim flow does not preserve from D-029:**
+
+- **Claude-originated pushes.** The "Claude pushes to staging" automation benefit is deferred. Operator still performs the upload step; the benefit over the pre-D-029 workflow is that operator uploads to `claude-staging` (reviewable) rather than `main` (immediately live).
+- **Claude-led pre-push validation.** D-029 Commitment §4 specified Claude-run tests, path-correctness check, and stale-artifact check before push. Under the interim flow these checks still happen (Claude runs them in sandbox and reports in chat), but they're advisory rather than push-gating. Operator is the effective gate for all four.
+
+**Considered (and rejected) alternatives:**
+
+- **(a) Revise D-029 itself.** Adding a superseding clause to D-029 §2 that describes the interim flow. Rejected as heavier than needed — D-029's core commitments are correct; only one clause of its implementation picture is incomplete. Retaining D-029 as-is and recording the gap in a separate entry preserves D-029's legibility and makes the gap discoverable as a distinct governance event.
+- **(b) Wait to resolve until a push mechanism is available.** Reject the interim flow, pause all session work until D-029 is properly implementable. Rejected — the project has substantive work (main sweeps, I-017 disposition, stale-file cleanup) that is independent of the push mechanism and does not benefit from being blocked. §13.5.7 exists precisely to allow work to proceed during setup gaps.
+- **(c) Paste PAT into chat under OOP each session.** Use Playbook §5 to override SECRETS_POLICY §A.6 per session. Rejected — SECRETS_POLICY §A.6 is one of the tightest governance commitments in the project, and routinely OOP-overriding it to save operator upload effort is a bad governance tradeoff. OOP is for genuine emergencies, not for working around architectural gaps.
+
+**Commitment:**
+
+1. **The interim flow (steps 1-5 above) is the default deployment mechanism for this project for H-017 and all subsequent sessions, until superseded.** No per-session re-ratification is required. The default is safe-by-fail — if Claude or operator is uncertain about mechanism at any session-open, drag-and-drop-to-staging is the assumed flow.
+
+2. **`main` is never pushed to directly.** All commits reach `main` via a merge from `claude-staging`. This is operator-enforced (Claude has no push mechanism) and, optionally, can be structurally enforced via GitHub branch protection rules on `main` (not required by D-030; recommended as complementary hygiene).
+
+3. **D-029 Commitment §2 (authentication via Render env var) is suspended pending resolution.** The Render env var `GITHUB_PAT` (if set by operator per D-029 implementation §2) is not currently referenced by any active code path. Operator may leave it set or delete it; no functional difference. Future resolution of the authentication mechanism may or may not use that specific pattern.
+
+4. **A new pending operator decision is opened** (`POD-H017-D029-mechanism`) tracking the question "how should D-029's push mechanism actually work given Claude.ai's sandbox environment?" This POD is not urgent; it has no deadline, and the project operates correctly without it being resolved. It will be listed in STATE's `open_items.pending_operator_decisions` as an open item and surfaced at each session-open until resolved.
+
+**Resolution path (not a commitment, just direction):**
+
+At each future session-open, Claude surfaces the D-029 mechanism question briefly if any of the following has changed:
+
+- GitHub MCP connector added to Anthropic's registry (check takes one `search_mcp_registry` call).
+- Other sandbox-accessible secret-injection mechanisms made available in Claude.ai.
+- Operator preferences shift (e.g., "I'm fine pasting the PAT per session with rotation," which would require a SECRETS_POLICY §A.6 revision DJ entry, not an OOP).
+- An alternative architecture surfaces (e.g., a small shim service that reads `GITHUB_PAT` from Render and pushes on Claude's behalf via an API Claude can call).
+
+Any of these, if material, becomes its own targeted DJ entry at that session. No pressure to resolve on any particular cadence.
+
+**Scope and carve-outs:**
+
+- **D-029's substantive commitments remain fully active.** Merge-gate, sole-authoring, always-replace, no-secrets-in-chat, observation-lock-preservation, OOP-cannot-bypass-merge-gate — all preserved. D-030 touches only Commitment §2 (the authentication mechanism clause).
+- **Playbook §13 stands unchanged.** §13.5.7's transitional-failure-mode text is applicable to the current state. If §13 text needs revising to reflect the new default (e.g., because §13.5.7's language implies the failure is temporary-and-specific-to-a-session rather than general), that's a Playbook revision to do when we have more clarity on the resolution path — not now.
+- **SECRETS_POLICY is unchanged.** The PAT (if it exists on Render) is still a secret; §A.6 still governs it.
+- **OBSERVATION_ACTIVE soft lock is unchanged.** Enforced in Claude's behavior layer, independent of commit mechanism.
+
+**Effect on other decisions and governance artifacts:**
+
+- **D-029:** preserved verbatim; Commitment §2 annotated as "suspended pending resolution per D-030" in any downstream references.
+- **Playbook §13.5.7:** currently-invoked failure mode, now the effective default. No text change to §13 at this time.
+- **STATE:** gains `POD-H017-D029-mechanism` in `open_items.pending_operator_decisions`. DJ counter increments 29 → 30. No other YAML changes caused by D-030 specifically.
+- **Plan §1.5.3 / §1.5.4 revision (v4.1-candidate-4):** still queued; the revision target text (Claude pushes to staging; operator merges) remains correct at the governance-intent level. The interim mechanism doesn't change the plan-revision's target text, only its implementation schedule.
+
+**What this decision does not decide:**
+
+- **Which resolution path is best.** Options named above are sketched, not evaluated. Evaluation happens in a targeted future DJ entry when one of the options becomes concretely available.
+- **A deadline for resolution.** Open-ended; the project operates correctly under the interim flow.
+- **Whether D-029 should eventually be retracted and replaced.** Premature; depends on what the resolution looks like.
+- **Whether per-session re-ratification should be required if the situation persists for many sessions.** β-i was chosen per operator ruling at H-017; if drift concerns surface later, a follow-up DJ entry can impose ratification cadence.
+
+**Evidence trail:**
+
+- D-029 §2 (H-016 DecisionJournal): PAT-via-Render-env-var mechanism as drafted.
+- Playbook §13.2, §13.5.7 (H-016): preconditions requiring Render-env-var access; transitional-failure-mode language.
+- H-017 chat exchange: Claude surface of architectural gap before first-use; operator validation of Render config (Auto-Deploy: On commit, Branch: main); operator ruling on Option β-i.
+- SECRETS_POLICY §A.6: secret values never in chat transcript (constraint that rules out Option (c) above).
+- H-016 always-replace-never-patch commitment (carried forward in interim flow step 1).
+
+---
+
 ## D-029 — Deployment procedure revision: Claude pushes to a staging branch; operator merges to `main`
 
 **Date:** 2026-04-19

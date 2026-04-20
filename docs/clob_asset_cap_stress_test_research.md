@@ -778,4 +778,350 @@ Consolidated for the next session:
 
 ---
 
-*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive.*
+## 16. H-019 main-sweeps-scope addendum — §7 Q3=(c) harness design, cited against the re-fetched SDK
+
+This section is additive to v4. Written at H-019 (2026-04-20) to scope the main stress-test sweeps per §7 Q3=(c), following the research-first-then-code sequencing committed in D-019. The code turn implementing this scope is expected at H-020 or later, not this session. §§1–15 are unchanged by this section.
+
+§16 is the research artifact for the main sweeps. It cites its external sources against authoritative material re-fetched this session, inherits the rulings committed in D-018 through D-031, names the empirical questions the sweeps code is designed to answer, and specifies the harness shape and acceptance bar. Every commitment §16 makes to main-sweeps design is traceable either to a cited authoritative source or to a named measurement question the sweeps code will resolve empirically.
+
+### 16.1 Fetch record
+
+Sources re-fetched at H-019 session start. Every §16 claim about SDK surface or documented Polymarket US behavior traces to one of these fetches.
+
+| Source | URL | Fetched at H-019 | Repo/page state at fetch |
+|---|---|---|---|
+| [E] | `github.com/Polymarket/polymarket-us-python` (README.md on `main` branch) | 2026-04-20 | 10 commits, 5 stars, 0 forks. **Unchanged commit count from H-013's "10 commits" (research-doc §12, §15.1).** MIT license. PyPI link: `pypi.org/project/polymarket-us/`. |
+| [F] | `docs.polymarket.us/api-reference/websocket/markets` (Markets WebSocket documentation page) | 2026-04-20 | Page content current. Subscription Limits section present. |
+| [G] | `libraries.io/pypi/polymarket-us` (PyPI version metadata) | 2026-04-20 | Latest release: `0.1.2` (2026-01-22). First release: `0.1.1` (2026-01-22, same day). **Two releases total; 0.1.2 is still current.** `pip install polymarket-us==0.1.2` remains the pinned target per D-024 commitment 1 and H-013's stability ruling. |
+
+**Baseline — this is what the re-fetch established against prior research:**
+
+1. The SDK has not moved. `polymarket-us==0.1.2` is still the latest release on PyPI; the GitHub repo's commit count is unchanged from H-013. D-024 commitment 1's pin is current-against-upstream as of H-019.
+2. Every SDK symbol cited in probe.py's [A]–[D] block (H-013) still resolves correctly against [E]. `AsyncPolymarketUS` constructor shape, `client.ws.markets()` factory, `markets_ws.connect()`/`subscribe(request_id, subscription_type, market_slugs_list)`/`close()` methods, the `on(event_name, fn)` handler pattern, the six documented exception types (`AuthenticationError`, `APIConnectionError`, `APITimeoutError`, `BadRequestError`, `NotFoundError`, `RateLimitError`), and the `SUBSCRIPTION_TYPE_MARKET_DATA` enum-string — all unchanged.
+3. Ed25519 signing remains fully internal to the SDK per [E]'s Authentication section (*"The SDK automatically signs requests with your credentials"*). §15.1.1's H-013 finding is re-confirmed. No user-code signing surface is exposed.
+4. Python 3.10+ requirement is explicit in [E]. `polymarket-us==0.1.2` depends on `httpx>=0.27.0`, `pynacl>=1.5.0`, `websockets>=12.0` per §15.1.3's verified dep tree (12 packages total, all wheel-available for Linux/x86_64 + CPython 3.12, no compile required).
+5. No contradictions with the research record surfaced during the re-fetch. §16 drafts cleanly against [E], [F], and prior research.
+
+This baseline is the load-bearing context for every commitment §16 makes below. If H-020-Claude (or later) reads §16 and finds the re-fetch baseline contradicted by newer SDK state at code-turn time, that is a research-first event (per D-019, R-010) and warrants re-opening the relevant §16 commitments before writing code against them.
+
+### 16.2 What §16 inherits from prior rulings
+
+Consolidated for the sweeps code turn. Every item below is a prior ruling in force at H-019 session close; §16 does not re-litigate any of them.
+
+1. **Scope: deferred CLOB asset-cap stress test.** Per D-018, the first deliverable of Phase 3 attempt 2 is the stress test from RAID I-002. The main sweeps are the test itself.
+2. **Form: research-doc first, operator review, code follows in a subsequent turn.** Per D-019. §16 is the research-doc artifact; H-020 code implements against operator-reviewed §16.
+3. **Definition of done: unit tests + operator code review + stress test runs to completion against actual gateway with actual asset count.** Per D-020 and D-021. §16 names the acceptance bar in §16.8.
+4. **Testing posture: zero SDK mocking.** Per H-012 addendum, reinforced by H-013's 38-test probe suite. Sweeps unit tests exercise the non-network paths (config loading, grid generation, classification, outcome serialization) without stubbing SDK surfaces.
+5. **Commit cadence: periodic commits within a deliverable permitted; handoff required at session end.** Per D-022.
+6. **Isolation: separate Render service, torn down after.** Per D-020 / §7 Q2=(b). Sweeps run on `pm-tennis-stress-test`; `pm-tennis-api/requirements.txt` is not modified (D-024 commitment 1).
+7. **Authentication: SDK-internal Ed25519.** Per D-023 / D-024 commitment 4a / §15.1.1. Credential env vars on `pm-tennis-stress-test`: `POLYMARKET_US_API_KEY_ID`, `POLYMARKET_US_API_SECRET_KEY`.
+8. **Slug source for sweeps: api-sourced via `client.markets.list()` as default; gateway-sourced optional.** Per D-025 resolved branch after H-016 probe outcome (§14.4). The gateway-to-api slug bridge is confirmed working for at least one slug (sample of one — see §16.5); main sweeps default to api-sourced because it does not depend on the shared-disk architecture Render does not support (D-027 / §15.2).
+9. **No disk writes of received tick content.** Per §7 Q1=(a). The sweeps are connection-level measurements, not archive-write tests.
+10. **Sweep grid shape: 1/2/5/10 subscriptions per connection × 1/2/4 concurrent connections.** Per §7 Q3=(c). Slug count per subscription is 100 placeholder slugs, targeting the documented cap [F].
+11. **No Phase 2 code touch.** Per D-016 commitment 2; the sweeps do not read `/data/matches/` or modify `discovery.py` / `main.py`.
+12. **Deployment: Claude pushes to `claude-staging`, operator merges to `main`.** Per D-029, operating under the D-030 interim drag-and-drop flow until the authentication mechanism is resolved. The code turn's session-close bundle follows this discipline; §16 itself follows it at this session's close.
+
+### 16.3 The 100-slug-per-subscription cap — re-cited for §16's sweep grid
+
+Directly quoted from [F] (`docs.polymarket.us/api-reference/websocket/markets`, Subscription Limits section):
+
+> Subscription Limits: You can subscribe to a maximum of 100 markets per subscription. Use multiple subscriptions if you need more.
+
+This citation anchors §16's choice of **100 placeholder slugs per subscription** in the sweep grid. The cap is a documented hard limit; sweeps at N=100 slugs per subscription hit the cap exactly and serve as the positive control. Sweeps that exceed the cap are out of scope for §7 Q3=(c) — the cap is documented, not the research question.
+
+The "Use multiple subscriptions if you need more" phrase in [F] is the prescribed pattern for >100-slug needs. That pattern is what §7 Q3=(c)'s "1/2/5/10 subscriptions per connection" sweep is measuring the feasibility of at scale. It is supporting evidence for Measurement Question M1 (§16.4) — the documentation describes the pattern; the harness measures it.
+
+### 16.4 Measurement questions
+
+The sweeps are designed to answer a small set of explicit empirical questions. Each is named with an identifier so the sweeps code can be read against them directly. These are not prose observations — they are the experimental questions the harness is built to answer.
+
+**M1 — multi-same-type subscription composition on one `markets_ws`.**
+
+*Question:* Do multiple `await markets_ws.subscribe(request_id, "SUBSCRIPTION_TYPE_MARKET_DATA", slug_list)` calls on one `markets_ws` object, each with a distinct `request_id` and a distinct (or overlapping) slug list, compose into N concurrent `SUBSCRIPTION_TYPE_MARKET_DATA` subscriptions — or does each call replace the prior, or produce some other behavior?
+
+*Why this is empirical and not pinned:*
+- [E] (the SDK README) demonstrates multi-subscription composition on one `markets_ws` via two `subscribe()` calls with **different subscription types**: one `SUBSCRIPTION_TYPE_MARKET_DATA` and one `SUBSCRIPTION_TYPE_TRADE`. It demonstrates three-subscription composition on `private_ws` (a different WS factory) with three different subscription types. It does **not** directly demonstrate the multi-`MARKET_DATA`-with-distinct-slug-lists pattern specifically.
+- [F] states the prescribed pattern for >100 slugs is "Use multiple subscriptions." That is consistent with M1 resolving as "compose" but does not prove it at the wire level for same-type calls.
+- §14.3 (H-016 probe outcome) is a sample of one — one `subscribe()` call, one `market_data` message back with correct `marketSlug` echo. Supporting evidence for subscription-addressability-by-`requestId`, not proof of multi-subscription composition.
+
+*How the harness measures it:* Each sweeps cell that specifies ≥2 subscriptions per connection issues N distinct `subscribe()` calls on the same `markets_ws` object, each with a distinct `request_id` (e.g., `sweep-h020-{timestamp}-sub-{n}`) and a distinct 100-slug placeholder list. The harness records per-`requestId` message counts over the observation window. M1 resolves as:
+- **Compose** if each `requestId` receives its own distinct traffic during the observation window (i.e., sum of per-`requestId` message counts equals total, with attribution reliable).
+- **Replace** if only the most recent `requestId` receives traffic.
+- **Error** if the second `subscribe()` call raises `BadRequestError` or similar.
+- **Ambiguous** if some other behavior (partial attribution, cross-subscription noise) is observed.
+
+M1 is the single most load-bearing question for §7 Q3=(c)'s "subscriptions per connection" sweep. Its resolution determines whether the sweep's axis-label "N subscriptions per connection" means what §7 Q3 presumes it means.
+
+**M2 — multi-connection composition on one client.**
+
+*Question:* Do multiple `client.ws.markets()` calls on one `AsyncPolymarketUS` client produce N independent markets WebSocket connections — or does the second call return the same `markets_ws` object as the first, or produce some other behavior?
+
+*Why this is empirical and not pinned:*
+- [E] demonstrates one-client-can-host-multiple-WS-connections with **different WS factories**: one `client.ws.private()` AND one `client.ws.markets()` on the same client, running concurrently. It does **not** directly demonstrate two `client.ws.markets()` calls on one client.
+- Prior research (§4.5, §15.2) records concurrent-connection limits as undocumented on `docs.polymarket.us`. That concerns Polymarket-side caps; M2 concerns the SDK-side question of whether the factory can produce multiple independent instances.
+
+*How the harness measures it:* Each sweeps cell that specifies ≥2 concurrent connections instantiates N `markets_ws` objects via N calls to `client.ws.markets()`. The harness connects, subscribes, and observes on each. M2 resolves as:
+- **Independent** if each `markets_ws` connects cleanly and receives traffic independently.
+- **Shared** if the second `client.ws.markets()` call returns the first's object (same identity) and the two subscribe paths collide on one connection.
+- **Error** if the second `connect()` call raises an exception the SDK documents (likely `APIConnectionError` family) or raises an undocumented exception type.
+- **Ambiguous** if some other behavior is observed.
+
+If M2 resolves as "shared" or "error," the concurrent-connections axis of §7 Q3=(c) is not testable via a single `AsyncPolymarketUS` client, and the harness design needs a secondary strategy (multiple clients, one per connection). §16 commits to the single-client design as default because it matches [E]'s demonstrated pattern for cross-factory concurrency; if M2 resolves against it, a targeted DJ entry at code-turn time specifies the secondary strategy before writing it.
+
+**M3 — per-subscription cap behavior at 100 slugs.**
+
+*Question:* Does a `subscribe()` call with exactly 100 placeholder slugs succeed cleanly, and does a call with 101 slugs raise the documented failure? If it succeeds, what is the first-message latency and the subsequent message rate for 100-slug subscriptions under the observation window?
+
+*Why this is partially pinned:*
+- [F] documents the 100-slug cap as a hard limit. §16.3 re-cites.
+- [E] does not demonstrate 100-slug subscriptions; the example shows single-slug subscriptions.
+- §14.3 (H-016 probe) demonstrated single-slug subscription latency of 1.15 seconds to first `market_data` message. Behavior at 100-slug load is not pinned.
+
+*How the harness measures it:* Every sweeps cell uses 100 placeholder slugs per subscription as the default (the documented cap). A single 101-slug cell is included as the negative control. The harness records first-message latency, per-slug message attribution (via the `marketSlug` echo in `market_data` payloads — observed in §14.3), and total message volume across the observation window.
+
+**M4 — placeholder-slug rejection behavior.**
+
+*Question:* When the harness subscribes to placeholder slugs that do not correspond to real markets on Polymarket US (the bulk of the 100-slug sweep, since only a handful of real tennis slugs exist at any given time), does the subscription:
+- (a) succeed at the subscribe level but produce no `market_data` messages for the placeholder slugs (silent filter)?
+- (b) raise `BadRequestError` or `NotFoundError` on the entire subscription (hard rejection)?
+- (c) partially accept — real slugs produce traffic, placeholder slugs silently don't, and the subscription stays alive?
+- (d) some other behavior?
+
+*Why this is empirical:*
+- [E]'s Error Handling section documents `BadRequestError` and `NotFoundError` as generic failure surfaces. It does not pin whether they fire on per-slug-not-found or whole-subscription-rejected semantics.
+- [F] does not discuss placeholder-slug behavior.
+- §14.3 subscribed to one real slug and got one `market_data` back. Placeholder-slug behavior is not pinned.
+
+*How the harness measures it:* Each sweeps subscription's slug list is 1 real slug (from `markets.list()`, to anchor the subscription) + 99 placeholder slugs (synthetically constructed — see §16.5). The harness observes which slugs produce traffic via the `marketSlug` echo and records whether the subscribe call raised or succeeded.
+
+**M5 — connection-level concurrent-connection cap.**
+
+*Question:* At what N does the 1/2/4-connections axis stop working cleanly? Specifically: does 4 concurrent connections from one client succeed (M2 resolves independent) and stay alive through the observation window, or does the Nth connection get rejected, rate-limited, or silently broken?
+
+*Why this is empirical:*
+- Per prior research (§4.5, §15.2), Polymarket US concurrent-connection caps are undocumented. The sweeps exist to characterize them.
+- [E] and [F] do not mention concurrent-connection limits.
+
+*How the harness measures it:* The connection-count sweep (1, 2, 4) runs each cell and records for each connection: connect success/failure, subscribe success/failure, first-message latency, observation-window message count, explicit error events, close events. Any non-success across the 4-connection cell answers M5 at an upper bound; success across all three cells answers M5 as "≥4 concurrent OK."
+
+### 16.5 Harness design
+
+The sweeps harness is the main-sweeps analogue of probe.py's design. Its structure mirrors probe.py's but generalizes to a grid.
+
+**Module identity.** `src/stress_test/sweeps.py`, entry point `python -m src.stress_test.sweeps`. Unit tests at `tests/test_stress_test_sweeps.py`. Same package, same Render service (`pm-tennis-stress-test`), same credentials, same SDK pin.
+
+**CLI surface (preliminary; final details resolve at code-turn time):**
+- `--sweep=subscriptions` — run the per-connection subscription-count sweep (axis: 1, 2, 5, 10 subscriptions × 100 slugs each, one connection).
+- `--sweep=connections` — run the concurrent-connection-count sweep (axis: 1, 2, 4 connections × 1 subscription × 100 slugs each).
+- `--sweep=both` — both sweeps in sequence. Approximate total runtime ~30 minutes per §7 Q3=(c).
+- `--observation-seconds=N` — per-cell observation window (default inherited from probe's `DEFAULT_OBSERVATION_SECONDS = 10.0`, but likely longer for sweeps; code-turn decides).
+- `--slug-source=api` (default; uses `client.markets.list()`) or `--slug-source=gateway` (operator-supplied seed slug via `--seed-slug=SLUG`, similar to probe's `--slug` under D-027, optional under D-025 resolved branch).
+
+**Slug composition per cell (default).** Each subscription in a default sweep cell uses 100 slugs:
+- 1 **real anchor slug** fetched via `client.markets.list()` (or operator-supplied via `--seed-slug` if `--slug-source=gateway`). This ensures every subscription has at least one slug that can produce traffic, giving M1 attribution evidence continuously across the grid — even if placeholder-rejection behavior (M4) fails in a way that drops placeholder traffic entirely, the anchor guarantees the cell still produces meaningful data.
+- 99 **placeholder slugs** synthesized to match the observed Polymarket US slug format (`aec-<tour>-<abbrev_a>-<abbrev_b>-<YYYY-MM-DD>` per §13.2's observed format). The placeholders are guaranteed not to correspond to real markets (e.g., YYYY-MM-DD set far in the past or with syntactically distinct but format-matching content). Synthesis is deterministic per-cell so results are reproducible across sweep runs.
+
+Placeholder synthesis is a point where §16 commits to a concrete strategy but the code turn may refine it based on what [E]/[F] do or do not say about invalid-slug formatting at code-turn re-fetch time.
+
+**Dedicated M4 control cell (100P/0R).** In addition to the default 1+99 composition across the main grid, the sweep runs **one dedicated control cell** with a pure-placeholder composition: 100 placeholder slugs, 0 real anchor. This cell is a single-subscription, single-connection cell (the simplest shape) and runs alongside the main grid.
+
+The purpose is to give M4 a clean, unconfounded measurement. In the default 1+99 cells, the presence of the 1 real anchor means any observed traffic on the subscription could come from the anchor regardless of placeholder behavior; M4 is still measurable via per-slug attribution, but placeholder rejection is inferred from the absence of placeholder-keyed messages rather than observed directly. The 100P/0R control cell measures placeholder behavior against a baseline of "zero real slugs to confound the signal" — it resolves M4 directly:
+- **Silent filter (M4 option a):** Subscribe succeeds, no messages produced over the observation window.
+- **Hard rejection (M4 option b):** Subscribe raises `BadRequestError` or `NotFoundError`.
+- **Unexpected traffic (other):** Subscribe succeeds and produces messages keyed to slugs the harness did not believe were real. Surface literally; flag for investigation.
+
+The 100P/0R cell is cheap — one additional cell adds ~30–60 seconds to the ~30-minute sweep. Its inclusion disambiguates M4 without requiring a separate invocation or a different CLI surface. It is enumerated in the grid alongside the default cells and receives the same `SweepCellOutcome` treatment, flagged in `cell_id` (e.g., `m4-control-100p-0r`) and in `SubscribeObservation.real_slug` (set to an empty string to signal the pure-placeholder composition).
+
+**Per-cell execution:**
+1. For a connections-axis cell of N connections: spawn N `client.ws.markets()` instances (or N `AsyncPolymarketUS` clients if M2 resolves shared, decided at code-turn). For a subscriptions-axis cell of N subscriptions: one `markets_ws`, N subscribe calls.
+2. Register handlers: `market_data`, `market_data_lite`, `trade`, `heartbeat`, `error`, `close` — same pattern as probe.py lines 445–450.
+3. Connect; record `connected: true/false` per connection.
+4. Subscribe; record `subscribe_sent: true/false` per subscription.
+5. Observe for the configured window. Record per-`requestId` message counts (for M1), per-`marketSlug` attribution (for M4), first-message latency per connection (for M5), explicit error events, explicit close events.
+6. Close each connection; record close outcome.
+7. Emit one `SweepCellOutcome` record (JSON) per cell.
+
+**Event attribution.** Per-`requestId` message attribution is the load-bearing observation mechanism. §14.3 demonstrated that the first `market_data` message preview included both `'requestId': 'probe-h013-1776637224'` and `'marketSlug': 'aec-wta-paubad-julgra-2026-04-21'`. Main sweeps presume both fields are reliably present in `market_data` payloads; if they aren't at code-turn time, the harness falls back to aggregate counts per connection and M1 resolves as "ambiguous — could not attribute per-subscription."
+
+**No debouncing.** [F] documents a `responsesDebounced: true` subscribe parameter that batches updates at regular intervals. Main sweeps explicitly set `responsesDebounced: false` (or omit the parameter, whichever the SDK treats as undebounced) to get maximum per-subscription message volume for load characterization. Debouncing is out of scope for §7 Q3=(c); §16 names it here so H-020-Claude does not reach for it.
+
+**No disk writes of received tick content.** Per §7 Q1=(a). The sweeps harness keeps per-cell state in memory; only the final aggregate outcome JSON is emitted (to stdout per cell; aggregated to a final summary). This is unchanged from probe.py's posture.
+
+### 16.6 `SweepCellOutcome` and `SweepRunOutcome` record shapes
+
+The outcome records are the main-sweeps analogue of probe.py's `ProbeOutcome` (probe.py lines 135–183). §16 commits to the shape below; field names and types are final; final code-turn details on optional vs required fields resolve at code-turn time.
+
+**`SweepCellOutcome`** (one per grid cell):
+
+```
+- sweep_id: str                            # identifies the parent run
+- cell_id: str                             # e.g., "subscriptions-axis-n5"
+- cell_axis: str                           # "subscriptions" | "connections"
+- cell_axis_value: int                     # N for the axis
+- slugs_per_subscription: int              # always 100 in committed grid
+- cell_started_at_utc: str
+- cell_ended_at_utc: str
+- observation_window_seconds: float
+- elapsed_seconds: float
+
+# per-connection records (list length = cell_axis_value for connections-axis,
+#                         1 for subscriptions-axis)
+- connections: list[ConnectionObservation]
+
+# classification
+- cell_classification: str                 # "clean" | "degraded" | "rejected" | "exception" | "ambiguous"
+- cell_classification_reason: str
+
+# measurement-question resolution flags for this cell
+- m1_resolution: Optional[str]             # "compose" | "replace" | "error" | "ambiguous" | null (not tested in this cell)
+- m2_resolution: Optional[str]             # "independent" | "shared" | "error" | "ambiguous" | null
+- m3_observations: dict                    # first-message latency, per-slug message counts
+- m4_observations: dict                    # per-slug attribution for placeholder vs real
+- m5_observations: dict                    # per-connection connect/subscribe/message outcomes
+
+- exception_type: str
+- exception_message: str
+```
+
+**`ConnectionObservation`** (one per connection within a cell):
+
+```
+- connection_index: int
+- connected: bool
+- subscribe_calls: list[SubscribeObservation]
+- error_events: list[str]
+- close_events: list[str]
+- closed_cleanly: bool
+```
+
+**`SubscribeObservation`** (one per `subscribe()` call within a connection):
+
+```
+- request_id: str
+- subscribe_sent: bool
+- slugs: list[str]                         # the 100 slugs for this subscription
+- real_slug: str                           # the 1 real anchor from markets.list()
+- placeholder_slugs_count: int             # 99 (if real anchor present)
+- message_count_by_event: dict[str, int]   # {"market_data": N, "heartbeat": M, ...}
+- per_slug_message_counts: dict[str, int]  # attribution via marketSlug echo
+- first_message_latency_seconds: Optional[float]
+- first_message_event: Optional[str]
+- first_message_preview: Optional[str]     # truncated repr, like probe.py
+```
+
+**`SweepRunOutcome`** (one per full sweep invocation; emitted to stdout at run end):
+
+```
+- run_id: str                              # sweep_id
+- sweep_started_at_utc: str
+- sweep_ended_at_utc: str
+- cells: list[SweepCellOutcome]
+- m1_aggregate_resolution: str             # synthesized across all cells that tested M1
+- m2_aggregate_resolution: str             # synthesized across all cells that tested M2
+- m3_aggregate_summary: dict               # per-N latency medians, etc.
+- m4_aggregate_summary: dict               # placeholder-rejection behavior across cells
+- m5_upper_bound: int                      # highest connection count observed to succeed cleanly
+- run_classification: str                  # "clean" | "partial" | "failed" | "ambiguous"
+- sdk_version: str
+- run_notes: str                           # free text for anomalies
+```
+
+The outcome shape is verbose by design. Main sweeps produce data that §17 (or the next additive section) will interpret; interpretation depends on having every per-cell observation in structured form. Probe.py's `ProbeOutcome` at 500-char preview truncation is a good precedent; sweeps apply the same truncation policy for individual payload previews.
+
+### 16.7 Cell classification state machine
+
+Per-cell classification generalizes probe.py's four-way classifier (`accepted` / `rejected` / `ambiguous` / `exception`, probe.py `_classify_outcome` logic lines 536–582). For sweeps cells, a fifth classification is added because the sweep's success mode is more nuanced than the probe's.
+
+**Subscribe-success threshold — the primary partition between `clean` / `degraded` / `rejected`.**
+
+Sweeps cells have an intended subscribe count per cell: for subscriptions-axis cells, it is `cell_axis_value` (e.g., 5 subscribes at N=5); for connections-axis cells, it is the cell's connection count × 1 subscribe per connection (e.g., 4 at N=4 connections). The observed subscribe count is the number of those intended subscribes that returned successfully (the SDK did not raise, `subscribe_sent == True`). The ratio of observed to intended is the classification threshold:
+
+- **All intended subscribes succeeded** (observed == intended): candidate for `clean` (final classification depends on the other `clean` conditions below).
+- **More than half but not all succeeded** (observed > intended/2, observed < intended): `degraded`.
+- **Half or fewer succeeded** (observed ≤ intended/2): `rejected`.
+
+The "more than half" cutoff is the threshold; cells on either side of it get different classifications. The threshold is pinned at cell-authoring time, not delegated to H-020-Claude's judgment. If code-turn experience suggests a different threshold (e.g., "any failed subscribe is `rejected`" as a stricter bar, or a ratio tuned to sweep size), that is a follow-up ruling with its own DJ entry — but §16 commits to the half-threshold as the initial bar so the sweeps produce classification data against a named standard from the first run.
+
+For single-subscribe cells (N=1 subscription): the threshold degenerates — observed is 0 or 1. 0 → `rejected`; 1 → candidate for `clean`. No `degraded` possible at N=1, by construction. This matches probe.py's single-subscribe classifier behavior.
+
+For the M4 control cell (100P/0R, single subscribe): same as N=1 logic. The cell's classification reflects subscribe success/failure, not placeholder-traffic behavior; M4's resolution is recorded in `m4_observations`, not in the cell's classification.
+
+| Classification | Meaning | Rule |
+|---|---|---|
+| `clean` | Every connection connected; every intended subscribe succeeded (observed == intended); message traffic received on the anchor slug(s) within the observation window; no error/close events during observation. | All of: `connections[*].connected == True`; subscribe ratio `observed == intended`; for default cells, at least one `market_data` or `trade` or `heartbeat` received across the cell; `connections[*].error_events == []`; `connections[*].close_events == []`. For the M4 control cell: relaxed — no anchor-slug traffic is expected; `clean` requires the subscribe succeeded and no error events fired, regardless of message count. |
+| `degraded` | Subscribe ratio is above the half-threshold but below 1.0 (more than half of intended subscribes succeeded, but not all) — OR all subscribes succeeded but the cell has one or more of: `error_events` non-empty during observation, `close_events` non-empty mid-window, anchor slug produced zero traffic across the observation window. The cell produced meaningful data but with identifiable anomalies. | Subscribe ratio in (0.5, 1.0) exclusive, OR (ratio == 1.0 AND one of the anomaly conditions fires). |
+| `rejected` | Subscribe ratio is at or below the half-threshold (half or fewer of intended subscribes succeeded) — OR the SDK raised a documented exception (`AuthenticationError`, `BadRequestError`, `NotFoundError`, `RateLimitError`) on the cell's critical path. | Subscribe ratio ≤ 0.5, OR documented exception caught per probe.py's pattern (probe.py lines 476–510). |
+| `exception` | Transport-layer error or undocumented SDK exception type on the cell's critical path. | `APITimeoutError`, `APIConnectionError`, `asyncio.TimeoutError`, or catch-all (`Exception` matched with undocumented type name). Takes precedence over subscribe-ratio classification — if an exception was raised, the cell is `exception` regardless of how many subscribes succeeded before the exception. |
+| `ambiguous` | Connected but observation window elapsed with no traffic and no explicit error on a default cell — or M1/M2 empirical resolution within the cell is "ambiguous." | Per D-025 commitment 4, ambiguity is surfaced literally, not silently collapsed. Reserved for cases where the cell's own observations don't cleanly fit any of the other four classifications. The M4 control cell is never `ambiguous` by the zero-traffic criterion alone — pure-placeholder cells are expected to produce zero traffic under the silent-filter branch of M4. |
+
+**Classification precedence (applied top to bottom at classification time):**
+1. If an uncaught exception escaped the cell's execution → `exception`.
+2. Else if a documented SDK exception was raised on the critical path → `rejected`.
+3. Else if subscribe ratio ≤ 0.5 → `rejected`.
+4. Else if subscribe ratio in (0.5, 1.0) exclusive → `degraded`.
+5. Else (ratio == 1.0) if all `clean` conditions hold → `clean`.
+6. Else (ratio == 1.0 but some anomaly condition fires) → `degraded`.
+7. Else → `ambiguous` (should be rare; used only when none of the above rules resolve).
+
+Sweep-run classification (`SweepRunOutcome.run_classification`) is aggregated from cell classifications:
+- `clean` — every cell is `clean`.
+- `partial` — some cells clean, some degraded, none rejected/exception/ambiguous.
+- `failed` — one or more cells rejected or exception.
+- `ambiguous` — one or more cells ambiguous and none rejected/exception.
+
+### 16.8 Acceptance bar
+
+Per D-021 (testing posture) and D-020 (definition of done), the sweeps deliverable is accepted when:
+
+1. **Unit tests pass in a fresh venv against pinned deps.** The `tests/test_stress_test_sweeps.py` suite exercises non-network paths: grid generation (cell enumeration from CLI args), placeholder-slug synthesis (deterministic, format-correct, non-colliding with real slugs), classification state machine (each rule path covered), outcome record serialization, config loading (inherits `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` discipline from probe.py's `load_probe_config`). Zero SDK mocking, per H-012 addendum.
+
+2. **Operator code review.** Claude presents the `sweeps.py` + test files for review in the same session that produces them (or in a subsequent session, at operator's cut). Review follows the same shape as H-013's probe.py review.
+
+3. **Live smoke run against actual gateway.** Per D-020's "actual asset count we expect" language as revised per §13.2's N=74 baseline (now ≈126 per §14.2's H-016 observation; will be larger at H-020), the live run covers at least:
+   - One successful cell of `--sweep=subscriptions` at N=1 (positive control — mirrors the probe's shape).
+   - One successful cell of `--sweep=subscriptions` at N≥2 (answers M1 directly).
+   - One successful cell of `--sweep=connections` at N≥2 (answers M2 directly).
+   - The dedicated M4 control cell (100P/0R single-subscription, single-connection) runs to completion and M4 resolves to one of the named options (silent filter / hard rejection / unexpected-traffic flag).
+   - The full `--sweep=both` run, completing within its documented ~30-minute window, producing a `SweepRunOutcome` JSON that captures M1–M5 resolutions.
+   - Outcome JSON is preserved for the §17 (or next additive) research-doc analysis.
+
+4. **All results cited against [E], [F], [G] or against §16's measurement questions.** No prose interpretation of outcomes without traceable source. If the sweeps produce an unexpected observation that does not fit §16's M1–M5 frame, the observation is logged literally in the `run_notes` field and surfaced to operator rather than reinterpreted.
+
+The acceptance bar is the same discipline probe.py cleared at H-016 — unit tests plus operator-reviewed code plus live smoke against the actual gateway producing data that a subsequent research-doc section interprets.
+
+### 16.9 Session-close discipline for the code turn
+
+For H-020-Claude (or whichever session implements the sweeps code) reading this section to know what to do:
+
+1. **Re-fetch [E] at code-turn time.** The re-fetch at H-019 established a clean baseline, but code-turn sessions operate under R-010 (Claude fabrication) and D-016 commitment 2 (research-first for external APIs); the pin-against-fresh-source discipline applies at every code-touch of the SDK surface, not just at research-doc time. Fetch record for the code-turn session goes in the session handoff, not in a revised §16 — §16 is frozen at H-019.
+2. **If [E] has moved materially** (commit count changed, SDK version past 0.1.2, any surface change): do not write code against §16's commitments without first surfacing the delta. That is a governance-layer event and warrants a targeted DJ entry before code.
+3. **If [E] is unchanged** from H-019's fetch record (§16.1): proceed to code, citing §16 in the sweeps module header block [H]+, and citing [E], [F] for SDK/wire-format material as probe.py cited [A]–[C].
+4. **No Phase 2 code touch** per D-016 commitment 2. Sweeps are in `src/stress_test/` only.
+5. **No modification to `pm-tennis-api/requirements.txt`** per D-024 commitment 1. Sweeps deps live in `src/stress_test/requirements.txt` and reuse the existing pins.
+6. **Always-replace convention** per D-029 §3 / H-016: `sweeps.py` and test files are produced as complete files, never as splice-into-existing-file instructions.
+7. **Session cut discipline.** If H-020 cuts the session at code-only (deferring live smoke to H-021), the acceptance bar's items 3 and 4 defer with it; §17 (or next additive) is not written until after live smoke produces data. One-deliverable-per-session is the project's pattern.
+
+### 16.10 What §16 does not decide
+
+- **Exact observation-window length per cell.** Default is inherited from probe.py's 10 seconds; sweeps may want longer (30–60s per cell) because aggregate message volume is the measurement. Final value set at code-turn time, informed by [E]'s behavior at 100-slug scale.
+- **Exact placeholder-slug synthesis details.** §16.5 commits to format-matching synthesis with deterministic seeding; the exact construction (e.g., whether placeholder date suffixes are past-dated, far-future, or syntactically invalid) is a code-turn decision informed by M4 pilot observations.
+- **Module-internal architecture of `sweeps.py`.** Whether the grid is enumerated as a Python generator, a data-class tree, a CLI-flag-parsed list — all are implementation details of one module; §16 commits to the external CLI surface and the outcome-record shape, not to the internal code structure.
+- **Whether `SweepRunOutcome` is written to stdout only or also persisted to a file.** Per §7 Q1=(a) no-disk-writes commitment, the default is stdout-only. Code-turn may want a `--output-file` flag for convenience; if so, it reads from `/tmp` (ephemeral, not the persistent disk) and is flagged as operator-scrapable rather than archival.
+- **Whether `--sweep=subscriptions` and `--sweep=connections` run in the same process or via two separate invocations.** Both are sound; code-turn picks one.
+- **The shape of §17** (the main-sweeps-outcome addendum that will interpret the live smoke results). §14 is the precedent; §17 will follow that convention when written.
+- **The teardown of `pm-tennis-stress-test`** after sweeps complete. Per RB-002 teardown section, the service is deleted after stress-test work is in hand; §16 does not schedule this, but flags it as the post-§17 cleanup step.
+- **Plan-text revisions v4.1-candidate-2 (the 150-asset-cap vs documented-100-cap reconciliation).** Remains queued in STATE `pending_revisions`. §16 does not cut a plan revision; it populates the research the revision will reference.
+
+### 16.11 What §16 does not change
+
+- **§16 does not amend §§1–15.** §§1–15 are preserved byte-identical from v4 as recorded pre-H-019; §16 is a purely additive section appended after §15. No claim in §§1–15 is revised, no wording in §§1–15 is edited, no §-level renumbering occurs. §15.1's H-013 findings on Ed25519 signing, timestamp unit, and dep footprint stand as recorded; §16.1's re-fetch is confirmation, not revision. §14.3's probe outcome stands; §16 cites it as supporting evidence (n=1) for M1 without re-interpreting it.
+- **§7 Q1/Q2/Q3/Q4/Q5/Q5′ resolutions stand.** D-023/D-024/D-025/D-027 commitments are in force as-recorded.
+- **D-025 commitments 2, 3, and 4 stand.** D-027 supersedes commitment 1 only; §16's api-sourced default for main sweeps implements D-025's resolved branch from §14.4.
+- **No plan-text revisions are cut.** v4.1-candidate, v4.1-candidate-2, v4.1-candidate-3, v4.1-candidate-4 remain queued in STATE `pending_revisions`.
+- **No commitment files are touched.** `fees.json`, `breakeven.json`, `signal_thresholds.json` (which does not exist), `data/sackmann/build_log.json` — none in the path of §16 or of the sweeps code turn.
+- **No Phase 2 source files are touched.** `src/capture/discovery.py`, `main.py` — untouched by §16.
+- **No RAID entries added or modified by §16 itself.** §16 populates the research record; it does not surface new risks or issues. If code-turn work does surface any, that is H-020's scope, not H-019's.
+
+---
+
+*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive + §16 H-019 main-sweeps-scope addendum.*

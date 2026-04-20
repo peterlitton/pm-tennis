@@ -18,6 +18,160 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-033 — `polymarket-us==0.1.2` full exception surface surfaced at H-020 SDK introspection: frozenset assignments revised
+
+**Date:** 2026-04-20
+**Session:** H-020
+**Type:** SDK-surface clarification / Classifier frozenset revision
+
+**Source:** Claude surfaced during H-020 checkpoint 3 SDK introspection (post-install of `polymarket-us==0.1.2` per `src/stress_test/requirements.txt`). The check was a discipline layer beyond §16.9 step 1's README re-fetch — introspecting the installed module's `__all__` and exception hierarchy. This check is the H-013 / §15.1.3 standard that §16.9 did not name explicitly. Operator ruled at checkpoint 3 hard pause.
+
+**Finding.** `polymarket-us==0.1.2` top-level namespace (and `polymarket_us.__all__`) exports **twelve** exception classes; [E]'s README Error Handling section illustrates **six** of them via its import example. The README's six is an illustrative import list, not an exhaustive type enumeration. Complete hierarchy rooted at `PolymarketUSError ← Exception`:
+
+```
+PolymarketUSError (root)
+├── APIError
+│   ├── APIConnectionError                [README]
+│   │   └── APITimeoutError               [README]
+│   └── APIStatusError (HTTP 4xx/5xx base)
+│       ├── BadRequestError (400)         [README]
+│       ├── AuthenticationError (401)     [README]
+│       ├── PermissionDeniedError (403)
+│       ├── NotFoundError (404)           [README]
+│       ├── RateLimitError (429)          [README]
+│       └── InternalServerError (500+)
+└── WebSocketError
+```
+
+Types documented in the README's Error Handling example: 6 (marked [README] above). Types present in the installed module but not in the README example: 6 (`PolymarketUSError`, `APIError`, `APIStatusError`, `PermissionDeniedError`, `InternalServerError`, `WebSocketError`). HTTP-status-code mappings come from each class's own docstring in `polymarket_us/errors.py` (verified at H-020 via source read).
+
+**Framing this against the §16.9 re-fetch:** H-020 §16.9 step 1 re-fetch recommended exit state A (clean) on the basis that the [E] README text was identical to H-019's baseline, including the six-type import example in the Error Handling section. That ruling holds for the README-as-text check §16.9 step 1 names. The finding here is at a different layer: the *installed module* exports more than the README illustrates. Per the "when uncertain, default to B" rule, this gap between the research record (§16.1 + [A] citation) and the installed surface is B material — a contradiction between the research record and what the code will actually execute against — that was not caught at H-019 re-fetch time because the re-fetch was README-only. The README re-fetch was correct per §16.9's letter; the gap is in what §16.9 asks for, not in how the re-fetch was performed.
+
+**Decision:**
+
+1. **Expand `DOCUMENTED_REJECTED_EXCEPTION_TYPES`** to include `PermissionDeniedError`. Final set of 5 type names:
+   `{"AuthenticationError", "BadRequestError", "NotFoundError", "PermissionDeniedError", "RateLimitError"}`.
+   Criterion: 4xx client-error class under `APIStatusError` — the server received the request and refused it for a documented reason. A 403 is a documented client refusal; classifying it as `rejected` preserves the "server responded with a documented refusal" signal.
+
+2. **Expand `DOCUMENTED_TRANSPORT_EXCEPTION_TYPES`** to include `InternalServerError` and `WebSocketError`. Final set of 5 type names:
+   `{"APIConnectionError", "APITimeoutError", "TimeoutError", "InternalServerError", "WebSocketError"}`.
+   Criterion: transport/infrastructure-layer error — the request either didn't reach the server, didn't complete, or failed server-side in a way the client request didn't cause. `InternalServerError` (5xx) is a server-side failure, not a client refusal; `WebSocketError` is WS-layer transport, analogous to `APIConnectionError` for HTTP.
+
+3. **`APIError`, `APIStatusError`, `PolymarketUSError`** — base classes. Under normal SDK behavior these are not raised directly (leaf subclasses are). If one does raise at runtime, catch-all in the classifier routes to `exception`. No frozenset assignment.
+
+**Considered:**
+
+- **(1) Stay with the README-named six.** Classify the three newly-surfaced non-base types (`PermissionDeniedError`, `InternalServerError`, `WebSocketError`) via catch-all → `exception`. Rejected — `PermissionDeniedError` is structurally a sibling of the four named `APIStatusError` leaves; classifying it as `exception` loses information that the classifier already preserves for 400/401/404/429. Same reasoning applies to `InternalServerError` (known 5xx semantic) and `WebSocketError` (known transport semantic).
+- **(2) Expand by `isinstance` against base classes.** Import `APIStatusError` and `APIConnectionError` into the classifier, use `isinstance(exc, APIStatusError)` → rejected and `isinstance(exc, APIConnectionError)` → exception. Cleaner semantically but requires importing the SDK into `classify_cell`. Rejected — the classifier is deliberately import-light (string-matching against frozensets) so the unit tests exercise classification without installing the SDK (D-021). Maintains probe.py's exception-type-string convention.
+- **(3) Expand named, with `WebSocketError` deferred to live-smoke observation.** The checkpoint 3 pause proposal. Rejected — `WebSocketError`'s docstring and source (takes a `request_id` parameter, inherits from `PolymarketUSError` directly, not under `APIStatusError`) are clear enough that deferral is unnecessary. WS is the transport for the markets-ws channel sweeps exercises; a WS-layer error is a transport error.
+- **(4) Expand by documented semantic with InternalServerError routed to rejected instead of transport.** Alternate reading — since `InternalServerError` is an `APIStatusError` subclass (4xx/5xx group), treat it as rejected. Rejected — 5xx is a server-side failure; classifying it as `rejected` implies the sweep's request was refused, which mis-attributes the failure to the sweep when it's a server-infrastructure signal. The `APIStatusError` inheritance is a Python-level factoring choice; the HTTP-semantic split (4xx client error vs 5xx server error) is the more faithful classifier boundary.
+
+**Reasoning:**
+
+The [A] citation block in probe.py cites README Error Handling and names six exception types as the documented SDK surface. At H-013, probe.py's classifier used those six because that was the surface probe.py needed to classify against and the README was the authoritative public-doc source at the time. H-013 did not hit any exception in the clean-probe run (§14.3), so the gap between README-exported and module-installed was never observationally tested.
+
+Sweeps exercises a much larger surface than probe.py — N connections × M subscriptions × 100 slugs per subscription, including deliberately-invalid placeholder slugs on the M4 control cell. The M4 control cell is precisely the path most likely to raise `BadRequestError`, `NotFoundError`, or `PermissionDeniedError` if the server does hard-reject placeholder slugs. Sweeps is also the first piece of code that will observe WS-layer concurrent-connection behavior, where `WebSocketError` is the most likely raise site for any cap-boundary behavior.
+
+The `polymarket_us.__all__` list is the SDK's authoritative public surface declaration — it's the SDK's own statement of what the public API is. Twelve exception classes are public per `__all__`; six are illustrated in the Error Handling example. The classifier's frozensets should align with `__all__`, not with the README example, because `__all__` is what the SDK commits to supporting as stable public API.
+
+The HTTP-status-code framing in the docstrings (`400`, `401`, `403`, `404`, `429`, `500+`) is a second authoritative source — each class's own docstring pins its semantic. Using those docstring-named HTTP semantics to partition into `rejected` (4xx) vs `transport` (5xx + network + WS) is more faithful to the SDK's self-documentation than grouping strictly by Python inheritance.
+
+**Commitment:**
+
+1. `src/stress_test/sweeps.py` `DOCUMENTED_REJECTED_EXCEPTION_TYPES` = `frozenset({"AuthenticationError", "BadRequestError", "NotFoundError", "PermissionDeniedError", "RateLimitError"})`.
+2. `src/stress_test/sweeps.py` `DOCUMENTED_TRANSPORT_EXCEPTION_TYPES` = `frozenset({"APIConnectionError", "APITimeoutError", "TimeoutError", "InternalServerError", "WebSocketError"})`.
+3. Module header [A]-equivalent citation block updated to cite the **installed module's `__all__`** as the authoritative public-surface source alongside [E]'s README (which remains cited for the illustrative example and HTTP-status-code semantics). The header names the twelve exception classes explicitly so the classifier's frozenset membership is traceable to a specific source at code read time.
+4. Classifier unit tests cover each of the five rejected types and each of the five transport types firing their respective steps (5 + 5 = 10 type-specific sanity checks plus the undocumented-type catch-all).
+5. No `isinstance` / SDK-import is added to the classifier — frozenset string-matching is preserved per D-021 testability discipline.
+
+**Scope and carve-outs:**
+
+- **D-033 does not supersede §16.** §16 remains accepted and frozen at H-019. D-033 is a code-turn clarification of `§16.1`'s fetch-record claim (SDK surface unchanged) and `§16.4`/`§16.7`'s exception-type assignments. §16 prose is not edited.
+- **D-033 does not change §16.7's precedence list.** Steps 1–7 are unchanged. Only the frozensets that step 1 and step 2 consult are revised.
+- **D-033 does not change §16.6's outcome record shapes.** `exception_type` remains a string; `exception_message` remains a string-truncated-at-PREVIEW_TRUNCATION_CHARS.
+- **D-033 adds a standing addition to §16.9 (proposed in H-020 handoff):** future code-turn sessions perform both (a) [E]/[F]/[G] README re-fetch AND (b) `pip install` of the pinned SDK version + `__all__` / exception-hierarchy / public-surface introspection. README-documented and module-exported surfaces can diverge; the re-fetch discipline must cover both. This is the H-013 / §15.1.3 standard applied to §16 code turns.
+- **D-033 does not gate on live-smoke observation.** All five rejected-type assignments and all five transport-type assignments are based on docstring + HTTP-status-code semantics + module inheritance; no assignment requires H-021 live smoke to disambiguate. H-021 live smoke will observationally confirm (or contradict) the assignments; if any assignment's observed behavior contradicts this ruling, a follow-up DJ entry at that session revises.
+
+**Effect on other decisions:**
+
+- **D-016 (research-first):** preserved and honored. D-033 was surfaced during SDK introspection before any code change that depended on the broader frozenset assignments shipped. The classifier as shipped at checkpoint 2 used the README-documented six; D-033 is the correction before the frozensets become load-bearing for H-021 live smoke.
+- **D-019 (research-first):** preserved. D-033 is a code-turn correction of a research-record gap, surfaced honestly rather than papered over.
+- **D-021 (testing posture):** preserved and strengthened. Classifier tests remain SDK-import-free; string-matching against frozensets is the mechanism.
+- **D-025 commitment 4 (surface ambiguity literally):** honored. The README-vs-module surface gap was surfaced at the moment it was noticed, not resolved silently by either staying with six or silently expanding.
+- **D-027 (operator-supplied slug; slug_selector not in sweeps):** unchanged. D-033 touches exception classification, not anchor sourcing.
+- **D-032 (§16.7 Reading B):** unchanged. D-033 is orthogonal — it revises which exception-type strings step 1 vs step 2 match, not the clean-(iii) predicate.
+- **§16.1 (fetch record, research-doc):** unchanged as frozen prose. D-033 is the standing clarification that §16.1's "SDK unchanged" claim was README-accurate but module-surface-incomplete.
+- **§16.9 (session-close discipline, research-doc):** unchanged as frozen prose. D-033 proposes a standing addition to §16.9 in H-020's handoff — future code-turn sessions add the install-and-introspect step. The addition is proposed in handoff, not journaled as a §16 amendment.
+
+**Evidence trail:**
+
+- `polymarket_us.__all__` at H-020 introspection: 14 entries, 12 of them exception classes (`PolymarketUS`, `AsyncPolymarketUS`, and the 12 exception classes listed above).
+- `polymarket_us/errors.py` source at H-020 (path: `/usr/local/lib/python3.12/dist-packages/polymarket_us/errors.py`): 12 exception classes, each with a one-line docstring naming the HTTP status code (for `APIStatusError` subclasses) or the transport semantic (`APIConnectionError`: "Network connection error"; `APITimeoutError`: "Request timed out"; `WebSocketError`: "WebSocket-related error").
+- [E] README Error Handling section (re-fetched H-020 §16.9 step 1): six types in the import example — the same six `[A]` cites in probe.py lines 200-206.
+- Inheritance trace at H-020: `APIStatusError ← APIError ← PolymarketUSError`; six `*Error` leaves under `APIStatusError`; `APIConnectionError ← APIError`; `APITimeoutError ← APIConnectionError`; `WebSocketError ← PolymarketUSError` directly (not under `APIError`).
+- `WebSocketError.__init__` signature at H-020: `(self, message: str, request_id: str | None = None)` — carries a `request_id` parameter, meaning WS-layer errors can be attributed to a specific subscribe call when raised.
+- H-020 code: `/home/claude/pm-tennis/src/stress_test/sweeps.py` `DOCUMENTED_REJECTED_EXCEPTION_TYPES` and `DOCUMENTED_TRANSPORT_EXCEPTION_TYPES` post-D-033 revision.
+
+---
+
+## D-032 — §16.7 clean-(iii) reading: anchor-specific per Meaning column (Reading B)
+
+**Date:** 2026-04-20
+**Session:** H-020
+**Type:** Research-doc clarification / Code-turn reading-question resolution
+
+**Source:** Claude surfaced an internal inconsistency in research-doc §16.7 during mechanical transcription of the classification state machine at H-020 checkpoint 2 (§16.6 / §16.7 code-turn transcription per §16.9). Operator ruled at checkpoint 2 pause.
+
+**The inconsistency.** §16.7's `clean` row has a Meaning column and a Rule column that disagree on clean-condition (iii) for default cells:
+
+- **Meaning column:** *"message traffic received on the anchor slug(s) within the observation window"* — requires anchor-slug-specific traffic.
+- **Rule column:** *"at least one `market_data` or `trade` or `heartbeat` received across the cell"* — requires any qualifying traffic anywhere in the cell.
+
+Meanwhile §16.7's `degraded` row names *"anchor slug produced zero traffic across the observation window"* as an anomaly that forces step 6 to classify `ratio == 1.0` cells as `degraded`. Under a literal reading of the Rule column (call it Reading A), a cell with heartbeat-only traffic and zero anchor-slug traffic would satisfy clean-(iii) (heartbeat counts) AND the `degraded` anchor-zero anomaly — an overlapping case where step 5 resolves first and the anchor-zero anomaly at step 6 becomes operationally unreachable. Reading A makes the textually-named anomaly unreachable in practice.
+
+**Decision:** Adopt **Reading B** — clean-(iii) is anchor-slug-specific per the Meaning column. The Rule column's "across the cell" phrasing is imprecise transcription of the Meaning column's intent. Under Reading B, a cell with heartbeat-only traffic and zero anchor-slug traffic fails clean-(iii) at step 5, and step 6's anchor-zero-traffic anomaly fires cleanly. The M4 control cell's relaxed-clean caveat (no traffic required) is preserved unchanged.
+
+**Considered:**
+
+- **(A) Rule column literal, clean dominates.** Clean-(iii) as written requires any qualifying traffic; anchor-zero anomaly at step 6 becomes unreachable when step 5 has already fired. Preserves the Rule column's literal wording at the cost of making the `degraded` row's anchor-zero anomaly operationally inert. Rejected — textually-named but operationally-unreachable anomaly is the inconsistency signal.
+- **(B) Meaning column literal, anchor-specific.** Selected. Clean-(iii) requires anchor-specific traffic; step 6's anchor-zero anomaly becomes the path from "ratio 1.0 but no anchor traffic" to `degraded`, which is textually consistent.
+- **(C) Both hold, degraded vetoes clean on anomaly.** Keeps the Rule column's broader clean-(iii) but lets any anomaly condition override step 5. Richer; generalizes to future anomaly conditions. Rejected — §16 names three anomalies (errors, closes, anchor-zero) and only anchor-zero creates the inconsistency. Over-engineering for H-020 scope; if future anomalies require the veto pattern, a future research-doc addendum revises.
+
+**Reasoning:** §16.5's rationale for the 1+99 anchor-plus-placeholder composition is to produce *attributable* traffic for M1 measurement — traffic the harness can attribute to a specific subscription via the `marketSlug` echo (§14.3). Heartbeat traffic is connection-level and does not carry a `marketSlug` echo; it is not subscription-attributable. A cell with heartbeats but zero anchor `market_data` / `trade` is meaningfully degraded — the anchor is doing the work §16.5 specifies it for *precisely when* clean-(iii) requires anchor-specific traffic. The Meaning column captures this design intent; the Rule column was sloppy transcription.
+
+**Commitment:**
+
+1. `src/stress_test/sweeps.py` implements Reading B: `_cell_has_anchor_slug_traffic_qualifying` is the clean-(iii) predicate for default cells. Heartbeat alone does not satisfy clean-(iii).
+2. §16.7's Rule column phrasing stands unedited — §16 is frozen at H-019 and §16.11 names that §16 does not amend §§1–15 during the code turn. D-032 clarifies §16.7's Rule column vs. Meaning column by ruling Reading B authoritative, without editing §16 prose. If a future research-doc addendum (§17 or later) revises §16.7's text for clarity, it cites D-032.
+3. The M4 control cell's relaxed-clean caveat is preserved: M4 requires only subscribe success + no error events + no close events, no traffic required. §16.7's M4 caveat is unchanged by D-032.
+4. The `degraded` row's three anomalies (error_events non-empty, close_events non-empty, anchor slug zero traffic) all fire correctly at step 6 under Reading B. The regression test Claude wrote at checkpoint 2 (heartbeat-only traffic, zero anchor traffic → expect `degraded`) is the standing regression.
+
+**Scope and carve-outs:**
+
+- **D-032 does not supersede §16.** §16 remains accepted and frozen at H-019. D-032 resolves an ambiguity in §16.7 that operator review at H-019 did not catch. §16 prose is not edited.
+- **D-032 does not change §16.7's precedence list.** Steps 1–7 are unchanged. Only the clean-(iii) predicate (what counts as "traffic" for default cells) is clarified.
+- **D-032 does not affect the M4 control cell's relaxed-clean caveat.** M4 is explicitly untouched.
+- **D-032 does not change §16.6's outcome record shapes.** SubscribeObservation fields (`real_slug`, `per_slug_message_counts`, `message_count_by_event`) already support Reading B without modification.
+- **D-032 does not require revision of v4.1-candidate plan revisions.** §16.7 is a research-doc section, not plan-text. Plan revisions queued in STATE `pending_revisions` are unchanged.
+
+**Effect on other decisions:**
+
+- **§16 (H-019 addendum):** unchanged as frozen artifact. D-032 is the standing clarification reference.
+- **D-019 (research-first):** preserved. D-032 is a code-turn reading resolution of a research-doc ambiguity, not a research-first bypass. The surfacing itself exercised research-first discipline — Claude paused code transcription to surface the ambiguity rather than pick a reading silently.
+- **D-021 (testing posture):** preserved. The regression test for the anchor-zero anomaly lives in the sweeps sanity suite and will appear in `tests/test_stress_test_sweeps.py` at checkpoint 3.
+- **D-025 commitment 4 (surface ambiguity literally):** honored. The §16.7 ambiguity was surfaced at the code-turn moment it was noticed, not resolved silently.
+
+**Evidence trail:**
+
+- §16.7 `clean` row (research-doc line 1051): Meaning column vs Rule column textual comparison.
+- §16.7 `degraded` row (research-doc line 1052): anchor-zero-traffic anomaly text.
+- §16.5 (research-doc lines 920–922): 1+99 anchor rationale — "This ensures every subscription has at least one slug that can produce traffic, giving M1 attribution evidence continuously across the grid."
+- §14.3 (research-doc lines 558–601): n=1 evidence that `market_data` payloads carry the `marketSlug` echo; heartbeat does not appear in the observed payload and is not subscription-attributable.
+- H-020 checkpoint 2 sanity-test-trace: one test expected `degraded` for heartbeat-only + zero-anchor-traffic; Reading A returned `clean`; Reading B returns `degraded`. The test is the regression standing behind D-032.
+- H-020 code: `/home/claude/pm-tennis/src/stress_test/sweeps.py` `_cell_has_anchor_slug_traffic_qualifying` and step 5 (default cell branch) implement Reading B.
+
+---
+
 ## D-031 — RAID I-017 resolution: align `TestVerifySportSlug` tests with intentional `RuntimeError` behavior per commit `bae6ee8e`
 
 **Date:** 2026-04-20

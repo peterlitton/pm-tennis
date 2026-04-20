@@ -48,14 +48,14 @@ project:
         sections: ["Section 1.5.3", "Section 1.5.4"]
         summary: "Plan §1.5.3 and §1.5.4 revision candidate to reflect D-029 — Claude pushes to `claude-staging` branch, operator merges to `main`. D-029 landed at H-016 as a DJ entry (operator ruled 'PAT, no expiration'). Revised text: §1.5.3 'The operator shall: [...] review and merge Claude's pushes to the claude-staging branch at the operator's cadence, per Playbook §13; [...]'; §1.5.4 addition 'Claude pushes code and documentation changes to the claude-staging branch using a non-expiring GitHub PAT stored as a Render env var. Claude does not merge to main, does not force-push, does not push to any branch other than claude-staging.' Apply under Playbook §12 at next plan-revision cadence alongside -1, -2, -3."
   state_document:
-    current_version: 15
-    last_updated: 2026-04-19
-    last_updated_by_session: H-017
+    current_version: 16
+    last_updated: 2026-04-20
+    last_updated_by_session: H-018
 
 # ---- Phase and work package ----
 phase:
   current: phase-3-attempt-2-probe-executed
-  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). H-016 completed: (1) helper-snippet flip landed (`src/stress_test/list_candidates.py` + 20 tests; RB-002 §5.1 and README updated) in commit d7b2bd2; (2) RAID I-016 investigated against a live gateway payload (event 9471 meta.json read in pm-tennis-api Shell) and fixed per D-028 — discovery.py line 328 now sources event_date from startDate[:10], and slug_selector._passes_date_filter falls back to start_date_iso[:10] for ~116 historical meta.json files; committed in d7b2bd2 (code + RAID) and 83c0bf8 (D-028); (3) live probe executed in pm-tennis-stress-test Shell against gateway-sourced slug `aec-wta-paubad-julgra-2026-04-21` (event 9471) — classification accepted, first_message_latency_seconds=1.15, one market_data message received, D-025 hybrid-probe-first question resolved: gateway-to-api slug bridge is confirmed working; main sweeps may use either slug source with api-sourced as default; (4) §14 probe-outcome addendum written into docs/clob_asset_cap_stress_test_research.md in commit e28e390. H-017 accomplished: (α) self-audit surfaced that Handoff_H-016.md was missing from main (66def97 contained DJ/Playbook/STATE only); operator committed it at e6c4deb. (β) D-029 first-use validation surfaced an architectural gap; D-030 landed naming the gap, adopting the drag-and-drop-to-staging interim flow per Playbook §13.5.7, opening POD-H017-D029-mechanism, and preserving D-029 unchanged (operator ruled Option β-i: default, no per-session re-ratification). (γ) Render side of D-029 verified by operator (Auto-Deploy='On commit', Branch='main'); merge-gate is structurally enforced. (δ) Three stale H-016 artifacts (CHECKSUMS.txt, COMMIT_MANIFEST.md, D-028-entry-to-insert.md) verified safe to delete (none referenced by code, tests, or docs); deletions queued in the H-017 commit bundle for operator action on claude-staging. (ε) Comprehensive re-read of governance corpus after Claude's mid-session present_files error was caught by operator — full Playbook (incl. §§3, 6, 7, 8, 9, 10, 11, 12 unread at session open), full SECRETS_POLICY, RAID Risks/Assumptions/Decisions, DJ D-016 through D-027 carefully, PCR introduction. H-018 picks up: (a) main sweeps per §7 Q3=(c) — first net-new SDK surface beyond probe.py's [A]-[D] citations; re-fetch polymarket-us-python README at code-turn time per H-016 preventive-fabrication standing instruction (no exceptions); (b) §16 research-doc addendum (research-first per D-019; operator review precedes code turn); (c) RAID I-017 disposition (sev 4; small fix); (d) surface POD-H017-D029-mechanism per D-030 Resolution path."
+  current_work_package: "Phase 3 attempt 2 — asset-cap stress test (D-018). H-016 completed: (1) helper-snippet flip landed (`src/stress_test/list_candidates.py` + 20 tests; RB-002 §5.1 and README updated) in commit d7b2bd2; (2) RAID I-016 investigated and fixed per D-028 — discovery.py line 328 sources event_date from startDate[:10], slug_selector._passes_date_filter falls back to start_date_iso[:10] for ~116 historical meta.json files; committed in d7b2bd2 and 83c0bf8; (3) live probe executed in pm-tennis-stress-test Shell against gateway-sourced slug `aec-wta-paubad-julgra-2026-04-21` — classification accepted, D-025 hybrid-probe-first resolved; (4) §14 probe-outcome addendum written in commit e28e390. H-017 accomplished: (α) self-audit surfaced Handoff_H-016.md was missing from main; operator committed at e6c4deb. (β) D-029 first-use validation surfaced architectural gap; D-030 landed adopting drag-and-drop-to-staging interim flow per Playbook §13.5.7; POD-H017-D029-mechanism opened; D-029 preserved unchanged. (γ) Render side of D-029 verified (Auto-Deploy='On commit', Branch='main'). (δ) Three stale H-016 artifacts deleted. (ε) Comprehensive re-read of governance corpus after mid-session present_files error caught by operator. H-018 accomplished: (A) session-open self-audit confirmed H-017 bundle merged cleanly on main (commit a2b5217); STATE v15, DJ at 30 entries, Handoff_H-017, three stale deletions all verified on disk. (B) POD-H017-D029-mechanism resolution-path check per D-030: `search_mcp_registry` returned GitLab + others but no GitHub MCP connector (unchanged from H-016/H-017 finding). No path-change detected; POD remains open. (C) RAID I-017 disposition: read `verify_sport_slug` (discovery.py line 544) + production caller in main.py (lines 40–62, retry-wrapper around `except Exception`) + the two failing tests (test_discovery.py lines 566–579); operator requested `git blame` before ruling. Blame evidence: commit `bae6ee8e` (peterlitton, 2026-04-18 20:46:03, pre-H-004) with commit message *'fix: replace SystemExit with RuntimeError in verify_sport_slug'* — targeted, intentional edit. Operator ruled Option (a): align tests with intentional code behavior. D-031 written. tests/test_discovery.py updated (two methods renamed + reassertions + inline comments citing D-031/bae6ee8e). 49/49 passed in fresh venv. RAID I-017 marked Resolved. No Phase 2 code touch. H-019 picks up: (a) main sweeps per §7 Q3=(c) — still the first net-new SDK surface beyond probe.py's [A]-[D] citations; re-fetch polymarket-us-python README at code-turn time per H-016 preventive-fabrication standing instruction (no exceptions). This instruction is now in its FOURTH consecutive handoff (H-015→H-016→H-017→H-018→H-019) without being exercised. (b) §16 research-doc addendum (research-first per D-019; operator review precedes code turn); (c) surface POD-H017-D029-mechanism per D-030 Resolution path."
   work_package_started_session: null  # starts next session
   last_gate_passed:
     name: "Phase 2 exit gate"
@@ -76,10 +76,10 @@ phase:
 
 # ---- Session accounting ----
 sessions:
-  last_handoff_id: H-017
-  next_handoff_id: H-018
-  sessions_count: 17
-  most_recent_session_date: 2026-04-19
+  last_handoff_id: H-018
+  next_handoff_id: H-019
+  sessions_count: 18
+  most_recent_session_date: 2026-04-20
   out_of_protocol_events_cumulative: 0
   out_of_protocol_events_since_last_gate: 0
   out_of_protocol_trigger_phrase: "out-of-protocol"
@@ -241,8 +241,8 @@ open_items:
     sev_7: 9   # R-010, I-003, I-004, I-005, I-006, I-007, I-008 (and 2 others)
     sev_6: 3   # I-009, I-010, I-011 (I-016 resolved H-016 per D-028)
     sev_5: 0
-    sev_4_and_below: 4  # I-002 (severity 2), I-014 (severity 3), I-015 (severity 3), I-017 (severity 4, added H-016)
-    issues_open: 14   # 17 total issues; I-001 resolved H-005, I-013 resolved H-009, I-016 resolved H-016; I-017 added H-016
+    sev_4_and_below: 3  # I-002 (severity 2), I-014 (severity 3), I-015 (severity 3). I-017 resolved H-018 per D-031.
+    issues_open: 13   # 17 total issues; I-001 resolved H-005, I-013 resolved H-009, I-016 resolved H-016, I-017 resolved H-018
     assumptions_unvalidated: 6  # A-001, A-002, A-003, A-004, A-006, A-008
   pending_operator_decisions:
     - id: POD-H017-D029-mechanism
@@ -251,14 +251,14 @@ open_items:
       summary: "How should D-029's push mechanism actually work given Claude.ai's sandbox environment has no access to Render env vars? D-029 Commitment §2 specifies authentication via a GitHub PAT stored as a Render env var, but that presumes a working environment (a Python process on the Render service) that Claude.ai's sandbox is not. D-030 adopted the interim drag-and-drop-to-staging flow per Playbook §13.5.7 so the project can continue operating; this POD tracks the open question of how D-029 should be properly implemented. Not urgent; no deadline; project operates correctly under the interim flow. Surfaced at each session-open per D-030 Resolution path. Possible resolutions sketched in D-030 include: GitHub MCP connector becoming available in Anthropic's registry; operator preferences shifting (e.g., per-session PAT paste, which would require a SECRETS_POLICY §A.6 revision DJ entry); a shim-service architecture; or something not yet imagined."
       urgency: "low — project operates correctly under the interim flow per D-030"
   resolved_operator_decisions_current_session:
-    # Pruned to current-session (H-017) entries only per the H-014-settled
-    # stricter-reading convention. H-016 entries are preserved in
-    # Handoff_H-016 §2 and STATE v14's prose; this field reflects only
+    # Pruned to current-session (H-018) entries only per the H-014-settled
+    # stricter-reading convention. H-017 entries are preserved in
+    # Handoff_H-017 §2 and STATE v15's prose; this field reflects only
     # the current session's in-session rulings.
-    - id: H-017-D029-mechanism-gap-interim-flow
-      resolved_session: H-017
-      resolved_by_decision: operator ruling at session open (formalized as DJ entry D-030)
-      resolution_summary: "First-use validation of D-029 at H-017 open surfaced an architectural gap: D-029 §2's PAT-via-Render-env-var mechanism presumes a working environment Claude.ai's sandbox does not have. Operator ruled Option β (new DJ entry) + β-i (default, no per-session re-ratification). D-030 landed naming the gap, adopting the drag-and-drop-to-staging interim flow per Playbook §13.5.7, opening POD-H017-D029-mechanism, and preserving D-029 unchanged. Render side of D-029 separately verified at H-017: pm-tennis-api Auto-Deploy='On commit', Branch='main'; the merge-gate safety property is structurally available."
+    - id: H-018-I-017-disposition
+      resolved_session: H-018
+      resolved_by_decision: operator ruling at H-018 (formalized as DJ entry D-031)
+      resolution_summary: "RAID I-017 disposition — two pre-existing TestVerifySportSlug failures where tests expected SystemExit but production code raised RuntimeError. Operator requested git blame before final ruling; blame evidence on src/capture/discovery.py lines 558 and 562 pointed to commit bae6ee8e (peterlitton, 2026-04-18 20:46:03, pre-H-004) with commit message 'fix: replace SystemExit with RuntimeError in verify_sport_slug' — deliberate, targeted change. Operator ruled Option (a): align tests with intentional production behavior. D-031 written. tests/test_discovery.py updated (two test methods renamed; reassertions changed to pytest.raises(RuntimeError); inline comments added citing D-031 and bae6ee8e). No Phase 2 code touch. 49/49 tests pass in tests/test_discovery.py under fresh venv + pinned deps. RAID I-017 marked Resolved. Framing per operator direction at ruling: the drift is not someone being careless; it is a test file that never caught up with an intentional code change made before the single-authoring-channel governance discipline was in force."
   phase_3_attempt_2_notes:
     - "Research-first discipline in force per D-016 commitment 2 and R-010 — no fabrication of URLs or module symbols. H-013 exercised it three times in preventive mode without firing a tripwire."
     - "H-010: research document produced at docs/clob_asset_cap_stress_test_research.md, three versions this session (v1, v2, v2.1, v3). v3 accepted."
@@ -303,6 +303,12 @@ open_items:
     - "H-017 D-030 landed (this session): D-029 first-use validation surfaced an architectural gap — D-029 §2's PAT-via-Render-env-var mechanism presumes a working environment Claude.ai's sandbox does not have (no access to Render env vars). Operator-validated Render config (Auto-Deploy='On commit', Branch='main') confirms the merge-gate safety property is structurally available. Drag-and-drop-to-staging interim flow adopted per Playbook §13.5.7, with no per-session re-ratification (β-i). POD-H017-D029-mechanism opened (low urgency; project operates correctly). D-029 preserved unchanged. Verified D-030's claims against SECRETS_POLICY §A.6 and Playbook §5.5.4 — both support the option-(c) rejection."
     - "H-017 stale-artifact cleanup queued: CHECKSUMS.txt, COMMIT_MANIFEST.md, D-028-entry-to-insert.md verified safe to delete (none referenced by code, tests, or documentation; D-028-entry-to-insert.md content fully preserved in DecisionJournal D-028 committed at 83c0bf8 since H-016). Deletions are operator actions on claude-staging during the H-017 commit-bundle merge, not Claude actions."
     - "H-017 process-recovery: mid-session, Claude called present_files on DecisionJournal.md and STATE.md as a draft availability gesture. Operator correctly read this as a discipline signal — files presented for upload imply session output ready, but the session was not closed and the substantive scope (I-017, main sweeps) had not been addressed. Claude acknowledged the error rather than rationalizing. Operator authorized a comprehensive re-read of the governance corpus before further work. Claude completed the re-read (full Playbook including §§3, 6, 7, 8, 9, 10, 11, 12 unread at session open; full SECRETS_POLICY; RAID Risks/Assumptions/Decisions; DJ D-016 through D-027 carefully). Recalibrations from the read are in Handoff_H-017 §3."
+    - "H-018 open: full reading completed (Handoff_H-017 all 308 lines, Orientation, Playbook end-to-end including §§1-13, STATE.md v15 YAML + prose). Session-open self-audit surfaced zero discrepancies — H-017 bundle merged cleanly on main (commit a2b5217: DJ + Handoff + STATE); three stale H-016 artifacts deleted (bc3ed83, 8a2bdb4, 5b6f9f9); claude-staging branch present on remote; DJ at 30 entries with D-030 at top. Eight-session clean-discipline streak (H-010→H-017) intact at session open."
+    - "H-018 item 1 (POD-H017-D029-mechanism resolution-path check per D-030): `search_mcp_registry` with keywords ['github', 'git', 'repository'] returned GitLab, Contentsquare, Exa, Microsoft Learn, Lucid, Mem, Glean — no GitHub MCP connector. Unchanged from H-016 finding (D-029 Finding §2) and H-017's confirmation. No path-change detected. POD-H017-D029-mechanism remains open, low urgency. No targeted DJ entry needed at H-018 per D-030's 'if any of these, if material, becomes its own targeted DJ entry' — nothing material."
+    - "H-018 item 2 (RAID I-017 disposition): session-scope reading pass — verify_sport_slug at src/capture/discovery.py line 544 (confirmed raises RuntimeError at lines 558 and 562); production caller at main.py lines 40-62 (while-True retry wrapper catching Exception with 30-second sleep between retries); tests at tests/test_discovery.py lines 566-579 (both use pytest.raises(SystemExit)); confirmed 2-failed/2-passed in fresh venv against pinned deps. Key finding surfaced before ruling: main.py's `except Exception` catches RuntimeError but would NOT catch SystemExit (SystemExit inherits from BaseException, not Exception) — production retry-wrapper integrates with RuntimeError semantics but not SystemExit semantics. Two options surfaced to operator: (a) update tests to match code [selected], (b) update code to match tests [rejected as would require paired main.py revision and reverses intentional commit]."
+    - "H-018 item 2 (continued): operator requested git blame before ruling. Blame -L 555,565 on src/capture/discovery.py pointed to commit bae6ee8e (peterlitton, 2026-04-18 20:46:03, pre-H-004) with commit message 'fix: replace SystemExit with RuntimeError in verify_sport_slug'. Full diff showed targeted, deliberate -raise SystemExit(1) → +raise RuntimeError(...) changes paired with a small GatewayClient.get_all_sports() response-shape refactor. Unambiguous direction-of-drift resolution: the code change was intentional; the tests never caught up because bae6ee8e predates the single-authoring-channel discipline. Operator ruled Option (a) and supplied the framing for the D-031 entry text ('not someone being careless, it's a test file that never caught up with an intentional code change made before the governance discipline was in force')."
+    - "H-018 item 2 (fix applied): tests/test_discovery.py lines 566-579 edited in-place via str_replace: test_network_failure_raises_system_exit → test_network_failure_raises_runtime_error; test_empty_sports_list_raises_system_exit → test_empty_sports_list_raises_runtime_error; pytest.raises(SystemExit) → pytest.raises(RuntimeError); inline comments added to both methods citing D-031 and bae6ee8e. No change to src/capture/discovery.py. No change to main.py. Verification: tests/test_discovery.py 49/49 passed in fresh venv against pinned deps (requirements.txt + pytest). Full tests/ directory: 112/113 passed; one unrelated failure (tests/test_stress_test_probe_cli.py::test_main_defaults_to_self_check) confirmed pre-existing environmental failure — polymarket_us SDK is in src/stress_test/requirements.txt not top-level requirements.txt per D-024 dep-isolation. Not in scope for I-017; noted for handoff."
+    - "H-018 close: zero PODs added. D-031 written and inserted at top of DecisionJournal. RAID.md updated (I-017 resolved; header 'Last updated' bumped; changelog entry added). STATE bumped v15 → v16. DJ counter 30 → 31. RAID open issues 14 → 13 (total still 17). Tripwires: none fired. OOP: zero. Nine consecutive clean-discipline sessions (H-010 → H-018). H-017 mid-session present_files lesson held — no present_files call during session work; all files bundled for close only. H-019 picks up: main sweeps (§7 Q3=(c)), §16 research-doc addendum (research-first per D-019, operator review precedes code), and the polymarket-us-python README re-fetch at code-turn time (standing instruction now in its fourth consecutive handoff; H-019 will be the first to exercise it)."
 
 # ---- Runbooks inventory ----
 runbooks:
@@ -388,10 +394,10 @@ costs:
 scaffolding_files:
   STATE_md:
     status: accepted
-    current_version: 15
-    committed_to_repo: pending  # v15 produced this session
-    committed_session: H-017
-    note: "v15 reflects H-017 progress so far: D-030 landed (D-029 authentication-mechanism architectural gap surfaced at first-use; drag-and-drop-to-staging interim flow adopted per Playbook §13.5.7; POD-H017-D029-mechanism opened; D-029 preserved unchanged). 30 DJ entries at v15 production. Render side of D-029 verified (Auto-Deploy=On commit, Branch=main). H-017 remaining scope carried forward in phase.current_work_package. v14 reflected H-016 close."
+    current_version: 16
+    committed_to_repo: pending  # v16 produced this session
+    committed_session: H-018
+    note: "v16 reflects H-018: item 1 complete (POD-H017-D029-mechanism resolution-path check: no GitHub MCP connector in Anthropic registry, no path-change detected, POD remains open); item 2 complete (RAID I-017 resolved per D-031 — tests/test_discovery.py updated to expect RuntimeError per operator ruling after git blame confirmed commit bae6ee8e was a deliberate, intentional pre-H-004 SystemExit→RuntimeError change). DJ at 31 entries. RAID 13 open / 17 total. Nine consecutive clean-discipline sessions (H-010→H-018). H-019 inherits: main sweeps + §16 research-doc addendum + surface POD-H017-D029-mechanism. v15 reflected H-017 close."
   Orientation_md:
     status: accepted
     committed_to_repo: true
@@ -405,15 +411,15 @@ scaffolding_files:
     committed_to_repo: true
   DecisionJournal_md:
     status: accepted
-    committed_to_repo: pending  # D-030 added this session at H-017; D-029 previously landed at H-016 close in commit 66def97
-    committed_session: H-017
+    committed_to_repo: pending  # D-031 added this session at H-018; D-030 landed on main in a2b5217 during H-017 merge; D-029 landed at H-016 close in commit 66def97
+    committed_session: H-018
     pending_entries: []
-    note: "At H-016 close, D-029 landed on main in commit 66def97 (together with STATE v14 and Playbook §13). At H-017, D-030 is added at the top of the file; replacement produced in this session awaits operator merge via the drag-and-drop-to-staging interim flow adopted in D-030 itself. 30 DJ entries total."
+    note: "At H-016 close, D-029 landed on main in commit 66def97. At H-017, D-030 was added and landed via commit a2b5217 (H-017 bundle merge). At H-018, D-031 is added at the top of the file (above D-030 per reverse-chronological convention) resolving RAID I-017. Replacement produced in this session awaits operator merge via the D-030 drag-and-drop-to-staging interim flow. 31 DJ entries total."
   RAID_md:
     status: accepted
-    committed_to_repo: true  # updated at H-016: I-016 resolved per D-028, I-017 added
-    committed_session: H-016
-    note: "H-016: I-016 marked Resolved with reference to D-028; I-017 added (sev 4, two pre-existing TestVerifySportSlug failures surfaced during H-016 testing); header 'Last updated' bumped to H-016 close; footer changelog updated. Landed in commit d7b2bd2."
+    committed_to_repo: pending  # I-017 resolved this session per D-031; header 'Last updated' bumped to H-018; changelog entry added
+    committed_session: H-018
+    note: "H-018: I-017 marked Resolved per D-031 — tests/test_discovery.py updated to match intentional RuntimeError behavior from commit bae6ee8e; no Phase 2 code touch; 49/49 tests pass. Header 'Last updated' bumped from H-016 to H-018 (H-017 did not touch RAID). Changelog entry added at footer above H-016 block. Prior state: H-016 marked I-016 Resolved per D-028 and added I-017; landed in commit d7b2bd2."
   PreCommitmentRegister_md:
     status: accepted
     committed_to_repo: true
@@ -465,9 +471,15 @@ scaffolding_files:
   Handoff_H017_md:
     status: accepted
     path: "Handoff_H-017.md"
-    committed_to_repo: pending  # produced this session as part of session-close bundle
+    committed_to_repo: true  # landed on main in commit a2b5217 during H-017 bundle merge
     committed_session: H-017
-    note: "Produced at H-017 session close per Playbook §2. Bundle includes DecisionJournal.md (with D-030 added), STATE.md v15, this handoff, and three deletions (CHECKSUMS.txt, COMMIT_MANIFEST.md, D-028-entry-to-insert.md) on claude-staging."
+    note: "Landed on main in commit a2b5217 together with the STATE v15 and DJ (D-030) updates. 308 lines. Bundle-merge integrity verified at H-018 self-audit."
+  Handoff_H018_md:
+    status: accepted
+    path: "Handoff_H-018.md"
+    committed_to_repo: pending  # produced this session as part of session-close bundle
+    committed_session: H-018
+    note: "Produced at H-018 session close per Playbook §2. Bundle includes DecisionJournal.md (with D-031 added at top), STATE.md v16, RAID.md (I-017 resolved + H-018 changelog entry), tests/test_discovery.py (two methods renamed + reassertions updated per D-031), and this handoff. All files delivered as complete replacements per D-029 §3 / H-016 always-replace convention. Operator delivery path per D-030 interim flow: drag-and-drop to claude-staging → operator diff-review → merge staging → main."
   data_dictionary_md:
     status: not-started
     note: "Phase 3 deliverable"
@@ -521,7 +533,13 @@ phase_2_files:
     path: "src/capture/discovery.py"
     status: committed
     committed_session: H-007
-    tests: "tests/test_discovery.py — 46 tests passing"
+    last_modified_session: H-016  # per D-028 — event_date extraction fix + start_date_iso fallback
+    tests: "tests/test_discovery.py — 49 tests passing (46 original at H-007 + 3 regression added at H-016 per D-028; test count unchanged at H-018 but two methods were renamed per D-031)"
+  tests_test_discovery_py:
+    path: "tests/test_discovery.py"
+    status: committed
+    last_modified_session: H-018  # per D-031 — TestVerifySportSlug two methods renamed from *_raises_system_exit to *_raises_runtime_error; pytest.raises(SystemExit) → pytest.raises(RuntimeError); inline comments added citing D-031 and commit bae6ee8e
+    note: "Current test count: 49. H-018 change: tests/test_discovery.py lines 566-579 (two methods in TestVerifySportSlug class) renamed and reassertions updated to match intentional RuntimeError semantics from commit bae6ee8e (2026-04-18 20:46:03, pre-H-004). Inline comments reference D-031 and the source commit. Verification: 49/49 passed in fresh venv against pinned deps (requirements.txt + pytest). No changes to src/capture/discovery.py or main.py."
   src_init_py:
     path: "src/__init__.py"
     status: committed
@@ -553,79 +571,81 @@ Phase 2 remains complete and operational. The service at `pm-tennis-api.onrender
 
 **Phase 3 attempt 2 stress-test service remains live.** `pm-tennis-stress-test` at `https://pm-tennis-stress-test.onrender.com` verified at H-014, self-check green, H-016 executed the first live probe against it successfully (classification: accepted).
 
-**The D-025 hybrid-probe-first research question is answered.** Gateway-to-api slug bridge confirmed working at H-016. Per D-025 commitment language, main sweeps (H-017 remaining scope) may use either gateway-sourced or api-sourced slugs with api-sourced as the default.
+**The D-025 hybrid-probe-first research question is answered.** Gateway-to-api slug bridge confirmed working at H-016. Per D-025 commitment language, main sweeps (H-019 scope) may use either gateway-sourced or api-sourced slugs with api-sourced as the default.
 
 **RAID I-016 resolved via D-028 (H-016).** Subsidiary finding: `_check_duplicate_players` was silently broken in production since H-007 (always returned `False` due to the empty-event_date short-circuit); restored automatically going forward by the fix.
 
-**RAID I-017 added (sev 4) at H-016.** Two pre-existing test failures in `TestVerifySportSlug`; not introduced by H-016 work; H-017 disposition still pending.
+**RAID I-017 resolved via D-031 (H-018).** Two pre-existing test failures in `TestVerifySportSlug` that surfaced at H-016. `git blame` at H-018 confirmed commit `bae6ee8e` (peterlitton, 2026-04-18 20:46:03, pre-H-004) was a deliberate, targeted change replacing `raise SystemExit(1)` with `raise RuntimeError(...)` at both sites; commit message *'fix: replace SystemExit with RuntimeError in verify_sport_slug'*. The drift is not carelessness — it is a test file that never caught up with an intentional code change made before the single-authoring-channel governance discipline was in force. Option (a) applied: tests renamed to `test_*_raises_runtime_error`; reassertions changed to `pytest.raises(RuntimeError)`; inline comments added to both methods citing D-031 and `bae6ee8e`. No change to `discovery.py`; no change to `main.py`. `tests/test_discovery.py` 49/49 passed in fresh venv against pinned deps. RAID open issues 14 → 13; total still 17.
 
-**D-029 deployment-procedure revision landed at H-016 close.** First-use validation at H-017 surfaced a gap (covered immediately below).
+**D-029 deployment-procedure revision landed at H-016 close.** First-use validation at H-017 surfaced a gap.
 
-**D-030 landed at H-017.** D-029's authentication mechanism (PAT stored as a Render env var) presumes a working environment Claude.ai's sandbox does not have — Claude.ai cannot read Render env vars. Operator-validated Render config (Auto-Deploy='On commit', Branch='main') confirms the merge-gate safety property is structurally available; only the "Claude pushes" automation benefit is deferred. D-030 adopts a drag-and-drop-to-staging interim flow per Playbook §13.5.7 as the default for H-017 and all subsequent sessions until D-029's authentication mechanism is fixed by a future DJ entry. β-i: no per-session re-ratification required. D-029 itself is preserved unchanged. POD-H017-D029-mechanism opened (low urgency; project operates correctly under the interim flow). The D-030 commit bundle is the first concrete use of the interim flow — three stale H-016 artifacts (`CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, `D-028-entry-to-insert.md`) are queued for deletion in the same bundle as operator actions on claude-staging.
+**D-030 landed at H-017.** D-029's authentication mechanism (PAT stored as a Render env var) presumes a working environment Claude.ai's sandbox does not have. Operator-validated Render config (Auto-Deploy='On commit', Branch='main') confirms the merge-gate safety property is structurally available; only the "Claude pushes" automation benefit is deferred. D-030 adopts a drag-and-drop-to-staging interim flow per Playbook §13.5.7 as the default until D-029's authentication mechanism is fixed by a future DJ entry. β-i: no per-session re-ratification required. D-029 itself is preserved unchanged. POD-H017-D029-mechanism remains open (low urgency).
 
-**D-027 remains active.** D-025 commitment 1 is superseded; commitments 2/3/4 stand. D-024 commitment 1 (pm-tennis-api/requirements.txt untouched) is actively reinforced. D-020/Q2=(b) isolation is preserved. D-028 and D-029 from H-016 remain active. D-030 is new at H-017 and immediately operative.
+**D-031 landed at H-018.** RAID I-017 resolved, scoped narrowly to the `TestVerifySportSlug` test-code reconciliation. See the paragraph above for mechanics.
 
-**What the H-018 session inherits:**
+**D-027 remains active.** D-025 commitment 1 is superseded; commitments 2/3/4 stand. D-024 commitment 1 (pm-tennis-api/requirements.txt untouched) is actively reinforced. D-020/Q2=(b) isolation is preserved. D-028, D-029, D-030, D-031 all active.
 
-- Repo with the H-017 bundle merged (assuming operator completes the staging upload + deletions + merge): STATE v15. DJ at 30 entries (D-030 added). Handoff_H-016 (committed at e6c4deb during H-017 self-audit catch-up). Handoff_H-017 (this session's). RAID with I-016 resolved + I-017 still open (14 open issues, 17 total). Playbook with §13 unchanged from H-016. Three stale H-016 artifacts deleted.
-- If operator defers some H-017 commit-bundle actions (e.g., uploads files but defers deletions, or defers the entire bundle): H-018 self-audit will surface the discrepancy between STATE's claims and on-disk repo state, and Claude proceeds per §1.5.4 (surface, await operator ruling).
-- Live `pm-tennis-api` service with I-016 fix deployed.
+**What the H-019 session inherits:**
+
+- Repo with the H-018 bundle merged (assuming operator completes the claude-staging upload and merge): STATE v16. DJ at 31 entries (D-031 added at top; D-030 and D-029 preserved). Handoff_H-018. RAID with I-017 resolved (13 open issues, 17 total). `tests/test_discovery.py` with the two renamed `TestVerifySportSlug` methods in place.
+- If operator defers some bundle actions (e.g., uploads STATE but defers the test-file change, or the DJ, or the RAID): H-019 self-audit will surface the specific discrepancy between STATE's claims and on-disk repo state, and Claude proceeds per Playbook §1.5.4 (surface, await operator ruling).
+- Live `pm-tennis-api` service with I-016 fix deployed. H-018 made no deploy-affecting change (test-file-only).
 - Live `pm-tennis-stress-test` service; one successful probe in its history.
-- One pending operator decision: `POD-H017-D029-mechanism` (low urgency).
-- §14 of research-doc populated; §16 is the natural next slot for the H-018 main-sweeps addendum.
-- Four plan-text revisions queued in STATE `pending_revisions`: v4.1-candidate (Section 5.6 baseline path), -2 (Section 5.4 and §11.3 asset-cap language), -3 (discovery.py comments), -4 (§1.5.3/§1.5.4 for D-029).
-- D-030 interim flow is the default deployment mechanism. Staging branch (`claude-staging`) exists; merge gate is real (Render Auto-Deploy from `main` only).
-- Eight consecutive sessions (H-010 through H-017) closed without firing a tripwire or invoking OOP. The H-017 mid-session present_files event was a Claude error caught and corrected within the session, not a tripwire.
+- One pending operator decision: `POD-H017-D029-mechanism` (low urgency; unchanged — H-018 resolution-path check found no change).
+- §14 of research-doc populated. §16 remains the natural next slot for the main-sweeps addendum (H-019 scope).
+- Four plan-text revisions queued in STATE `pending_revisions`: v4.1-candidate (Section 5.6 baseline path), -2 (Section 5.4 and §11.3 asset-cap language), -3 (discovery.py comments), -4 (§1.5.3/§1.5.4 for D-029). Unchanged at H-018.
+- D-030 interim flow is the default deployment mechanism. Staging branch (`claude-staging`) exists; merge gate is operator-only.
+- **Nine consecutive sessions (H-010 through H-018) closed without firing a tripwire or invoking OOP.** No present_files call mid-session at H-018 — the H-017 lesson held.
 
-### What changed in H-017
+### What changed in H-018
 
-**D-030 landed.** First-use validation of D-029 surfaced an architectural gap between D-029 §2's drafted authentication mechanism (PAT in Render env var) and Claude.ai's sandbox environment (no access to Render env vars). The decision adopts the drag-and-drop-to-staging interim flow per Playbook §13.5.7 as the default until D-029 is properly implementable. D-029 itself is preserved unchanged. POD-H017-D029-mechanism opened to track the resolution question.
+**Item 1 (POD-H017-D029-mechanism resolution-path check per D-030):** `search_mcp_registry` with keywords `['github', 'git', 'repository']` returned GitLab, Contentsquare, Exa, Microsoft Learn, Lucid, Mem, Glean — no GitHub MCP connector. Unchanged from H-016 (D-029 Finding §2) and H-017 findings. No path-change detected. POD-H017-D029-mechanism remains open, low urgency. No targeted DJ entry created per D-030's "if material, becomes its own targeted DJ entry" — nothing material.
 
-**Self-audit recovered a missing artifact.** Handoff_H-016.md was not in the H-016 session-close commit (`66def97` contained DecisionJournal.md, Playbook.md, STATE.md only). H-017 self-audit surfaced the gap; operator committed the handoff to main as `e6c4deb` during H-017. Discrepancy resolved without Claude action; this is a §10-permitted operator action (committing a Claude-produced file).
+**Item 2 (RAID I-017 disposition) — reading pass.** Read `verify_sport_slug` at `src/capture/discovery.py` line 544 (raises `RuntimeError` at lines 558 and 562 — both deliberately added per blame evidence). Read production caller at `main.py` lines 40–62 (retry wrapper around `except Exception`; `RuntimeError` integrates with this, `SystemExit` would not — SystemExit inherits from BaseException, not Exception). Read the two failing tests at `tests/test_discovery.py` lines 566–579. Confirmed via fresh-venv run: 2 failed / 2 passed in TestVerifySportSlug; 47 passed elsewhere in test_discovery.py.
 
-**Render side of D-029 verified.** Operator confirmed at H-017 that `pm-tennis-api` Auto-Deploy is set to "On commit" with Branch set to `main`. Pushes to `claude-staging` are ignored by auto-deploy; the merge-gate is structurally enforced. This narrows D-030's scope to exactly the authentication mechanism, not the deployment topology.
+**Item 2 — operator requested git blame before final ruling.** Blame on lines 555–565 of `discovery.py` pointed to commit `bae6ee8e` (peterlitton, 2026-04-18 20:46:03). Commit message: *"fix: replace SystemExit with RuntimeError in verify_sport_slug"*. Full diff showed deliberate, targeted replacement at both `raise` sites, paired with a small `GatewayClient.get_all_sports()` response-shape handler. Unambiguous direction-of-drift: code change was intentional (and pre-H-004, i.e., pre-single-authoring-channel); tests never caught up.
 
-**Stale-artifact deletions queued in D-030 commit bundle.** Three artifacts inadvertently committed at H-016 verified safe to delete (none referenced by code, tests, or documentation; D-028-entry-to-insert.md content fully preserved in DecisionJournal D-028 since `83c0bf8`): `CHECKSUMS.txt`, `COMMIT_MANIFEST.md`, `D-028-entry-to-insert.md`. Deletions are operator actions on claude-staging during the bundle merge.
+**Item 2 — operator ruling on Option (a); D-031 written.** Test file updated in-place: two method names changed from `*_raises_system_exit` to `*_raises_runtime_error`; `pytest.raises(SystemExit)` → `pytest.raises(RuntimeError)`; inline comments added to both methods citing D-031 and `bae6ee8e`. No Phase 2 code touch (D-016 commitment 2 not triggered). 49/49 passed in fresh venv against pinned deps post-fix.
 
-**Mid-session process recovery.** Claude called `present_files` on draft DecisionJournal.md and STATE.md mid-session as a draft-availability gesture. Operator correctly read this as a discipline signal — files presented for upload imply session-output ready, but the session was not closed and substantive scope was incomplete. Claude acknowledged the error rather than rationalizing. Operator authorized comprehensive re-read of governance corpus before further work. Claude completed the re-read (full Playbook including §§3, 6, 7, 8, 9, 10, 11, 12 unread at session open; full SECRETS_POLICY; RAID Risks/Assumptions/Decisions; DJ D-016 through D-027 carefully). Recalibrations from the read documented in Handoff_H-017 §3.
+**Environmental finding.** Full `tests/` directory run produced one unrelated failure: `tests/test_stress_test_probe_cli.py::test_main_defaults_to_self_check` fails because `polymarket_us` SDK is in `src/stress_test/requirements.txt` (per D-024 dep-isolation), not top-level `requirements.txt`. Pre-existing environmental failure, unrelated to I-017; documented here for future sessions running the full suite in a single venv.
 
-**DJ +1: D-030 added.** Counter now 30. STATE bumped v14 → v15.
+**DJ +1: D-031 added.** Counter now 31. STATE bumped v15 → v16. RAID 14 → 13 open. 17 total issues (I-001, I-013, I-016, I-017 resolved; 3 at sev 4 or below remain).
 
-**Tripwires: none fired.** Zero OOP events. Eight consecutive sessions (H-010 through H-017) with clean discipline. The mid-session present_files event was a Claude error caught and corrected within the session, not a tripwire firing.
+**Tripwires: none fired.** Zero OOP events. Nine consecutive sessions (H-010 through H-018) with clean discipline. Discipline held specifically on the `present_files` lesson from H-017 — no present_files calls mid-session; all files bundled for close.
 
-**What did NOT happen this session, deferred to H-018:** main sweeps per §7 Q3=(c); §16 research-doc addendum; RAID I-017 disposition. All explicitly in scope for H-018 per the Path A cut at session close.
+**What did NOT happen this session (per H-018 operator cut):** main sweeps per §7 Q3=(c); §16 research-doc addendum. Both deferred to H-019 at operator direction. Session cut to items 1 and 2 only (approved at session open).
 
-### H-018 starting conditions
+### H-019 starting conditions
 
-When the next session opens, Claude will find (assuming operator completes the H-017 commit-bundle merge):
+When the next session opens, Claude will find (assuming operator completes the H-018 bundle merge):
 
-- Repo on `main` with the H-017 bundle merged: STATE v15, DJ at 30 entries (last D-030), Handoff_H-017, three stale H-016 artifacts deleted from repo root.
-- `pm-tennis-api` service running with I-016 fix deployed.
+- Repo on `main` with the H-018 bundle merged: STATE v16, DJ at 31 entries (last D-031), Handoff_H-018, RAID with I-017 resolved, `tests/test_discovery.py` with two renamed TestVerifySportSlug methods in place.
+- `pm-tennis-api` service running — no behavior change at H-018.
 - `pm-tennis-stress-test` service live; one successful probe in its history.
-- One pending operator decision: `POD-H017-D029-mechanism` — surface at H-018 open per D-030 Resolution path; check whether GitHub MCP connector has appeared in Anthropic's registry, or any other relevant change. No urgency.
+- One pending operator decision: `POD-H017-D029-mechanism` — surface at H-019 open per D-030 Resolution path; brief check (no material change expected absent operator saying so). No urgency.
 - §16 as the natural next section of research-doc for main-sweeps addendum.
-- RAID I-017 disposition still pending (carried forward from H-016 → H-017 → H-018).
-- Four plan-text pending revisions in STATE.
+- Four plan-text pending revisions in STATE (unchanged at H-018).
 - Research-first discipline in force per D-016, D-019.
 - D-030 interim flow is the default deployment mechanism.
 - Drag-and-drop-to-staging discipline in force; `main` is never pushed to directly; merge gate is operator-only.
+- Nine-session clean-discipline streak (H-010 → H-018).
 
-If operator merge has not happened by H-018 open, Claude's self-audit will surface the discrepancy (STATE claims merged state; repo shows pre-merge state) and seek operator ruling per Playbook §1.5.4 before proceeding.
+If operator merge has not happened by H-019 open, Claude's self-audit will surface the discrepancy (STATE claims merged state; repo shows pre-merge state) and seek operator ruling per Playbook §1.5.4 before proceeding.
 
 ### Validation posture going forward
 
-At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode. At H-018 open, the check has these application surfaces:
+At every session-open hereafter, the self-audit includes a specific check against the fabrication failure mode. At H-019 open, the check has these application surfaces:
 
-- **Retrospective for H-017 artifacts.** D-030 entry text, STATE v15 changes (POD opened, scaffolding flips, prose updates), the three deletions. Spot-check that claims about commit SHAs and counts match on-disk reality.
+- **Retrospective for H-018 artifacts.** D-031 entry text, STATE v16 changes (RAID counters, scaffolding-files updates, H-018 notes appended to chronology), RAID.md I-017 flip + changelog entry, `tests/test_discovery.py` two renamed methods. Spot-check that on-disk reality matches the bundle's claims. In particular: 49/49 tests still pass; `git blame` on `tests/test_discovery.py` lines 566–579 shows an H-018 commit (not `f3db86e2`); RAID I-017 row reads Resolved.
 
-- **Preventive for main sweeps code-turn (still pending; deferred from H-017).** Main sweeps remains the first net-new SDK surface beyond probe.py's citation block [A]-[D]. Re-fetch `github.com/Polymarket/polymarket-us-python` README at code-turn time. No exceptions. (Same instruction as in H-016 → H-017 handoff; not yet exercised.)
+- **Preventive for main sweeps code-turn.** Main sweeps remains the first net-new SDK surface beyond probe.py's citation block [A]-[D]. **Re-fetch `github.com/Polymarket/polymarket-us-python` README at code-turn time. No exceptions.** This instruction is now in its FOURTH consecutive handoff (H-015 → H-016 → H-017 → H-018 → H-019) and has never been exercised. H-019-Claude will be the first to actually execute it.
 
-- **Preventive for I-017 disposition.** Small code fix either side (update tests to expect `RuntimeError`, OR update code to raise `SystemExit`). Read the actual `verify_sport_slug` function at H-018 before deciding which side to fix.
+- **Preventive for §16 research-doc addendum.** Per D-019, the addendum is research-first — produced first, operator reviews, then code follows in a subsequent turn. Do not conflate the addendum with the code.
 
-- **Surface POD-H017-D029-mechanism per D-030 Resolution path.** Brief check: GitHub MCP connector in Anthropic registry yet? Other sandbox-accessible secret-injection mechanisms? Operator preference change? If any change material, becomes its own targeted DJ entry.
+- **Surface POD-H017-D029-mechanism per D-030 Resolution path.** Brief check at session open. H-018 check found no change; repeat briefly.
 
-Values of `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` must never enter the chat transcript — they are set via Render dashboard only. H-016 exercised the credential path during the probe; discipline held. H-017 explicitly rejected (per D-030) the option of pasting a GitHub PAT into chat under OOP, citing SECRETS_POLICY §A.6 and Playbook §5.5.4.
+Values of `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` must never enter the chat transcript — they are set via Render dashboard only. H-018 did not exercise the credential path (test-file-only fix); discipline maintained trivially.
 
 ---
 
-*End of STATE.md — current document version: 15. Last updated: H-017.*
+*End of STATE.md — current document version: 16. Last updated: H-018.*

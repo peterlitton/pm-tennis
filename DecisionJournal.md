@@ -18,6 +18,73 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-031 — RAID I-017 resolution: align `TestVerifySportSlug` tests with intentional `RuntimeError` behavior per commit `bae6ee8e`
+
+**Date:** 2026-04-20
+**Session:** H-018
+**Type:** Bug fix / Test-code reconciliation / Pre-H-004 drift resolution
+
+**Source:** Operator ruling at H-018 following Claude's investigation of RAID I-017, supplemented by targeted `git blame` and commit-message inspection as requested by the operator before final ruling.
+
+**Finding 1 — the drift is not incidental.** `git blame` on `src/capture/discovery.py` lines 558 and 562 points to commit `bae6ee8e` (peterlitton, 2026-04-18 20:46:03). The commit message is explicit: `"fix: replace SystemExit with RuntimeError in verify_sport_slug"`. The diff shows a targeted change — only the two `raise` sites were modified, paired with a small refactor of `GatewayClient.get_all_sports()`'s response-shape handling. This was a deliberate, intentional behavior change by the operator during early bootstrap, not an incidental edit.
+
+**Finding 2 — why the tests drifted.** `bae6ee8e` is dated 2026-04-18 20:46:03, which is pre-H-004 — i.e., before the project's single-authoring-channel governance discipline was established. In the pre-H-004 environment, tests were not being kept in lockstep with code by the current Claude-authors / operator-commits-only workflow. The `TestVerifySportSlug` tests at `tests/test_discovery.py` lines 566 and 574 were created at (or before) `f3db86e2` with `pytest.raises(SystemExit)` assertions consistent with the then-current code; when `bae6ee8e` changed the code twenty minutes later, the tests were not updated in the same commit and no later commit caught up. The drift surfaced at H-016 during D-028 test runs as two persistent red tests on `main`, logged as RAID I-017.
+
+**Finding 3 — production behavior confirms `RuntimeError` is the intended semantics.** The production caller in `main.py` lines 40–62 wraps discovery startup in `while True: try ... except Exception as exc: log.critical(...) await asyncio.sleep(30)`. `RuntimeError` is caught by `except Exception`; `SystemExit` inherits from `BaseException` and would *not* be caught, which would leave the asyncio task dead without restart. The current `RuntimeError` behavior integrates with the retry wrapper; the original `SystemExit` behavior did not, suggesting `bae6ee8e` was a deliberate fix to make `verify_sport_slug` play well with the supervising retry loop. The production `main.py` path has been running uninterrupted since H-009's revert through H-016's I-016 fix without startup-verification incident.
+
+**Decision:** Apply Option (a) — update the two failing tests at `tests/test_discovery.py` to expect `RuntimeError` rather than `SystemExit`. Rename methods from `test_*_raises_system_exit` to `test_*_raises_runtime_error`. Add an inline comment in each renamed test pointing to D-031 and `bae6ee8e` so the rationale is visible without a journal round-trip.
+
+No change to `src/capture/discovery.py`. No change to `main.py`. Scope is test-file only.
+
+**Considered:**
+- **(a) Update tests to expect `RuntimeError`.** Selected. Aligns tests with intentional production behavior established by `bae6ee8e`; no Phase 2 code touch; no D-016 authorization ceremony; no paired `main.py` revision required.
+- **(b) Update `src/capture/discovery.py` to raise `SystemExit`.** Rejected. Would revert `bae6ee8e`'s intentional decision. Would require a paired `main.py` revision (widen `except Exception` to `except BaseException`, or accept that the discovery asyncio task dies with no retry). Touches Phase 2 code, which per D-016 commitment 2 is gated on explicit operator authorization with narrow justification. Intentional-commit evidence from `bae6ee8e` removes any ambiguity about which side is the source of truth.
+
+**Reasoning:** The blame evidence resolves the direction of drift. The intentional commit is the code change; the test was the one that didn't catch up. Pre-H-004 context matters here: this is not someone being careless. It is a test file that never caught up with an intentional code change made before the single-authoring-channel governance discipline was in force. Under current discipline, a code change of this kind would travel with its test update in the same commit; under pre-H-004 discipline, that coupling was not enforced, and some drift accumulated. I-017 is one such piece of accumulated drift, and D-031 resolves it by bringing the tests into conformance with the intentional behavior.
+
+This is a deliberate, bounded reconciliation. It is explicitly **not** a test-weakening of the class Playbook §4.2 tripwire (d) names. The tests continue to assert that an exception is raised on each of the two failure modes; only the named exception type is brought into conformance with the code's intentional behavior. The tests remain functionally equivalent in what they verify.
+
+**Commitment:**
+
+1. `tests/test_discovery.py` lines 566–579 are modified:
+   - Method `test_network_failure_raises_system_exit` → `test_network_failure_raises_runtime_error`; `pytest.raises(SystemExit)` → `pytest.raises(RuntimeError)`.
+   - Method `test_empty_sports_list_raises_system_exit` → `test_empty_sports_list_raises_runtime_error`; `pytest.raises(SystemExit)` → `pytest.raises(RuntimeError)`.
+   - Inline comments added to both methods citing D-031 and `bae6ee8e`.
+
+2. `src/capture/discovery.py` is **not** modified. `main.py` is **not** modified. No Phase 2 code touch.
+
+3. RAID I-017 is marked **Resolved** with reference to D-031.
+
+4. This is a test-file fix; no live smoke test required per D-021 scope (D-021 applies to Phase 3 deliverables; I-017 is a pre-existing test mismatch, not a deliverable).
+
+**Verification:**
+- `tests/test_discovery.py` in isolation: 49 passed, 0 failed in a fresh venv against pinned `requirements.txt` deps.
+- Full `tests/` directory: 112 passed. One pre-existing, environmental failure in `tests/test_stress_test_probe_cli.py::test_main_defaults_to_self_check` (root cause: `polymarket_us` SDK is in `src/stress_test/requirements.txt`, not the top-level `requirements.txt`; baseline venv does not install it). Unrelated to I-017 and unrelated to this change.
+
+**Scope and carve-outs:**
+
+- **D-031 resolves only I-017.** Other pre-H-004 drift (if any) is not surveyed or resolved here. If similar test-code mismatches surface later, each is its own targeted entry.
+- **The pre-existing `DeprecationWarning` on `asyncio.get_event_loop()` in `test_slug_found` (line 550) is not addressed.** It predates I-017, is not in the scope of this fix, and affects four tests in the class (only two of which are being modified). Worth a future cleanup pass; not in scope here.
+- **The environmental failure in `test_main_defaults_to_self_check` is not addressed.** It is a consequence of the D-024 / D-020 dep-isolation design (`polymarket_us` lives in `src/stress_test/requirements.txt`, intentionally separate from the top-level `requirements.txt` per D-024 commitment 1). Any test-runner that needs this to pass must install both requirements files; that is a test-execution-documentation concern, not a code defect.
+
+**Effect on other decisions and governance artifacts:**
+
+- **D-016 commitment 2** (research-first, Phase 2 touch requires explicit authorization): not triggered. This fix is test-file only; no Phase 2 code touch.
+- **D-021** (testing posture for Phase 3 attempt 2): not applicable. I-017 is a pre-existing test mismatch, not a Phase 3 deliverable. Completion bar is: test file passes in clean venv, operator code review, journaled.
+- **D-029 §3** (always-replace-never-patch): followed. `tests/test_discovery.py` is delivered as a complete-replacement file in the session-close bundle.
+- **Always-replace convention (H-016):** followed.
+
+**Evidence trail:**
+
+- `git blame -L 555,565 src/capture/discovery.py` → commit `bae6ee8e` authored lines 558 and 562 (the two `raise` sites).
+- `git show bae6ee8e` → commit message "fix: replace SystemExit with RuntimeError in verify_sport_slug"; full diff showing deliberate `-raise SystemExit(1)` → `+raise RuntimeError(...)` changes.
+- Commit metadata: author `peterlitton`, date 2026-04-18 20:46:03 -0500, predates H-004.
+- `tests/test_discovery.py` test run before fix: 2 failed, 2 passed (TestVerifySportSlug class); after fix: 4 passed. Full test_discovery.py: 49/49 passed.
+- `main.py` lines 40–62: production caller confirms `except Exception`-style retry-wrapper behavior, which `RuntimeError` satisfies and `SystemExit` would not.
+- RAID I-017 entry (H-016 open) for original description of the drift.
+
+---
+
 ## D-030 — D-029 authentication mechanism: architectural gap at first-use; interim flow adopted per Playbook §13.5.7
 
 **Date:** 2026-04-19

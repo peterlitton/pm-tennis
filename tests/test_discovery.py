@@ -563,17 +563,25 @@ class TestVerifySportSlug:
         )
         assert result is False
 
-    def test_network_failure_raises_system_exit(self):
+    def test_network_failure_raises_runtime_error(self):
+        # Per D-031 (H-018): reconciles with commit bae6ee8e (2026-04-18 20:46:03)
+        # which deliberately replaced SystemExit(1) with RuntimeError in
+        # verify_sport_slug. Commit message: "fix: replace SystemExit with
+        # RuntimeError in verify_sport_slug". Tests were not updated at that
+        # time (pre-H-004, pre-single-authoring-channel). RAID I-017 tracked
+        # the drift; D-031 resolves it by aligning the tests with the
+        # intentional production behavior.
         client = MagicMock(spec=disc.GatewayClient)
         client.get_all_sports = AsyncMock(side_effect=Exception("connection refused"))
-        with pytest.raises(SystemExit):
+        with pytest.raises(RuntimeError):
             asyncio.get_event_loop().run_until_complete(
                 disc.verify_sport_slug(client, "tennis")
             )
 
-    def test_empty_sports_list_raises_system_exit(self):
+    def test_empty_sports_list_raises_runtime_error(self):
+        # Per D-031 (H-018): see companion test above for full rationale.
         client = self._make_client_with_sports([])
-        with pytest.raises(SystemExit):
+        with pytest.raises(RuntimeError):
             asyncio.get_event_loop().run_until_complete(
                 disc.verify_sport_slug(client, "tennis")
             )

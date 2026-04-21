@@ -18,6 +18,110 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-034 — POD-H017-D029-mechanism resolved: D-030 interim flow promoted to permanent (supersedes D-029 Commitment §2)
+
+**Date:** 2026-04-21
+**Session:** H-025
+**Type:** Governance / Supersession
+
+**Source:** Operator ruling at H-025 following narrow-scope cleanup-session scope pre-registered at H-024 close. POD-H017-D029-mechanism had been open for seven sessions (H-017 → H-024) with every D-030 resolution-path check returning "no change — no GitHub MCP connector in Anthropic's registry." H-025's own session-open check (eighth consecutive) returned the same result: registry composition identical to H-021/H-022/H-023/H-024 snapshots (GitLab, Digits, Google Compute Engine, PitchBook Premium, Chronograph, Contentsquare, Ketryx, Exa, Microsoft Learn, Lucid); no GitHub MCP connector. Operator ruled Candidate A per the H-024-carried steering document.
+
+**Decision:** Promote the D-030 interim flow — Claude produces complete-replacement files in the sandbox working environment, presents them via `present_files`, operator uploads to `claude-staging` via GitHub web UI drag-and-drop, operator reviews staging-vs-main diff, operator merges `claude-staging` → `main` — to the permanent deploy mechanism for the PM-Tennis project. POD-H017-D029-mechanism is closed. D-030's "interim" framing is lifted; the drag-and-drop-to-staging discipline is the project's deploy mechanism going forward.
+
+This supersedes **D-029 Commitment §2** (the authentication-via-Render-env-var clause including its 7 sub-items 2.1–2.7 specifying PAT scope, expiration discipline, rotation cadence, and rationale-for-no-expiration paragraph). D-029's original text is preserved verbatim in the historical record; the supersession lives in this entry. D-029's other commitments remain fully preserved and active.
+
+**Considered (A / B / C, all carried in Handoff_H-024 §10 steering document verbatim-equivalent):**
+
+- **Candidate A — Promote D-030 interim flow to permanent.** Formally supersede D-029 Commitment §2. Close POD-H017-D029-mechanism. Operationally: no change (current workflow continues). Governance-ledger: clean — no orphan POD, no "interim solution" framing, D-030 becomes the formal answer.
+- **Candidate B — Per-session PAT paste with SECRETS_POLICY §A.6 revision.** Operator pastes a GitHub PAT into chat at the point Claude needs to push. Requires a §A.6 revision DJ entry because current policy is "credential values never enter chat." Operationally: Claude can push directly to staging, reducing operator-merge overhead per session. Cost: weakens §A.6 for a specific credential type (GitHub PAT class only).
+- **Candidate C — Explicit defer-until-condition.** Leave POD-H017-D029-mechanism open but formalize the deferral with specific triggering conditions (GitHub MCP connector appears / operator-merge overhead becomes named friction / H-050 regardless). Resolution-path checks become trigger-checks rather than ritual. Operationally: no immediate change. Cost: leaves POD formally open while acknowledging it is not actively working toward resolution.
+
+Selected: **A**. Operator ruling.
+
+**Reasoning (operator language, verbatim):**
+
+The GitHub MCP connector as a resolution path is hypothetical and not grounded in any knowledge — there is no project-visible signal that such a connector is planned, in development, or likely to appear. Seven sessions of resolution-path checks per D-030 have returned "no change," and registry composition churn across those sessions has not produced any GitHub-availability shift. The POD has been in effective static no-signal state. Continuing to treat the MCP-connector path as a live pending resolution has become cognitive overhead without benefit; closing the POD and formalizing the drag-and-drop-to-staging flow as the project's permanent deploy mechanism eliminates that overhead. If Anthropic later ships a GitHub MCP connector, revisiting this decision requires a new DJ entry superseding D-034; it does not re-open automatically.
+
+**Reasoning (empirical record, H-025 briefing):**
+
+1. **Eight consecutive no-signal checks, H-017 → H-025.** Every session-open D-030 resolution-path check has returned "no GitHub MCP connector in the registry." Registry composition has churned (Mem and Glean dropped at H-021; Digits, Google Compute Engine, PitchBook Premium, Chronograph, Ketryx added at H-021; stable thereafter), but GitHub-availability has never changed. The operator-preference-shift path named in D-030's Resolution path has likewise not surfaced — no session has named per-session-PAT-paste as a desired operational model.
+
+2. **Operator-merge overhead has not surfaced as a named friction point across H-017 → H-024.** A scan of all seven handoffs' friction/overhead language found references only to pre-D-029 bracketed-paste issues on Render Shell (unrelated to the deploy flow), one H-018 mention of session-cut friction (unrelated), and the hypothetical framing in the H-024 handoff's own steering document. The condition the H-024 steering document named as the trigger for weighting Candidate B upward — "operator-merge overhead becomes a named friction point" — has not appeared. This is the empirical basis for weighting the default toward A rather than B.
+
+3. **The D-030 interim flow has operated cleanly across the full seven-session window.** H-014, H-015, H-016 failure modes (STATE v11 omitted from bundle; bracketed-paste Render Shell failures; missing DJ plus stale artifacts committed) predated D-030 and motivated it. Under the interim flow, no commit-flow failure of the same class has recurred. The pattern D-029 was designed to address — silent-missing-file and stale-artifact commits at the drag-and-drop step — is not present under the staging-branch discipline. D-030's drag-and-drop-to-staging (as distinct from pre-D-029's drag-and-drop-to-main) preserves the merge-gate safety property and has performed the function D-029 was designed to perform.
+
+4. **Supersession rather than re-interpretation.** Per operator ruling at H-025, this entry supersedes D-029 Commitment §2 rather than re-interpreting it. The reasoning the project accepted at H-013 for D-027's relationship to D-025 Commitment §1 applies identically: re-interpretation sets a precedent that committed language can soften when implementation realities shift; supersession is more conservative, keeps D-029's original text intact in the historical record, and forces the new reality into a named, dated, numbered decision entry. D-029's text is not edited (except for the one-line supersession footer per the DecisionJournal Conventions ¶13 format).
+
+**Commitment:**
+
+1. **The drag-and-drop-to-staging flow is the project's permanent deploy mechanism.** The interim framing from D-030 is lifted. No time-boxing, no per-session ratification, no "until superseded by a future DJ entry" qualifier of the kind D-030 carried. If a future capability (MCP connector, sandbox secret-injection mechanism, other architecture) appears and the operator prefers to migrate, migration is a new DJ entry that supersedes D-034; it does not re-open automatically.
+
+2. **`main` is never pushed to directly.** All commits reach `main` via a merge from `claude-staging`. This is operator-enforced (Claude has no push mechanism from the sandbox working environment) and, optionally, can be structurally enforced via GitHub branch-protection rules on `main`. Branch protection remains recommended-but-not-required per D-029 Commitment §4's original scoping and D-030 Scope-and-carve-outs.
+
+3. **POD-H017-D029-mechanism is closed.** It moves out of STATE's `open_items.pending_operator_decisions` at this session's close. The D-030-established resolution-path check is retired as a per-session ritual. Future registry-composition shifts do not automatically re-open the POD.
+
+4. **D-029's preserved commitments remain fully active.** Specifically preserved and active after D-034:
+   - **Commitment §1** — `claude-staging` branch exists in the `peterlitton/pm-tennis` repository; operator merges staging → main; the merge is the gate.
+   - **Commitment §3** — Claude's push discipline on the staging branch (logically coherent units; descriptive commit messages identifying H-NNN and scope; complete replacement of every changed file; no patch files / splice-into-existing instructions; no pushing untouched files redundantly).
+   - **Commitment §4** — Claude's validation before requesting merge (tests in clean venv against pinned deps; path-correctness verification; schema/coupling check where applicable; summary to operator with explicit merge-request language). Under the drag-and-drop-to-staging mechanism these validations are presented as evidence in chat rather than pushed by Claude, but they remain Claude's responsibility to produce.
+   - **Commitment §5** — Operator merge-gate discipline (diff review; explicit merge; request-changes allowed; no limit on iteration cycles; post-merge problems logged to DJ).
+   - **Commitment §6** — Observation-active soft lock is not weakened by this revision. Claude refuses to modify any commitment file or any file during an active observation window regardless of the commit mechanism.
+   - **Commitment §7** — Out-of-protocol invocations (Playbook §5) are not affected. The merge-gate is not itself an OOP-suspendable step.
+   - **Commitment §8** — Session-close handoff production and STATE update are unchanged under this revision. Both remain Claude-authored and are part of the per-session bundle merged via `claude-staging`.
+
+   Only **Commitment §2** (authentication via GitHub PAT stored as Render environment variable, with its seven sub-items 2.1–2.7 on PAT scope, no-expiration rationale, rotation mechanism, and implementation sequencing) is superseded. §2's text is preserved in D-029 as historical record of the original mechanism plan; the mechanism it specifies is no longer in force.
+
+5. **D-030's interim-flow language is lifted; its governance record is preserved.** D-030 is not retracted or edited; it remains the DJ entry that documented the gap at first-use of D-029 and adopted the interim flow. D-030's Commitment §1 ("the interim flow is the default deployment mechanism for this project for H-017 and all subsequent sessions, until superseded") is satisfied by D-034 in the literal sense — D-034 is the "future DJ entry" D-030 anticipated, and it removes the "interim" and "until superseded" qualifiers. D-030's Commitment §3 ("D-029 Commitment §2 is suspended pending resolution") is converted from "suspended" to "superseded" by the present entry.
+
+**Scope and carve-outs:**
+
+- **D-029's other numbered commitments are not touched.** Only Commitment §2 is superseded. D-029's Rationale section (items 1–6), Considered section, Effect-on-other-decisions section, Evidence trail, and all sub-items under §§1, 3–8 are preserved verbatim.
+- **D-029's footer receives a one-line supersession note** per the DecisionJournal Conventions ¶13 format, matching the `SUPERSEDED IN PART BY D-xxx` pattern D-025 established when D-027 superseded its Commitment §1. This is a footer-level edit; D-029's body text is not modified.
+- **Playbook §13 receives mechanical coupling revisions at §§13.2, 13.3, and 13.5.7.** Travelling inline in the H-025 bundle per Ruling 1. §13.2's precondition language (which referenced "either a GitHub PAT stored as a Render environment variable accessible to Claude's working environment, or the GitHub MCP connector authorized for the repository") is tightened to a precondition naming D-034 as the mechanism in force. §13.3's Procedure step enumeration is minimally corrected to describe the operator-driven drag-and-drop-to-staging flow rather than the Claude-originated push flow; authoring-side commitments (validation set, bundle summary, post-merge notation) are preserved with only the phrasing updated for coherence with the upload mechanism. §13.5.7's language (which framed the drag-and-drop flow as "transitional and expected only during the D-029 implementation window") is revised to remove the transitional framing. No other Playbook §13 subsections are touched; no other Playbook chapter is touched.
+
+- **Scope-discipline precedent — the §13.3 revision is an explicit scope expansion from the original §§13.2-and-§13.5.7 footprint.** Ruling 4 of the H-025 consolidated operator ruling named the Playbook coupling breadth as held to §§13.2 and §13.5.7. §13.3 was added to the revision footprint after H-025-Claude surfaced during drafting that §13.3's Procedure step enumeration was substantively stale under D-034 (it described a Claude-originated push flow that is not the flow). The operator's Ruling 9 ruled that §13.3 staleness is substance-not-placement — categorically different from §13.5.7's placement-not-substance awkwardness (which Ruling 8 handled via a pending_revisions carry-forward entry). The §13.3 revision is a minimal correction bounded to mechanical-coupling consequences. This is not a general softening of scope discipline; it is a narrow, reasoned expansion with three characteristics that may establish precedent for future DJ sessions: (a) the expansion is transparently named rather than absorbed silently; (b) it is justified by material found during drafting that pre-registered scope could not have anticipated; (c) it is bounded to mechanical-coupling consequences rather than new deliverable work. Scope-widening for convenience is categorically different and not authorized by this precedent.
+- **Plan-text revision v4.1-candidate-4 (queued in STATE `pending_revisions`) becomes stale under D-034.** Its current target text describes the D-029 Commitment §2 PAT-on-Render-env-var mechanism and is no longer aligned with the permanent mechanism D-034 establishes. The pending_revisions entry is preserved in STATE; its target text needs re-drafting at next v4.1 plan-revision cut per Playbook §12. This is a mechanical consequence flagged for future handling; v4.1-candidate-4 is not edited in the H-025 bundle because Playbook §12 scopes plan-revision work to its own ritual.
+- **SECRETS_POLICY is unchanged.** Candidate B (the only candidate that would have revised §A.6) was not selected. §A.6's blanket discipline — credential values never enter chat — remains in force for all credential classes, including GitHub PATs, `POLYMARKET_US_API_KEY_ID` / `POLYMARKET_US_API_SECRET_KEY` per D-023, Render deploy keys, Netlify build tokens, `X-PM-Tennis-Token`, and everything else on the §A.2 list.
+- **OBSERVATION_ACTIVE soft lock is unchanged.** Enforced in Claude's behavior layer, independent of commit mechanism.
+- **Playbook §10 (out-of-session commit ritual) is unchanged.** Its scope is "operator making an edit directly between sessions" — distinct from the deploy mechanism D-034 formalizes.
+
+**Effect on other decisions and governance artifacts:**
+
+- **D-029:** preserved verbatim; Commitment §2 annotated via footer as "SUPERSEDED IN PART BY D-034" matching D-025's precedent format.
+- **D-030:** preserved verbatim; no footer change. D-030's purpose was documentation of the gap and adoption of the interim flow, both of which remain historically accurate. D-034 lifts the "interim" qualifier D-030 carried; D-030 itself is not superseded.
+- **D-027:** cited as the project's supersession precedent. Its structural template (name the specific clause superseded; preserve other commitments explicitly; update superseded-entry footer; record "supersession not re-interpretation" reasoning) is applied here.
+- **D-023:** unchanged. Credential env-var names and storage location for Polymarket credentials stand. `POLYMARKET_US_API_KEY_ID` and `POLYMARKET_US_API_SECRET_KEY` continue to live as Render env vars, read by name, never in repo, never in chat.
+- **Playbook §13.2, §13.3, and §13.5.7:** revised inline in the H-025 bundle per Ruling 1 (and per Ruling 9 for the §13.3 scope expansion) and the doc-code coupling rule (Orientation §8).
+- **Playbook §13 other subsections (§§13.1, 13.4, 13.5.1–13.5.6, 13.5.8, 13.6):** unchanged.
+- **Playbook §§1–12:** unchanged.
+- **STATE:** `open_items.pending_operator_decisions` loses the POD-H017-D029-mechanism entry; `resolved_operator_decisions_current_session` receives the H-025 ruling per the H-014-settled stricter-reading pruning convention; `state_document.current_version` bumps 22 → 23; `scaffolding_files` inventory updated for this session's bundle; `phase.current_work_package` appended with H-025 narrative.
+- **Plan-text revision v4.1-candidate-4:** target text becomes stale; flagged for re-drafting at next v4.1 cut.
+- **Plan-text revisions v4.1-candidate, v4.1-candidate-2, v4.1-candidate-3:** unchanged, not affected by D-034.
+- **RAID:** unchanged. No RAID entries reference D-029's authentication mechanism.
+- **PreCommitmentRegister:** unchanged. No PCR values reference the deploy mechanism.
+
+**What this decision does not decide:**
+
+- **Future migration to a different mechanism.** If Anthropic ships a GitHub MCP connector, or a sandbox-accessible secret-injection mechanism becomes available, or a different architecture is preferred by the operator, the migration is a new DJ entry at that time superseding D-034. D-034 does not pre-commit the project to never migrating; it commits the project to the current mechanism being the permanent default unless and until a named, dated, numbered successor decision replaces it.
+- **Branch protection rules on `main`.** D-029 Commitment §4 recommended (but did not require) GitHub branch-protection configuration on `main` to structurally enforce the merge gate. D-034 preserves that recommendation unchanged.
+- **Preview-environment on staging.** Same disposition as D-029 and D-030 — recommended-but-not-required; not in scope for D-034.
+- **Pending build-plan revision work.** v4.1-candidate-4's target-text re-draft is a Playbook §12 matter at next plan-revision cut, not a D-034 matter.
+
+**Evidence trail:**
+
+- **D-030** (H-017, DecisionJournal): interim-flow adoption text; established the drag-and-drop-to-staging discipline and opened POD-H017-D029-mechanism. `claude-staging` branch existence verified at D-030 via operator dashboard inspection (`pm-tennis-api` Auto-Deploy="On commit", Branch=`main`; pushes to `claude-staging` ignored by auto-deploy).
+- **D-029** (H-016, DecisionJournal): eight numbered commitments; §2's seven sub-items on PAT mechanism; motivated by H-014/H-015/H-016 drag-and-drop-to-main failure modes.
+- **D-027** (H-013, DecisionJournal): supersession-not-re-interpretation precedent. Applied here as the structural template for D-034.
+- **D-025** (H-013, DecisionJournal): first project entry to receive a footer-level `SUPERSEDED IN PART BY` annotation; format precedent for the D-029 footer edit landing in this bundle.
+- **Handoff_H-017 §3.2:** D-029 first-use validation at H-017 surfaced the architectural gap before any commit attempt; operator approved D-030 adoption of the interim flow.
+- **Handoffs H-018, H-019, H-020, H-021, H-022, H-023, H-024 §Item-1:** seven consecutive D-030 resolution-path checks, all returning "no GitHub MCP connector in Anthropic's registry." Registry composition recorded at each session; churn observed (Mem/Glean dropped at H-021; Digits, GCE, PitchBook, Chronograph, Ketryx added at H-021; stable H-021 → H-024); GitHub-availability unchanged at No throughout.
+- **H-025 session-open check:** `search_mcp_registry` with keywords `['github', 'git', 'repository', 'commit', 'push']` returned GitLab, Digits, Google Compute Engine, PitchBook Premium, Chronograph, Contentsquare, Ketryx, Exa, Microsoft Learn, Lucid. Registry composition identical to H-021/H-022/H-023/H-024 snapshots. No GitHub MCP connector. Eighth consecutive no-signal check.
+- **Handoff_H-024 §10:** operator-attached H-025 scope steering document carried verbatim-equivalent, naming three candidate resolutions (A/B/C) with reasoning, scope-discipline, and first-actions sequence for H-025-Claude.
+- **DecisionJournal Conventions ¶13:** documented supersession-footer convention (`SUPERSEDED BY D-xxx (date)`); D-025's footer at line 707 as the `SUPERSEDED IN PART BY D-xxx` precedent format.
+- **H-025 chat transcript:** operator consolidated ruling (Ruling 1 inline Playbook discipline; Ruling 2 Candidate A with verbatim operator-language; Ruling 3 D-027 structural template; Ruling 4 scope held to §§13.2 and §13.5.7).
+
+---
+
 ## D-033 — `polymarket-us==0.1.2` full exception surface surfaced at H-020 SDK introspection: frozenset assignments revised
 
 **Date:** 2026-04-20
@@ -456,6 +560,8 @@ Selected: (d). Operator ruling.
 - H-015 handoff §3.2 and §6: two multi-line paste failures in Render Shell (distinct from commit flow but same fragility class).
 - H-016 chat transcript: operator "I've already committed the zip file content" → Claude verification → finding that `DecisionJournal.md` was absent from the first commit and stale artifacts were present. Operator subsequent commit `83c0bf8` to add the DJ. Operator explicit statement: "DJ was not in the bundle just the entry to insert (BAD execution choice—too much manual error risk. for every deploy in other sessions I've ALWAYS been instructed to replace)".
 - Extended H-016 exchange on the tradeoffs between direct-push-to-main, staging-push, current-flow, with operator surfacing the specific failure modes the current flow had produced.
+
+**SUPERSEDED IN PART BY D-034 (2026-04-21, H-025).** Commitment §2's specification of Claude-originated authentication via a non-expiring fine-grained GitHub PAT stored as a Render environment variable (including sub-items 2.1–2.7 on PAT scope, no-expiration rationale, rotation cadence, and implementation sequencing) is superseded by D-034 after seven sessions of D-030 resolution-path checks (H-017 → H-024 plus H-025's own) returned "no GitHub MCP connector in Anthropic's registry." D-034 promotes the D-030 interim drag-and-drop-to-staging flow to the project's permanent deploy mechanism. Commitments §1 (claude-staging branch, operator merges staging → main), §3 (Claude's push/authoring discipline), §4 (pre-push validation set), §5 (operator merge-gate discipline), §6 (observation-active soft lock preservation), §7 (OOP cannot bypass merge gate), and §8 (handoff/STATE as part of per-session bundle) are preserved and active. D-029's Rationale, Considered, Commitments §§1, 3–8, and body text prior to this footer are unchanged.
 
 ---
 

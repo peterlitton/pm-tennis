@@ -1124,4 +1124,173 @@ For H-020-Claude (or whichever session implements the sweeps code) reading this 
 
 ---
 
-*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive + §16 H-019 main-sweeps-scope addendum.*
+## 17. H-023 main-sweeps-outcome addendum — two runs of live-gateway evidence against §16's harness
+
+This section is additive to v4. Written at H-024 (2026-04-21) to record the outcome of two live-smoke sweep invocations executed at H-023 against the Polymarket US Markets WebSocket gateway, using the sweeps harness committed at H-020 per §16.8 and the pinned SDK surface confirmed at H-022 via RB-002 Step 4 validation. §17 follows §14's precedent for an outcome addendum: input, execution, outcome, classification and interpretation, work summary, what the next session picks up, what §17 does not change. §§1–16 are unchanged by this section.
+
+§17 is written one session after the evidence was captured. H-023-Claude held §17 drafting for H-024 under the one-deliverable-per-session discipline, and under the judgment that transcription and interpretation of two 180KB `SweepRunOutcome` JSON artifacts plus structural findings on anchor-slug sourcing and WebSocket error-event behavior warranted its own focused session rather than bundling with the execution that produced them. H-024 is that session.
+
+### 17.1 Why §17 is written now and what it scopes
+
+§16 committed the sweeps harness design (§16.5), the per-cell outcome record shapes (§16.6), the classification state machine (§16.7), and the acceptance bar (§16.8) without data against any of them. §16.8 names the live smoke run against the actual gateway as the third leg of the acceptance bar, producing data that a subsequent additive section would interpret. H-023 executed that live smoke run in two invocations and produced the data. §17 is that interpretation.
+
+§17 scopes only the empirical content of the two H-023 runs: what was observed, how observations classify against §16.7's state machine, which of §16.4's measurement questions (M1 through M5) each run resolved and which remain open, and which findings surfaced that §16 did not anticipate. §17 does not reopen any §16 commitment. §17 does not revise §16's frame. §17 does not cut any plan-text revision. If post-§17 work motivates a revision to the sweeps harness, the anchor-slug sourcing strategy, or the exception-type partition, that work is explicitly deferred past H-024 — frame-extension or redesign work is research-first per D-019 and does not belong in a transcription addendum.
+
+One framing-precision discipline governs §17 throughout and warrants naming at the top rather than repeated at every claim. **The two runs observed a specific slice of gateway behavior: one 30-second observation window per cell, one anchor slug per run, two runs separated by ~80 minutes.** Every quantitative claim in §17 is bound by those parameters. Message counts are for a 30-second window on a specific anchor; timing intervals are for a specific pair of runs; per-cell classifications reflect a specific harness state at a specific moment against a specific live match. §17 does not make general claims about gateway architecture, SDK behavior, or market dynamics; it records what the harness observed and interprets the observations within the scope the harness defined.
+
+### 17.2 Run inputs
+
+Both runs executed from the `pm-tennis-stress-test` Render service at the known-good runtime state established at H-022 (RB-002 Step 4 self-check seven-for-seven, per §14 precedent for runtime-validation posture). No Manual Deploy between the two runs; no code changes between the two runs; same commit, same deployed binary, same credential environment. The difference between runs is one parameter: the anchor slug supplied to `_fetch_anchor_slug`.
+
+**Run 1** exercised `_fetch_anchor_slug`'s default path (no `--seed-slug` argument; the function calls `client.markets.list({"limit": 1})` and takes the first element).
+
+**Run 2** exercised `_fetch_anchor_slug`'s operator-supplied path via `--seed-slug=<slug>`. The operator sourced the slug from the `pm-tennis-api` service's persistent-disk meta.json corpus — specifically `/data/matches/9579/meta.json`, whose `moneyline_markets[0].market_slug` field names an active Challenger-level men's singles match (Kicker vs Mayo, Challenger Savannah, ATP, event id 9579). The operator confirmed on the Polymarket US iPhone app that the match was live in-play (first set) at the moment of invocation.
+
+Run inputs summary:
+
+| Parameter | Run 1 | Run 2 |
+|---|---|---|
+| Invocation | `python -m src.stress_test.sweeps --sweep=both --log-level=INFO` | `python -m src.stress_test.sweeps --sweep=both --log-level=INFO --seed-slug=aec-atp-nickic-aidmay-2026-04-21` |
+| Started (UTC) | 2026-04-21 ~13:05 | 2026-04-21 14:24:19 (run_id 1776781459) |
+| Wall-clock | ~4 min | ~4 min |
+| Output redirect | `> /tmp/sweep_h021.json 2> /tmp/sweep_h021.stderr.log` | `> /tmp/sweep_h023_run2.json 2> /tmp/sweep_h023_run2.stderr.log` |
+| Exit code | 5 (`EXIT_SWEEP_PARTIAL`) | 5 (`EXIT_SWEEP_PARTIAL`) |
+| JSON size | 176,843 bytes | 187,891 bytes |
+| Stderr size | 4,242 bytes | 4,395 bytes |
+| Anchor-slug source path | `_fetch_anchor_slug` → `client.markets.list({"limit": 1})` → first-element dict → field-name fallback chain | `_fetch_anchor_slug` → `--seed-slug` short-circuit (sweeps.py line 1454 branch) |
+| Anchor slug resolved to | `aec-nfl-lac-ten-2025-11-02` (settled NFL game, Nov 2025) | `aec-atp-nickic-aidmay-2026-04-21` (live in-play ATP Challenger, operator-supplied) |
+
+The ~80-minute gap between runs is not a designed interval; it reflects the investigation and remediation work between run 1's surfacing of the settled-anchor result and run 2's invocation with a live anchor. The gap is informational for the M4 silent-filter replication claim in §17.4 — the two M4 control-cell observations are separated by ~80 minutes of wall-clock.
+
+### 17.3 Run executions and outcomes
+
+Both runs executed the committed grid per §16.5: one M4 control cell (100P/0R) first, then subscriptions-axis cells at N=1/2/5/10, then connections-axis cells at N=1/2/4. Eight cells per run.
+
+**Run 1 outcomes — settled-anchor baseline.** Because `_fetch_anchor_slug`'s default path resolved to a settled NFL game from November 2025, the anchor slug produced zero traffic across every cell's observation window. Every cell's subscribe succeeded at the SDK level (subscribe_ratio == 1.0 in every cell), which is the expected behavior if placeholder-slug rejection is silent (M4's option a — silent filter). Under §16.7's classification precedence and D-032's Reading B, the M4 control cell classified `clean` via its relaxed caveat (no error events, no close events, traffic not required), and every other cell classified `degraded` via precedence step 6 — subscribe ratio 1.0 but anchor slug produced zero traffic across the observation window. Per-cell `cell_classification_reason` on cells 1–7 read verbatim: *"step 6: subscribe ratio 1.0 but anchor slug produced zero traffic across the observation window"*. The run-level `run_classification` was `partial` per §16.7's aggregation rule (some clean, some degraded, none rejected/exception/ambiguous), matching exit code 5 (`EXIT_SWEEP_PARTIAL`).
+
+M4 control cell result: `m4_observations.m4_control_behavior = "silent_filter"` with `silent_filter_inferred = true`. Subscribe succeeded, no error events, no close events, zero messages for 100 placeholder slugs over the 30-second window. This is a positive first sample for M4 option (a) per §16.4.
+
+M1 and M2 cells all resolved `ambiguous` rather than resolving cleanly into compose/replace (M1) or independent/shared (M2). The resolvers' logic is traffic-distribution-based — `_resolve_m1` returns `compose` only if two or more `request_id` values received traffic, and `_resolve_m2` returns `independent` only if every connection received traffic on its anchor. With zero traffic across all cells, both resolvers fall through to `ambiguous` as the unresolved-by-evidence verdict. This is the designed behavior per §16.4 and per the resolvers' docstrings (sweeps.py lines 1858–1918 for M1, 1921–1973 for M2): ambiguous-without-traffic is the legitimate verdict when the observation window produced no data to discriminate on, and the harness does not force a verdict from absent evidence.
+
+**Run 2 outcomes — live-anchor remediation.** With `--seed-slug` supplying an in-play tennis match slug, the anchor-zero-traffic degradation path on cells 1–7 cleared for cells that had not also surfaced a new anomaly. Four cells classified `clean` via precedence step 5 (cells 1, 5, 6, 7). Three cells classified `degraded` via precedence step 6 with a new anomaly reason (cells 2, 3, 4). M4 control cell classified `clean` via its relaxed caveat for the second time, with field-for-field identical `m4_observations` to run 1. Run-level `run_classification` was `partial` per §16.7's aggregation, matching exit code 5.
+
+Per-cell run-2 summary:
+
+| Cell | Axis / value | Subs per conn | Conns | Classification | Reason (step) | Total msgs |
+|---|---|---|---|---|---|---|
+| 0 | m4-control (100P/0R) | 1 | 1 | `clean` | step 5 (M4 caveat, no traffic required) | 0 |
+| 1 | subscriptions-axis-n1 | 1 | 1 | `clean` | step 5 | 73 |
+| 2 | subscriptions-axis-n2 | 2 | 1 | `degraded` | step 6 (error_events fired) | 30 |
+| 3 | subscriptions-axis-n5 | 5 | 1 | `degraded` | step 6 (error_events fired) | 66 |
+| 4 | subscriptions-axis-n10 | 10 | 1 | `degraded` | step 6 (error_events fired) | 52 |
+| 5 | connections-axis-n1 | 1 | 1 | `clean` | step 5 | 78 |
+| 6 | connections-axis-n2 | 1 | 2 | `clean` | step 5 | 67 |
+| 7 | connections-axis-n4 | 1 | 4 | `clean` | step 5 | 53 |
+
+Per H-023 handoff §9 E9, the per-cell message totals are for the ~30-second per-cell observation window on the operator-supplied anchor slug; these numbers are window-bound and anchor-bound and should not be generalized to "cell N produces Y messages" outside those parameters.
+
+The degraded reason string on cells 2, 3, 4 reads verbatim *"step 6: subscribe ratio 1.0 but error_events fired during observation (N total)"* with N scaling across the cells: N=1 for cell 2 (2 subscribes), N=4 for cell 3 (5 subscribes), N=9 for cell 4 (10 subscribes). The error_events were delivered via the `markets_ws.on('error', ...)` handler pattern (sweeps.py lines 1688–1698), stored in the `ConnectionObservation.error_events` list as truncated repr strings, and fired during the observation window rather than during subscribe. Every subscribe in every cell reported `subscribe_sent = True`; the errors are observation-window events, not subscribe-phase failures. The error-event payload content itself was not extracted into §17 (held per scope discipline; extractable from `/tmp/sweep_h023_run2.json` on the stress-test service's Shell if that artifact still persists at the time of any future analysis, or via a re-sweep if artifacts are evicted).
+
+Zero D-033-predicted exception types fired on any cell in either run. No `PermissionDeniedError`, no `InternalServerError`, no `WebSocketError`. No other exceptions either. Both runs executed the critical path without raising any Python exception the classifier would route to the `rejected` (step 2) or `exception` (step 1) branches of §16.7's precedence.
+
+### 17.4 Classification, interpretation, and findings
+
+Four distinct findings emerge from the run outcomes. Each is recorded below with its empirical support and explicit scope bounds on what the evidence does and does not license.
+
+**17.4.1 M4 silent-filter behavior replicated across two independent runs.** The M4 control cell produced `m4_observations.m4_control_behavior = "silent_filter"` in both runs — the documented-option-(a) result per §16.4's M4 resolution vocabulary. Run 2's M4 control-cell `m4_observations` record was field-for-field identical to run 1's on every pinned field. The ~80-minute interval between runs, during which no code changed and no deploy occurred, gives an additional temporal-stability signal against the M4 control cell's behavior: pure-placeholder subscribes (100 placeholder slugs, 0 real anchors) succeeded at the subscribe level and produced zero messages over the 30-second observation window, in both samples.
+
+This is directionally supportive of the silent-filter branch of M4 as a stable characterization for the placeholder format the harness generates (`aec-ph-<hex>-<hex>-2099-12-31` per §16.5's synthesis strategy). Two samples is not a large basis for a stability claim, and the placeholder-generation code path and format have not changed between the samples. §17 records the observation without generalizing it beyond the two samples and the specific placeholder format tested.
+
+**17.4.2 M2 concurrent-connection independence resolved for the first time on the connections-axis cells — at the traffic-distribution layer.** Run 2's connections-axis-n2 cell (cell 6) and connections-axis-n4 cell (cell 7) both produced `m2_resolution = "independent"`. This is the first non-ambiguous M2 resolution in the project's sweep history; run 1's cells 6 and 7 had produced `ambiguous` under the no-traffic default.
+
+One framing-precision call is load-bearing for how §17 records this finding. The `_resolve_m2` resolver (sweeps.py lines 1921–1973) documents its semantics explicitly in the docstring, and the docstring flags a caveat worth preserving in the research record:
+
+> shared: only one connection appears to have received traffic, OR all connections share identity (cannot be detected here without SDK-level introspection; we use a weaker observable — traffic distribution across connection slots).
+
+The resolver's `independent` verdict is an **observable-level** claim about traffic distribution: all N connections connected, and every connection received traffic on its anchor over the observation window. It is not an SDK-identity-level claim that the two `markets_ws` objects produced by `client.ws.markets()` calls have distinct Python identity or distinct underlying transport connections at the SDK implementation layer. The resolver does not test identity; it tests traffic distribution. A true shared-identity scenario where the SDK returns the same object twice but subscribes produce divergent traffic routing would not be distinguishable by this resolver from genuine independence. §17 therefore records the M2 observation as: at N=2 and N=4 concurrent `client.ws.markets()` instances, on one anchor slug, over a 30-second observation window, traffic was observed on every connection slot — consistent with independence at the observable level the harness measures.
+
+That per-slot traffic attribution would ideally be verified against the per-connection message counts in `ConnectionObservation.subscribe_calls[*].message_count_by_event`. The aggregate totals in the cell-level table (67 for cell 6, 53 for cell 7) support the verdict at the aggregate level — if any connection had received zero traffic at the per-slot level, the resolver would have returned `shared` (at N=2 with trafficked_count==1) or `ambiguous` (at N=4 with partial trafficked_count). The resolver returning `independent` on both cells means the per-slot check passed for every connection in each cell. The per-connection breakdown itself was not extracted into §17 narrative; it is present in the run-2 `SweepRunOutcome` JSON if future work needs the per-connection numbers.
+
+**17.4.3 WebSocket error-event scaling observed on the multi-subscribe cells — a category orthogonal to D-033's partition.** On cells 2, 3, 4 (subscriptions-axis at N=2, 5, 10 subscribes on one connection), the harness observed WebSocket `error_events` firing during the observation window. The count of error_events scaled across the cells: 1 error on cell 2 (2 subscribes), 4 errors on cell 3 (5 subscribes), 9 errors on cell 4 (10 subscribes). The same operator-supplied anchor slug, same observation-window length, same credentials, same service runtime state; the only varying parameter across these three cells is the number of `subscribe()` calls on the single `markets_ws` connection.
+
+The `error_events` are delivered via the `markets_ws.on('error', ...)` handler registration (sweeps.py lines 1688–1698) and stored in `ConnectionObservation.error_events` as truncated repr strings. They are **not Python exceptions**. They never flow through the try/except structure in `_run_cell_async`; they never populate `SweepCellOutcome.exception_type`; they do not trigger `_classify_outcome`'s step 1 or step 2 (which classify on Python exception types). They are WebSocket-protocol-level event payloads delivered via the SDK's event-handler mechanism, and they fire during observation rather than during subscribe (each subscribe reported `subscribe_sent = True` before the errors appeared in the observation window).
+
+This places error_events outside the scope D-033 addresses. D-033 partitions the documented Python exception-type surface of `polymarket-us==0.1.2` into two frozensets (`DOCUMENTED_REJECTED_EXCEPTION_TYPES` and `DOCUMENTED_TRANSPORT_EXCEPTION_TYPES`), which the classifier consults at precedence steps 1 and 2 via string-matching the caught exception's type name. Error_events have no Python exception type to match against; they are orthogonal data. The finding is **not** that D-033's partition is incomplete for its scope — D-033 scopes exception classification and the partition remains correct for the category D-033 addressed. The finding is that error_events are a category D-033 did not scope to address. Frame-extension work covering error_events as an orthogonal classification input — what they indicate, whether they warrant their own partition, how they should influence cell classification or measurement resolution — is deferred past H-024 per §17.6. This extension is research-first work per D-019 and does not belong in §17.
+
+Further scope bounds on the scaling claim itself. The 1/4/9 pattern is one observation across three cell configurations (N=2, 5, 10) on one anchor slug in one 30-second window in one run. It is not a general law about how error_events scale with subscribe count; it is a single observation of three data points in a specific configuration. Whether the pattern replicates under different anchors, different window lengths, different subscribe cadences, or different times of day is not pinned by §17. The pattern is recorded as observed; its replicability is an open empirical question for any future sweep that revisits the multi-subscribe axis.
+
+The payload content of the error_events themselves — what the errors say about which subscribe-request-id they correlate to, what error codes or messages they carry, whether they cluster in time or arrive spread across the observation window — is not extracted into §17 narrative. That extraction requires reading the `ConnectionObservation.error_events` list in the run-2 `SweepRunOutcome` JSON artifact, which lives on the `pm-tennis-stress-test` Shell's `/tmp/` filesystem and may or may not persist across session boundaries. §17 records the count scaling and the delivery mechanism; payload content is a legitimate H-025+ inquiry either via artifact extraction (if still present) or via a targeted re-sweep (new scope).
+
+**17.4.4 Anchor-slug sourcing via `client.markets.list({"limit": 1})` returned a settled non-tennis market — an empirical finding about default SDK behavior, not a bug.** Run 1's `_fetch_anchor_slug` default path exercised the SDK call `client.markets.list({"limit": 1})` and resolved to `aec-nfl-lac-ten-2025-11-02`, an NFL game from November 2025 (settled market). Zero traffic resulted from subscribes against this slug, degrading every cell except the M4 control to `degraded`-via-step-6-anchor-zero-traffic.
+
+The finding is structural and empirical. The SDK function-contract does not promise "return active tennis markets" or even "return active markets" — it promises "return some markets." The function delivered on that contract; it returned a valid markets record for a settled NFL game. The project's `_fetch_anchor_slug` default strategy was built on the implicit assumption that the top-ordered result from `markets.list()` would be usable as a live-anchor source for a tennis-sweep harness. That assumption is not supported by the observed SDK default-ordering behavior.
+
+Two subsidiary observations contribute to the finding. First, `_fetch_anchor_slug`'s defensive field-name chain resolved via its third fallback `'slug'` (not `'marketSlug'` or `'market_slug'`) when extracting the slug from the returned element (sweeps.py line 1495 dict-path branch — empirical confirmation of §16.1's note that inner element shape was not pinned at §16 authoring). The fall-through warning path at line 1499 did not fire on either run, meaning the defensive chain is adequate for the shape the SDK actually returns. Second, during H-023's run-2 remediation investigation, an operator-side exploratory `client.markets.list({"limit": 100})` query returned 57 NBA + 43 NFL markets — zero tennis markets in the top 100 under the default ordering. Tennis content exists on Polymarket US (confirmed by the `pm-tennis-api` discovery loop writing 126 active tennis event meta.json files at H-016 and continuing growth); it does not surface via `markets.list()`'s default-ordering at top rank.
+
+This is a finding about what `_fetch_anchor_slug`'s default strategy needs to do, not a claim that `markets.list()` is broken. The `_fetch_anchor_slug` redesign — whether to pass filter parameters to `markets.list()`, whether to read from `pm-tennis-api`'s meta.json corpus as the primary source, whether to require `--seed-slug` rather than accept a default, whether to fall through to `markets.list()` only after filter-based approaches — is research-first work per D-019, deferred past H-024 per §17.6.
+
+Run 2's `_fetch_anchor_slug` operator-supplied path (the `--seed-slug=<slug>` short-circuit at sweeps.py lines 1454–1458) executed without exercising the `markets.list()` default path. The stderr log line confirmed the path taken verbatim: *"anchor slug: using operator-supplied --seed-slug=aec-atp-nickic-aidmay-2026-04-21"*. Both code paths of `_fetch_anchor_slug` now have empirical evidence — the default `markets.list()` path on run 1 and the `--seed-slug` short-circuit on run 2.
+
+**17.4.5 Additional M-question status after both runs.** Beyond the above four findings:
+
+- **M1** (multi-same-type subscription composition on one `markets_ws`) resolved `ambiguous` on every M1-testable cell across both runs. Run 1 cells 2–4 produced no traffic (settled anchor); the resolver had no per-request_id attribution data to discriminate `compose` from `replace`. Run 2 cells 2–4 produced traffic (30/66/52 messages respectively) but the M1 resolver still returned `ambiguous` on those same cells. The resolver's `compose` verdict requires ≥2 distinct `request_id` values each receiving nonzero traffic; its `replace` verdict requires exactly one `request_id` receiving traffic and that one being the last subscribe; its `ambiguous` verdict catches everything else. The resolver returning `ambiguous` with traffic present means the per-`request_id` distribution did not cleanly satisfy either `compose` or `replace` under the conditions observed. M1 remains an open measurement question — unresolved by the two runs available. Mechanism-level interpretation of why the resolver returned `ambiguous` with traffic present is out of scope for §17 and deferred to the H-025+ work named in §17.6.
+
+- **M3** (per-subscription cap behavior at 100 slugs) is not directly tested by the committed grid; the grid uses 100 slugs per subscription (1 real + 99 placeholder) as the default, and the harness observed first-message latency and per-slug attribution per §16.4's M3 measurement-method. First-message latency values are present in run 2's cell outcomes (not summarized in §17 narrative; in the `SweepRunOutcome` JSON). A dedicated 101-slug negative-control cell is named in §16.4 as the negative control; that cell is not in the default grid and was not tested in either run.
+
+- **M5** (connection-level concurrent-connection cap) received positive evidence up to N=4 concurrent connections. Cell 7's `m2_resolution = "independent"` combined with its `clean` classification means all four concurrent connections connected cleanly, subscribed successfully, received traffic, and closed cleanly within the observation window. At N=4, no connect failure, no subscribe failure, no rate-limiting, no silent-broken connection was observed. §16.4's M5 measurement specifies "any non-success across the 4-connection cell answers M5 at an upper bound; success across all three cells answers M5 as `≥4 concurrent OK`." By that criterion, M5 resolves at `≥4 concurrent OK` for the configuration tested on run 2. Upper-bound behavior (at what N the axis stops working cleanly) is not tested by the committed grid, which caps at N=4.
+
+- **D-033 exception-type predictions** (PermissionDeniedError, InternalServerError, WebSocketError) remained unexercised across both runs. Zero instances of any of the three predicted types fired on any cell critical path. This is neither evidence for nor against the partition — the sweep grid as designed does not naturally exercise the code paths that trigger these types. D-033's partition remains hypothesis-correct-by-construction; empirical confirmation or contradiction requires a future experiment outside §16's scope.
+
+### 17.5 H-023 work summary for the research record
+
+Consolidated for future readers of this document.
+
+| H-023 deliverable | Status at H-023 close |
+|---|---|
+| §16.9 step 1a+1b re-fetch at session open | Operator ruled exit state A (clean) on combined [E]/[F]/[G] + installed-module introspection layers. D-033 frozenset validity preserved; 91/91 sweeps unit tests pass. |
+| Run 1 live-smoke execution (default `_fetch_anchor_slug`) | Executed on pm-tennis-stress-test Shell against current main binary at H-022 known-good runtime state. Exit 5. JSON 176,843 bytes; stderr 4,242 bytes. Wall-clock ~4 min. |
+| Run 1 finding: settled-anchor zero-traffic degradation | Cells 1–7 all `degraded` via step 6 anchor-zero-traffic. M4 control cell `clean` with `silent_filter_inferred=true` (first sample). |
+| Run 2 live-smoke execution (`--seed-slug` operator-supplied, live ATP Challenger) | Slug sourced from `pm-tennis-api` meta.json corpus (event 9579); operator confirmed live in-play on Polymarket US iPhone app before invocation. Exit 5. JSON 187,891 bytes; stderr 4,395 bytes. Wall-clock ~4 min. |
+| Run 2 finding: four cells clean, three degraded via error_events, M4 replicated | Cells 1, 5, 6, 7 `clean` via step 5 with anchor-slug traffic. Cells 2, 3, 4 `degraded` via step 6 error_events (1/4/9 errors for 2/5/10 subscribes). M4 control cell `clean` with `silent_filter_inferred=true` (second sample, field-identical to run 1). |
+| M2 concurrent-connection independence resolved | First non-ambiguous M2 resolution in project sweep history: `'independent'` on connections-axis-n2 and connections-axis-n4, at the traffic-distribution observable level per resolver docstring caveat. |
+| M1 multi-subscribe composition resolution | `'ambiguous'` on all testable cells across both runs; with and without traffic. Unresolved by the two runs available. |
+| D-033 exception-type prediction exercise | Unexercised across both runs. Neither evidence for nor against the partition. |
+| `_fetch_anchor_slug` both code paths empirically exercised | Default `markets.list()` path via run 1 (field-name resolved via third fallback `'slug'`); operator-supplied `--seed-slug` short-circuit via run 2. Fall-through warning path did not fire either run. |
+| Novel finding: WebSocket error_events scaling under multi-subscribe load | 1/4/9 error_events for 2/5/10 subscribes on one connection. Orthogonal to D-033's Python-exception partition. Payload content not extracted; held for H-025+ frame-extension work. |
+| Novel finding: `markets.list()` default-ordering returns non-tennis settled markets | Structural finding on SDK default behavior. Motivates `_fetch_anchor_slug` redesign (deferred past H-024, research-first per D-019). |
+
+H-023 made zero code changes, zero test changes, zero DJ entries, zero RAID changes, and zero commitment-file changes. Deploy state of `pm-tennis-stress-test` remained at H-022's known-good runtime state throughout; neither run triggered a new deploy. The session's evidence is preserved in Handoff_H-023 §9 (evidence trail E1–E10 and synthesized items 1–7) as the canonical source; §17 is the interpretation layer over that evidence.
+
+### 17.6 What H-025+ picks up
+
+§17 explicitly defers the following work past H-024. Each is named here so the deferral is visible in the research record rather than implicit.
+
+1. **`_fetch_anchor_slug` redesign.** The default `markets.list()` path is empirically unsuited as a live-anchor source for tennis-sweep work (per §17.4.4); the `--seed-slug` path requires operator-side sourcing. Redesign is research-first work per D-019 — a standalone research document evaluating candidate strategies against the SDK surface, filter capabilities, and cross-service data-access constraints precedes the code turn. The candidate set itself is research-first scope and §17 does not enumerate it.
+
+2. **D-033 frame extension to cover WebSocket error_events as an orthogonal category.** D-033 scopes Python exception-type classification via frozenset string-matching at classifier steps 1 and 2. WebSocket error_events are a different category (protocol-level event payloads delivered via `markets_ws.on('error', ...)`, not Python exceptions — per §17.4.3). Extending the frame to cover error_events is research-first per D-019; the shape of the extension (whether an amendment to §16's classification state machine, a new research-doc section, or something else) is itself research-first scope and §17 does not pre-determine it.
+
+3. **M1 resolution work.** The two runs of evidence leave M1 unresolved (per §17.4.5). Advancing M1 is dependent on item 1 as a prerequisite — a cleanly-sourced live anchor is a precondition for any M1 follow-up experiment. The form the M1 follow-up takes (targeted re-sweep against the redesigned anchor source, or some other experiment shape) is research-first scope and §17 does not pre-determine it.
+
+4. **Error-event payload extraction.** The `ConnectionObservation.error_events` list contains truncated repr strings for each fired error_event in run 2 cells 2, 3, 4. Extraction into interpretable form (error codes, correlation to subscribe request_ids, timing within the observation window) was held out of §17 per scope discipline. Extraction is available via the run-2 `SweepRunOutcome` JSON if the `/tmp/` artifact persists on `pm-tennis-stress-test` Shell at extraction time, or via a targeted re-sweep if artifacts are evicted. Extraction is a prerequisite to the D-033 frame-extension work in item 2.
+
+5. **Any code changes** to sweeps.py, the classifier, the outcome records, or the tests. Zero code changes were made at H-023; §17 does not motivate any code change on its own. Code-turn work follows D-019 research-first sequencing and is gated on the research-document-first-then-code pattern H-019 established for §16 and reinforced by H-020.
+
+6. **Phase 3 exit gate candidate work.** §17 does not close Phase 3. §17 closes the §16 sweeps deliverable's acceptance bar per §16.8 items 3 and 4 — live smoke run executed, outcome JSON preserved, results cited against §16's measurement questions. Other Phase 3 exit triggers (48-hour unattended capture, CLOB pool recycle, Sports WS retirement, handicap capture, first-server identification) remain untested and ungated.
+
+### 17.7 What §17 does not change
+
+- **§17 does not amend §§1–16.** §§1–16 are preserved byte-identical from v4 + §§13–16 additives as recorded pre-H-024; §17 is a purely additive section appended after §16.11. No claim in §§1–16 is revised, no wording in §§1–16 is edited, no §-level renumbering occurs. The §14 precedent for additive-after-the-fact outcome addenda is followed.
+- **§16's five measurement questions (M1–M5) remain as scoped.** §17 records which questions the two runs resolved (M4 silent_filter replicated, M2 `'independent'` at observable level up to N=4, M5 `≥4 concurrent OK` for the tested configuration) and which remain open (M1 unresolved, M3 not directly grid-tested). The questions themselves are not re-opened or re-framed.
+- **§16.7's classification state machine is not revised.** The seven-step precedence rules executed as written; every cell in both runs classified via one of the named steps with the documented reason string. D-032's Reading B held. No step was bypassed, no rule was re-interpreted.
+- **§16.6's outcome record shapes stand.** `SweepCellOutcome`, `ConnectionObservation`, `SubscribeObservation`, `SweepRunOutcome` all populated as specified. No new fields added, no existing fields re-interpreted.
+- **D-032, D-033 stand as ruled.** D-032's Reading B predicate drove the clean-vs-degraded decision on every cell; D-033's frozensets stand correct for the category they scope. §17.4.3's error_events finding is orthogonal to D-033, not a revision of D-033.
+- **D-025 commitments 2, 3, 4 stand.** D-027 supersession of D-025 commitment 1 stands. The `--seed-slug` operator-supplied path exercised in run 2 is consistent with D-027 Option D's spirit (operator-supplied slug via CLI argument preserves isolation).
+- **D-019 research-first discipline stands.** The deferred items in §17.6 are each explicitly research-first scope. §17 itself is transcription of already-observed evidence against an already-committed research frame and does not bypass research-first.
+- **No plan-text revisions are cut by this section.** Plan-text revisions v4.1-candidate, v4.1-candidate-2, v4.1-candidate-3, v4.1-candidate-4 remain queued in STATE `pending_revisions`.
+- **No commitment files are touched.** `fees.json`, `breakeven.json`, `signal_thresholds.json` (which does not exist), `data/sackmann/build_log.json` — none in the path of §17.
+- **No Phase 2 source files are touched.** `src/capture/discovery.py`, `main.py` — untouched by §17.
+- **No RAID entries added or modified by §17 itself.** §17 records empirical findings against §16's frame; any new risks or issues motivated by the findings would be raised at the session producing the follow-up work (H-025+), not in §17.
+
+---
+
+*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive + §16 H-019 main-sweeps-scope addendum + §17 H-024 main-sweeps-outcome addendum.*

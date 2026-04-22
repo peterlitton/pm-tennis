@@ -18,6 +18,108 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-035 — Auto-Deploy=Off session discipline for `pm-tennis-stress-test`: session convention + RB-002 Step 0 addition (H-022 §9 Observation 1 resolved)
+
+**Date:** 2026-04-22
+**Session:** H-027
+**Type:** Governance / Operational discipline
+
+**Source:** H-022 §9 Observation 1 surfaced at H-022 (2026-04-20) during the Manual Deploy validation work. The observation was carried forward in handoff prose at H-023, H-024, H-025, and H-026; H-026-Claude's informal letter explicitly flagged it as a carry-forward for the session opening the code turn or live-execution in the `_fetch_anchor_slug` redesign arc. H-027 did not open live execution (§19 and §20 are research-first scoping per D-019); operator ruled at H-027 that the Tier 2 DJ entry is written now as governance-debt closure in Phase B+ of the session, independent of the code-turn-activation framing.
+
+**Finding.** Between H-014 and H-021 (seven sessions), `pm-tennis-stress-test` had Auto-Deploy=Off and no session-level discipline existed for verifying the service's deploy state against `main` HEAD before attempting live execution. Bundle merges to `main` during this window that touched `src/stress_test/*` did not trigger redeploys because the setting was Off; no session clicked Manual Deploy because no session's ritual called for it. The gap was surfaced at H-021 when the first live-smoke attempt returned an `ImportError` — the deployed code was the initial provisioning commit (`8e04cfa`, 2026-04-19), not the current `main` HEAD. H-022 triggered the first-ever successful deploy of `pm-tennis-stress-test` with commit `b4e82d3` and `'Clear build cache & deploy'`; build succeeded at ~1 minute wall-clock; runtime self-check produced seven-for-seven pass against the RB-002 Step 4 template. The deploy discipline gap is the operational cost being addressed by this decision; the failure mode is service state silently drifting from `main` during inter-session bundle merges, producing stale-code live-execution when the next live session opens without verification.
+
+**Decision:** Adopt composition (i) + (iii) — session convention for Auto-Deploy-state pre-flight check on any session operating on `pm-tennis-stress-test`, codified via an RB-002 Step 0 addition so the discipline has a runbook anchor rather than living only in session-open norms.
+
+Specifically, the commitment is two-layered:
+
+1. **Session-convention layer.** Any session whose scope includes live execution on `pm-tennis-stress-test` (probe invocation, sweep invocation, shell-based diagnostic that exercises the service's deployed code) performs an explicit pre-flight check before proceeding to live work. The pre-flight check verifies: (a) current Auto-Deploy state, (b) last deployed commit versus `main` HEAD, (c) whether Manual Deploy is required before the session's live work begins. The check is either performed by the operator at session open on Claude's request, or by Claude via documented observable surfaces if the operator delegates. The pre-flight check outcome is named in the session's work-plan surfacing before any live execution proceeds.
+
+2. **Runbook-anchor layer.** RB-002 receives a new Step 0 paragraph immediately before Step 1, naming the session-convention discipline and pointing to the observable surfaces (Render dashboard Events tab, Service Settings page, current `main` HEAD via repo inspection) the check consults. Step 0 is not gated by service-provisioning state (RB-002 Step 1 is); it is the first thing any post-provisioning session consulting RB-002 reads.
+
+**Considered:**
+
+- **(i) Session convention alone.** Pre-flight check lives in session-open discipline (informally in Playbook §1 self-audit or Orientation, formally via handoff received-discipline propagation). Lightest intervention. Rejected-as-sole-answer — convention without a runbook anchor leaves the discipline informal and subject to drift; the H-014→H-021 gap was itself a discipline-without-anchor failure mode (the live-execution pattern had no codified ritual, and seven sessions of bundle merges proceeded without anyone noticing).
+
+- **(ii) Config flip to Auto-Deploy=On.** Change `pm-tennis-stress-test`'s Auto-Deploy setting in Render dashboard from Off to On. Service redeploys on every push to `main`. Eliminates the "did we Manual Deploy?" question by removing the gap. Rejected-as-sole-answer — the original H-022-cited rationale for Auto-Deploy=Off ("explicit control over when the service redeploys during stress-test sweeps; auto-deploy on every push would be noise during the live run") remains valid for live-execution sessions where deploy-during-sweep is operationally undesirable. Config flip trades away that control surface. Preserved as live consideration for a future session if session-convention discipline proves brittle — operator's H-027 ruling language explicitly preserves (ii) as not-ruled-out-just-not-ruled-in-now, subject to re-evaluation if the (i)+(iii) composition does not hold.
+
+- **(iii) RB-002 Step 0 addition alone.** Runbook anchor without session-convention layer. Rejected-as-sole-answer — runbook without convention means the check is documented but not ritualized; the operator reads it when consulting RB-002 but nothing prompts consulting RB-002 at session open. The H-014→H-021 gap included sessions that never consulted RB-002 at session open because no discipline required it.
+
+- **Composition (i)+(iii) — adopted.** Discipline-mechanism gap addressed by session-convention layer; runbook-anchor gap addressed by RB-002 Step 0. The two layers reinforce: the convention prompts consulting RB-002 at session open for relevant sessions, and RB-002 Step 0 codifies what the convention checks for.
+
+- **Composition (ii)+(iii).** Config flip with RB-002 update reflecting the new default. Addresses the gap structurally (no Manual Deploy question) plus runbook. Rejected because it chains (ii)'s rejection reasoning — trades away control during sweeps — without the session-convention layer's adaptability.
+
+- **Composition (i)+(ii).** Convention plus config flip without runbook anchor. Rejected — leaves (iii)'s runbook-anchor gap unaddressed and retains (ii)'s control-surface tradeoff.
+
+- **All three (i)+(ii)+(iii).** Over-specified; (ii) and (i) address the same discipline-mechanism gap from different angles (structural removal vs ritualized checking). Rejected as redundant.
+
+**Reasoning (forward-looking per Pull T2):**
+
+The H-027-era project state differs from H-022's state in one material way: §19.6 recommended Candidate E (D→F composition) as the forward `_fetch_anchor_slug` strategy, with operator-supplied `--seed-slug` as precedence-first. The code-turn and live-execution pattern implied by §19.6 is narrower than H-022 envisioned — operator supplies slug, live sweep executes, result observed. The frequency of live-execution sessions under §19.6's strategy is low and predictable (code-turn session; initial validation; M1 re-sweep; possibly payload-extraction re-sweep for §20 Shape Epsilon grounding), not high-cadence. At the cadence implied, session-convention discipline has low cognitive cost — each live session's pre-flight is a known ritual, not a frequent friction — and runbook-anchor ensures the ritual is codified rather than remembered.
+
+Composition (i)+(iii) over (ii) also preserves the operator's H-022-cited control rationale for Auto-Deploy=Off, which remains valid: during sweep execution the operator benefits from the service's code being pinned to a known commit rather than shifting mid-run. (ii) would re-raise this tradeoff now without a forcing reason.
+
+The three-characteristics test from D-034 Ruling 9 (scope expansion: transparently named, drafting-time material, bounded to mechanical-coupling) applies here inversely: the composition's scope is exactly what Pulls T3 and T4 pre-registered. The RB-002 Step 0 addition is pre-authorized for inline bundling per operator H-027 ruling, subject to staying within a compact single-paragraph scope (operator language: "if it grows beyond a single compact paragraph, defer to separate session"). The Step 0 language is surfaced below at the Commitment section for operator review.
+
+**Commitment:**
+
+1. **Session-convention pre-flight language** for any session whose scope includes live execution on `pm-tennis-stress-test`. The convention is carried via handoff received-discipline propagation (per H-023 / H-024 / H-025 / H-026 precedent for standing-discipline additions) and codified via the RB-002 Step 0 addition below. The pre-flight check consults:
+
+   - Render dashboard Events tab for `pm-tennis-stress-test` — last deploy commit, deploy status, any failures since last known-good deploy.
+   - Current `main` HEAD via repo inspection (commit SHA, commit message, relation to last successful deploy).
+   - Whether a Manual Deploy click is required before the session's live work begins. Required when: last deployed commit ≠ `main` HEAD AND any `main` HEAD change touched `src/stress_test/*` (source), `src/stress_test/requirements.txt` (dependencies), or related runtime-affecting code paths since the last known-good deploy.
+   - Auto-Deploy state confirmation (expected: Off; if changed, a D-035 successor decision is surfaced as the path-change signal).
+
+   The pre-flight result is named in the session's work-plan surfacing before any live execution proceeds. A pre-flight surfacing "Manual Deploy required" triggers the operator-executed Manual Deploy step before the session's live work begins; a pre-flight surfacing "last deploy covers current main" permits proceeding.
+
+2. **RB-002 Step 0 addition** — inline in the H-027 bundle per operator pre-authorization, subject to staying compact. Proposed Step 0 paragraph (surfaced for review before landing in the bundle):
+
+   > **Step 0 — Pre-flight: verify service deploy state against main**
+   >
+   > Before proceeding to any step that exercises `pm-tennis-stress-test`'s deployed code (live probe, live sweep, shell-based diagnostic that imports from `src/stress_test/*`), verify the service's current deploy state. Auto-Deploy is Off by design (Step 1) — pushes to `main` do not redeploy the service automatically. Check the Render dashboard Events tab for `pm-tennis-stress-test` and note the last successful deploy's commit. Compare against `main` HEAD. If any change to `src/stress_test/*` or its requirements has landed on `main` since that commit, click Manual Deploy (optionally with `'Clear build cache & deploy'` for dependency changes) before proceeding. A deploy where the start command exits cleanly after the self-check output is RB-002-expected behavior per Step 4, even though Render's UI may label it "Deploy failed: Application exited early" (see H-022 §9 Observation 2 for context). Per D-035, the pre-flight check is a session-convention discipline for any session scoping live execution on this service; this Step 0 is the runbook anchor for that discipline.
+
+3. **STATE field update.** STATE `deployment.stress_test.auto_deploy: false` is preserved unchanged; D-035 does not change the setting. A new narrative note in STATE's deployment.stress_test.notes field (or parallel field) records D-035 as the governing discipline for the Auto-Deploy=Off posture. The note is a pointer-to-D-035 rather than a duplication of D-035's content; STATE remains a current-state snapshot, not a decision record.
+
+4. **Standing discipline carry-forward.** D-035 joins the received-discipline-propagation set that handoffs carry forward to subsequent sessions. Future handoffs include a line noting D-035's session-convention discipline is in effect, parallel to how D-019 research-first and D-016 commitment 2 no-fabrication disciplines are carried forward.
+
+**Effect on other decisions and governance artifacts:**
+
+- **D-018 (asset-cap stress test deliverable):** unchanged. The stress-test deliverable's scope and sequencing stand. D-035 is the operational discipline for running the stress test cleanly, not a change to what the stress test is.
+- **D-020 (Q2=(b) isolated service):** unchanged. Service isolation preserved.
+- **D-021 (testing posture: unit + live smoke):** operationally reinforced. D-021 requires live smoke before deliverable acceptance; D-035's pre-flight ensures that live smoke runs against current-`main` code.
+- **D-027 (probe-slug transport via CLI argument):** unchanged. D-035 does not touch slug sourcing.
+- **D-029 (staging-to-main deploy mechanism):** unchanged. D-035 is adjacent (service deploy state) but not superseding (D-029 scopes how code reaches `main`; D-035 scopes how `main`-landed code reaches the live service).
+- **D-034 (drag-and-drop-to-staging as permanent mechanism):** unchanged. D-034's bundle-to-staging-to-main flow operates on the repo side; D-035 operates on the service-side observable.
+- **RB-002:** Step 0 inserted per Commitment §2 above. Steps 1–6 unchanged. Runbook version bump consistent with its internal versioning convention (handled at inline bundling).
+- **H-022 §9 Observation 1:** marked resolved by D-035. Handoff prose carry-forward ceases after H-027.
+- **H-022 §9 Observation 2 ("Deploy failed: Application exited early" label ambiguity):** remains a Tier 2 candidate for a separate DJ entry. D-035's Step 0 paragraph references the label ambiguity via a pointer to Observation 2, but does not resolve it. Preserved for H-028+ per operator scope-selection if ruled.
+- **H-022 §9 Observations 3–6 (Tier 3 meta and ops observations):** remain preserved for H-028+ per tier-gating structure.
+- **Playbook §1 (session-open ritual):** unchanged. D-035's session-convention discipline is carried via handoff propagation and anchored in RB-002, not embedded in the Playbook self-audit step itself. A future session may judge that the Playbook should codify the convention directly; that would be a Playbook revision decision, not part of D-035's scope.
+- **Orientation.md:** unchanged. Orientation describes structure; D-035 is a specific discipline. No Orientation update warranted.
+- **`pending_revisions` in STATE:** unchanged by D-035 itself. The RB-002 Step 0 addition is inlined in the H-027 bundle, not queued as a pending revision. Other pending revisions (v4.1-candidate through -5) remain as queued.
+- **RAID:** no new entries. D-035 addresses a resolved observation; the failure mode is closed by the discipline rather than open as ongoing risk.
+
+**What this decision does not decide:**
+
+- **Whether Auto-Deploy should eventually flip to On.** Candidate (ii) remains preserved as a live consideration for a future session per operator H-027 ruling. If the (i)+(iii) composition proves brittle — e.g., pre-flight checks are missed in practice, stale-code live-execution happens anyway — revisiting (ii) is a successor-DJ-entry scope. D-035 does not foreclose it.
+- **Playbook §1 self-audit embedding.** Whether the session-convention discipline should move into Playbook §1 as an embedded step (rather than living in handoff propagation + RB-002) is future-Playbook-revision scope.
+- **Pre-flight observable surfaces beyond Render Events tab.** If Anthropic ships a Render MCP connector (parallel to the GitHub MCP connector path D-030 tracked), Claude could perform the pre-flight check more directly via tool call rather than via operator dashboard inspection. D-035 does not pre-commit to a tool-enabled pre-flight path; current convention is operator-driven via dashboard.
+- **Application of D-035 to other Render services.** D-035 scopes `pm-tennis-stress-test` specifically. `pm-tennis-api` has Auto-Deploy=On per D-014 / STATE `deployment.backend.auto_deploy: true`; the discipline question does not apply there symmetrically. If future services are provisioned with Auto-Deploy=Off, whether D-035 generalizes is a separate decision.
+
+**Evidence trail:**
+
+- **H-022 §9 Observation 1** (Handoff_H-022 §9 and STATE prose commentary for H-022): three-candidate enumeration at source, failure-mode narrative, H-022 first-ever-successful-deploy recovery point.
+- **H-021 live-smoke failure** (Handoff_H-021): ImportError on commit mismatch, surfaced the stale-deploy failure mode.
+- **H-022 Manual Deploy validation record** (Handoff_H-022): RB-002 Step 4 seven-for-seven pass on self-check output, establishing the known-good deploy state.
+- **STATE `deployment.stress_test.auto_deploy: false`**: current setting confirmed unchanged.
+- **STATE `deployment.stress_test.live_deploy_verified_session: H-022`**: last known-good deploy session, the reference point for pre-flight checks going forward.
+- **H-023 / H-024 / H-025 / H-026 handoffs**: carry-forward prose preserving the observation across four sessions.
+- **H-026-Claude letter**: explicit flag to name the Auto-Deploy discipline in pre-flight at the session opening the code turn.
+- **§19.6 (research-doc)**: forward-looking strategy implied by §19.6's D→F recommendation — narrow, predictable live-execution cadence supports session-convention discipline over config flip.
+- **RB-002 Step 1**: current Auto-Deploy=Off language at line 82 of `runbooks/Runbook_RB-002_Stress_Test_Service.md`, cited as the design-intent origin of the Off setting.
+- **RB-002 Step 4**: self-check template H-022 validated against, referenced in Step 0 paragraph for "Deploy failed" label-ambiguity pointer.
+
+---
+
 ## D-034 — POD-H017-D029-mechanism resolved: D-030 interim flow promoted to permanent (supersedes D-029 Commitment §2)
 
 **Date:** 2026-04-21

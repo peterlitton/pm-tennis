@@ -10,6 +10,8 @@
 - **v4 (H-012): three H-012 rulings resolved and the §6 meta.json survey executed. §13 added capturing (a) the ruling on POD-H010-§12 = SDK (D-024), (b) the ruling on POD-H010-Q5′ = hybrid probe-first (D-025), (c) the authorization and execution of POD-H010-§6-survey (D-026), (d) the survey findings, (e) the probe-slug default for the Q5′=(c′) probe. v4 is additive only: §§1–12 are unchanged from v3. §5's "actual asset count we expect" estimate (≈38 at H-009 close) and §7's placeholder-bracket discussion are explicitly not revised; §13 cross-references them and notes the updated N=74 baseline instead, preserving v3's operator-accepted text.**
 - **v4 §15 additive (H-014): three H-013 code-turn-research tasks resolved against authoritative sources (Ed25519 signing fully internal to SDK; timestamp unit milliseconds; SDK transitive-dep footprint 12 wheel-available packages). D-027 supersession of D-025 commitment 1 after Render disks confirmed strictly single-service — probe slug is now operator-supplied via `--slug=SLUG` CLI arg; D-025's other commitments unaffected. Probe scaffolding at `src/stress_test/` (H-013) documented. Known-stale artifacts from H-013's Option X cut (`src/stress_test/README.md`, `runbooks/Runbook_RB-002_Stress_Test_Service.md`) rewritten at H-014 start. §14 reserved for H-015 probe-outcome addendum. No sections in §§1–14 revised.**
 - **v4 §18 additive (H-026): `_fetch_anchor_slug` redesign research-first scope addendum. First element of the H-025+ multi-session research-first arc §17.6 deferred past H-024; research-first per D-019. §18 scopes the redesign question (not the answer): two structurally-coupled open questions surfaced — Q1 single-anchor vs multi-anchor selector output shape, structurally upstream of Q2 signal preference. Five candidate access paths enumerated with closure-check findings (SDK `markets.list()` with filter parameters not-closed per H-026 SDK source inspection confirming `MarketsListParams` exposes `categories` / `active` / `closed` / pagination / ordering / liquidity-volume filters; meta.json bridge direct-disk variant closed by D-027, HTTP-endpoint variant not-closed; gateway-direct not-closed; operator-supplied `--seed-slug` elevated not-closed; hybrid composition not-closed). Seven evaluation criteria named as deliverables any candidate must meet, admitting both Q1 modes. Downstream dependency edges named (M1 resolution, M3 observability, M5 upper-bound probes, `classify_cell` step 5 predicate, error-event extraction orthogonality). No strategy-discriminating research performed; no candidate pre-selected; no code motivated. Strategy-discriminating research document deferred to subsequent Claude turn per D-019 sequencing. No sections in §§1–17 revised.**
+- **v4 §19 additive (H-027): strategy-discriminating research against §18's frame per D-019 sequencing. Pre-draft SDK introspection surfaced that §18.4's candidate enumeration was scoped to `markets.list()` and did not survey two additional SDK resource surfaces: `events.list()` / `events.retrieve_by_slug()` and `sports.list()` / `sports.teams()`. Operator ruled Option X at H-027 — expand candidate set to include F (`events.list()` with tennis filtering) and G (`sports.*` path), closure-checked in §19.2; discriminate A–G in §19.3 onward. §19 delivers: §19.2 inheritance from §18 plus closure-check on candidates F and G (F not-closed; G deferred on under-characterization, which is itself a closure-check verdict under the steering-compressed discipline); §19.3 structural discrimination of the candidate set against the seven §18.5 criteria via compressed tabular form per steering; §19.4 Q1 discrimination (single vs multi) with reasoning grounded in per-cell vs global query capability; §19.5 Q2 discrimination (signal preference) conditional on Q1 and on what the live candidate set admits; §19.6 recommended strategy with trade-offs named explicitly, not airtight-sounding; §19.7 what §19 does not change (byte-identical §§1–18 preservation via SHA-256 baseline using content-range language). Empirical contact with the market is addressed outside PM-Tennis's scope per operator clarification at H-027; §19's discrimination is structural (what each path admits, what each commits the project to, what governance-cost each carries), not empirical-reliability-measuring. No sections in §§1–18 revised; §18 as frozen at H-026 is the frame §19 builds on.**
+- **v4 §20 additive (H-027, second deliverable): D-033 frame-extension research-first scope addendum addressing §17.6 item 2. Phase B of H-027 per operator-ruled bundling authorization; Phase A = §19. §20 scopes how WebSocket error_events — protocol-level payloads delivered via `markets_ws.on('error', ...)`, orthogonal to D-033's Python exception-type partition per §17.4.3 — fit into the classifier's category frame. Pull B5 SDK introspection at §20 open surfaced material detail §17.4.3 had not recorded: the `'error'` event has three distinct emit sites in the installed SDK (`BaseWebSocket._message_loop` connection-failure emits `PolymarketUSError`; `MarketsWebSocket._handle_message` JSON-parse-failure emits `PolymarketUSError`; `MarketsWebSocket._handle_message` protocol-error path emits `WebSocketError(message, request_id)` with per-subscribe request-id attribution). Empirical-substrate deferral honestly named in §20.3: the `/tmp/sweep_h023_run2.json` artifact that would have provided structured payload extraction was evicted from the Render Starter instance's ephemeral filesystem; re-sweep for extraction is re-targeted to H-028 per operator ruling. §20 proceeds against structural grounds: §17.4.3 scaling-ratio evidence (1/4/9 error_events on cells 2/3/4 at N=2/5/10 subscribes), the three-emit-site structural record from Pull B5 introspection, and the orthogonality claim carried forward. §20 recommends frame-extension as a parallel-not-revisionary category tracked alongside D-033 in the classifier record, with the specific shape of classifier integration deferred to code-turn scope. §20 is research-first per D-019; no code motivated. §17.6 item 2 closes at the scoping level; item 4 (payload extraction) remains deferred and re-targeted to H-028 per operator ruling. No sections in §§1–19 revised.**
 **Status:** Draft document; v3 operator-accepted at H-010, §13 operator-accepted at H-012, §15 produced at H-014. Scaffolding code at `src/stress_test/` produced at H-013 per §13.5 (operator-committed, 38 unit tests passing, zero SDK mocking, live-probe deferred to H-015 per operator Option X cut). No live probe has been run against Polymarket US; no main-sweep run has been executed. Every external fact in §4 is cited with URL and excerpt per Ruling 2(a) and Tripwire 1. §15 findings extend the same discipline: SDK source and Render docs were fetched and cited before code was written or runbook procedures finalized.
 
 ---
@@ -1448,4 +1450,331 @@ The `_fetch_anchor_slug` redesign is not standalone; it composes with downstream
 
 ---
 
-*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive + §16 H-019 main-sweeps-scope addendum + §17 H-024 main-sweeps-outcome addendum + §18 H-026 `_fetch_anchor_slug` redesign scope addendum.*
+## 19. H-027 strategy-discriminating research against §18's frame
+
+This section is additive to v4. Written at H-027 (2026-04-22) to discriminate among the candidate access paths §18 scoped, producing the recommended strategy §18 deferred per D-019 research-first sequencing. §19 follows §18's additive-section precedent: scope / why written, inheritance and expanded closure-check on newly-surfaced candidates F and G, structural discrimination table, Q1 discrimination, Q2 discrimination, recommended strategy with trade-offs named, what §19 does not change. §§1–18 are unchanged by this section.
+
+§19 is research-first per D-019. The section commits to a recommended strategy grounded in the candidate set's structural characterization against §18.5's seven criteria; it does not commit to code. A subsequent Claude turn produces code against §19's recommendation, with the code turn's own pre-registration discipline and Auto-Deploy=Off pre-flight per H-022 §9 Observation 1 / H-026-Claude's letter.
+
+### 19.1 Why §19 is written now and what it scopes
+
+§18.1 named the strategy-selection move as "explicitly deferred to the session that produces strategy-discriminating research against §18's frame." §19 is that session's output. §17.6 item 1 remains the rootward reference: `_fetch_anchor_slug` redesign is the structurally upstream element of the research arc; M1 resolution (§17.6 item 3) depends on a cleanly-sourced live anchor as prerequisite. §19 discriminates; a later session implements; a session after that re-sweeps M1.
+
+§19 scopes strategy discrimination and recommendation. It performs structural characterization of each candidate access path against §18.5's seven criteria, without requiring empirical live-reliability measurement. Empirical reliability (what each path actually returns under real conditions) is deferred explicitly — either to the code turn's live smoke test per D-021, or to the separate thesis-validation effort the operator confirmed at H-027 is running outside PM-Tennis scope. The discrimination §19 performs is **what each access path admits the project to do**, **what governance-cost each carries**, and **what downstream capability each preserves or forecloses**.
+
+One framing-precision discipline governs §19 throughout. **§19 names trade-offs explicitly rather than constructing a recommendation that makes alternatives look obviously wrong.** The five-candidate set §18 enumerated plus the two candidates §19 surfaces do not decompose into one obvious winner and six obvious losers; each candidate commits the project to a different posture. §19.6's recommendation is the best-fit call against criteria and current project state, not the only-defensible call.
+
+### 19.2 What §19 inherits from §18 and closure-check on newly-surfaced candidates
+
+**Inherited from §18 unchanged.** §18's five candidates, closure-check findings, Q1 (single vs multi) and Q2 (signal preference) factoring, and seven evaluation criteria (a)–(g) are all preserved as the frame §19 discriminates within. §18.4's closure-check outcomes table stands: A not-closed (SDK `markets.list()` filter-parameter surface confirmed); B closed (D-027 single-service-disk); B' not-closed (governance-cost scoped to probe-transport, not anchor-redesign); C not-closed (public gateway, no auth for reads); D not-closed (already implemented, H-023 run 2 precedent); E not-closed (composition).
+
+**Candidates surfaced at H-027 pre-draft SDK introspection for Pull 5 (§18 did not survey).**
+
+The installed SDK exposes two additional resource surfaces beyond `markets.*` at `polymarket_us.resources.events` and `polymarket_us.resources.sports`. §18.4's candidate enumeration was scoped to `markets.list()` specifically; the broader SDK surface went uncharacterized. §19.2 closes the closure-check gap for these two candidates at the steering-compressed depth Option X's ruling specified (tight, not full §18.4-shape treatment).
+
+**Candidate F — SDK `events.list()` with tennis filtering.**
+
+Access path: invoke `AsyncPolymarketUS.events.list(params)` with filter parameters to narrow returned events to tennis at invocation time; extract a slug from the nested `markets: list[Market]` in one of the returned `Event` objects. `EventsListParams` exposes a filter surface strictly broader than `MarketsListParams`: in addition to the shared `categories` / `active` / `closed` / `orderBy` / liquidity-volume filters, `EventsListParams` adds `startDateMin/Max`, `endDateMin/Max`, `startTimeMin/Max`, `eventDate`, `eventWeek`, `tagSlug`, `tagId`, `seriesId`, `ended`, `featured`, `relatedTags`. The `Event` response shape includes `startTime: str`, `endTime: str`, `markets: list[Market]`, `tags: list[Tag]`, `series: SeriesInfo` — signals unavailable via `markets.list()`'s `MarketDetail` response (which exposes only market-level fields).
+
+Closure-check finding: **NOT closed.** Resource exists on `polymarket-us==0.1.2` with `list()`, `retrieve()`, `retrieve_by_slug()` methods. Filter-parameter surface is strictly richer than `MarketsListParams` for time-windowed and tag-based narrowing; response shape provides event-level signals (start time, tags, series) that market-level queries cannot directly expose. Whether specific `categories` / `tagSlug` values successfully narrow to tennis at the server is an empirical question deferred to live characterization, same posture §18.4 took for Candidate A.
+
+Q1 compatibility: supports both Q1=single (first event from filtered result, pick first market) and Q1=multi (N events from filtered result, N slugs). Fully Q1-agnostic.
+
+**Candidate G — SDK `sports.*` resource path.**
+
+Access path: invoke `AsyncPolymarketUS.sports.list()` or `AsyncPolymarketUS.sports.teams(params)`. Exists on `polymarket-us==0.1.2` with `list` and `teams` methods per module-level introspection. Per steering-compressed Option X scoping, §19.2 did not inspect `SportsListParams` / `GetSportsTeamsParams` / response shapes deeply enough to issue a binary not-closed verdict equivalent to Candidates A and F.
+
+Closure-check finding: **DEFERRED on under-characterization.** The honest verdict is that closure-check cannot be issued binary-style on method-name-only depth. G is not structurally closed (no prior decision forecloses it, no capability-absence evident); it is un-characterized. Per §18.4's discipline, a candidate that cannot be discriminated against the criteria without further closure-check work is not a live candidate at discrimination time. If future research surfaces that G offers signals unavailable via A/F — for example, a sport-level enumeration that returns currently-active tennis matches directly — G becomes a live candidate at that next session. §19 does not discriminate against G; §19.6's recommendation is scoped to A / B' / C / D / E / F with G flagged as a deferred candidate.
+
+**Summary of closure-check outcomes at H-027:**
+
+| Candidate | Closure-check | Reason |
+|---|---|---|
+| A — SDK `markets.list(filter_params)` | NOT closed | §18.4 closure-check; `MarketsListParams` surface confirmed |
+| B — meta.json bridge (direct disk) | CLOSED | §18.4 closure-check; D-027 single-service-disk constraint |
+| B' — meta.json bridge (HTTP endpoint) | NOT closed | §18.4 closure-check; D-027 governance-cost scoped to probe transport |
+| C — Gateway direct `gateway.polymarket.us` | NOT closed | §18.4 closure-check; public gateway, no auth for reads |
+| D — Operator-supplied `--seed-slug` as primary | NOT closed | §18.4 closure-check; already implemented |
+| E — Hybrid with explicit precedence | NOT closed | §18.4 closure-check; composition of live candidates |
+| F — SDK `events.list(filter_params)` | NOT closed | §19.2 closure-check; filter surface richer than `MarketsListParams` |
+| G — SDK `sports.*` path | DEFERRED | §19.2 closure-check; under-characterized at this session's introspection depth |
+
+Live candidates for discrimination: **A, B', C, D, E, F.**
+
+### 19.3 Structural discrimination across live candidates
+
+This subsection evaluates each live candidate against §18.5's seven criteria (a)–(g). Tabular form per steering compression; prose qualifications follow the table only where the tabular cell cannot carry the needed precision.
+
+**Criterion-by-candidate matrix.** Legend: ✓ = criterion satisfied by candidate's structural characterization; ✗ = criterion not satisfied; ~ = criterion satisfied with named qualification (see notes); `n/a` = criterion does not apply to this candidate's shape.
+
+| Criterion (§18.5) | A `markets.list` | B' meta.json HTTP | C gateway | D `--seed-slug` primary | E hybrid | F `events.list` |
+|---|---|---|---|---|---|---|
+| (a) Returns live tennis anchor with acceptable reliability | ~ [A1] | ~ [B'1] | ~ [C1] | ✓ [D1] | ~ [E1] | ~ [F1] |
+| (b) Preserves D-024 c1 + D-020/Q2=(b) isolation | ✓ | ~ [B'2] | ✓ | ✓ | ~ [E2] | ✓ |
+| (c) Preserves D-027 single-service-disk | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| (d) Compatible with `pm-tennis-stress-test` env | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| (e) Fails gracefully on no-live-match | ~ [A2] | ~ [B'3] | ~ [C2] | ✓ [D2] | ✓ [E3] | ~ [F2] |
+| (f) Preserves `--seed-slug` operator override | ~ [A3] | ~ [B'4] | ~ [C3] | ✓ by construction | ✓ by construction | ~ [F3] |
+| (g) Testable per D-021 (unit + live smoke) | ~ [A4] | ✗ [B'5] | ~ [C4] | ✓ [D3] | ~ [E4] | ~ [F4] |
+
+**Qualifications.**
+
+- **[A1]** Reliability of `markets.list()` with tennis-filter parameters is empirically unvalidated. H-023 run 1 exercised the no-filter default and returned a settled NFL game at top rank per §17.4.4; that is evidence the default-ordering is unsuitable, not evidence that filtered queries are unreliable. Whether `categories=["tennis"]` or `active=true + liquidityMin=<some threshold>` returns live tennis is the empirical question deferred to live smoke per D-021.
+- **[A2]** Fails gracefully depends on `_fetch_anchor_slug` caller-side handling when `markets.list()` returns an empty list or non-tennis result. Current implementation (sweeps.py lines 1478–1482, 1499–1504) returns `None`, caller exits `EXIT_NO_ANCHOR_SLUG`. Structurally satisfies (e) if the caller-side exit path is preserved; no structural change required.
+- **[A3]** §18 scoped override preservation to post-redesign behavior. Candidate A's redesigned form must retain `--seed-slug` short-circuit; the architecture compatibly admits this (current implementation already does it at sweeps.py lines 1454–1458) but it is a code-turn commitment, not automatic.
+- **[A4]** Testable: unit tests can mock `AsyncPolymarketUS.markets.list` return values (H-020 baseline has 91 tests all against string-matching frozensets with no SDK import per D-021). Live smoke testable against pm-tennis-stress-test. "~" because testing **filter-parameter-value semantics** (e.g., "does `categories=['tennis']` actually narrow") requires live-server characterization that unit tests cannot validate.
+
+- **[B'1]** Reliability of an HTTP endpoint exposed on `pm-tennis-api` depends on (i) service uptime; (ii) endpoint correctness; (iii) cross-service network reliability. Each is individually tractable but the composition adds surfaces. Per D-027 considered-alternatives H-013 rationale, adding an HTTP endpoint is a behavior change to the production discovery service.
+- **[B'2]** Isolation preserved in the narrow sense (no shared disk); weakened in the broader sense that a new HTTP dependency surface is added to `pm-tennis-api` that the stress-test service depends on. "Isolation" at D-020/Q2=(b) was disk-isolation primarily; this is not a direct violation but it reduces isolation in substance.
+- **[B'3]** Fails gracefully depends on endpoint-error handling. Implementable cleanly; no structural barrier.
+- **[B'4]** `--seed-slug` override preservable; requires code-turn commitment.
+- **[B'5]** Testable: the endpoint itself can be unit-tested on the `pm-tennis-api` side; the stress-test consumer's fetch can be unit-tested with mocked HTTP. Live-smoke requires both services being live, with working auth between them. D-021 live-smoke discipline becomes a two-service coordination rather than a one-service invocation. ✗ reflects this is a material degradation of D-021 testability, not a binary failure.
+
+- **[C1]** Gateway reliability is the discovery loop's upstream dependency already; `pm-tennis-api` polls this gateway every 60 seconds per §5.1 without operational issues recorded. Reliability is effectively inherited-known.
+- **[C2]** Fails gracefully on empty gateway response (no active tennis matches) — implementable via caller-side exit path; no structural barrier.
+- **[C3]** `--seed-slug` override preservable; code-turn commitment.
+- **[C4]** Testable: unit tests can mock HTTP response; live smoke hits the public gateway directly (one external surface, no cross-service coordination). Cleaner D-021 test posture than B'.
+
+- **[D1]** Reliability of `--seed-slug` as primary source is 100% when the operator supplies a valid slug and 0% when they don't. "Reliability" here is operator-workflow-dependency, not automated-service-dependency. H-023 run 2 exercised this cleanly.
+- **[D2]** Fails gracefully: if `--seed-slug` is not provided, exit cleanly with `EXIT_NO_ANCHOR_SLUG` and a message pointing at the CLI argument. Already implemented per §18.2.
+- **[D3]** Testable: unit tests exercise the short-circuit path; live smoke is the operator supplying a slug. Clean D-021 posture but dependent on operator in the loop at every invocation.
+
+- **[E1]** Reliability inherits from the composed paths. Structurally: E's reliability is the reliability of its best-ranked path when available, falling back through precedence.
+- **[E2]** Isolation preservation inherits from composed paths; if E includes B', the B' isolation qualification applies at E. If E is A+C+D or A+D only, E preserves isolation cleanly.
+- **[E3]** Fails gracefully: exhausting the precedence chain produces `EXIT_NO_ANCHOR_SLUG`. Good structural property.
+- **[E4]** Testability depends on which paths are composed and how precedence is exercised. Multi-path logic adds test surface; D-021 satisfiable with per-path unit tests plus end-to-end precedence tests.
+
+- **[F1]** Reliability of `events.list()` with tennis filtering is empirically unvalidated, same posture as A. The richer filter surface (startTime ranges, tagSlug, eventDate) suggests higher-precision narrowing is available, but this is a hypothesis awaiting empirical confirmation.
+- **[F2]** Fails gracefully: same caller-side exit path as A; no structural barrier.
+- **[F3]** `--seed-slug` override preservable; code-turn commitment.
+- **[F4]** Testable: same unit-test/live-smoke posture as A. Filter-parameter-value semantics require live characterization for the same reason.
+
+### 19.4 Q1 discrimination (single-anchor vs multi-anchor selector output)
+
+Q1 is the structurally upstream question per §18.3. Each live candidate's Q1 compatibility matters only if Q1=multi is the chosen direction.
+
+**Q1=single structural properties.** One selector call per sweep-run, returning one anchor slug used across all default cells via `_build_default_slug_list` composition. This is the current implementation's shape. Cell-level variance in anchor identity is zero by construction: every default cell in a run subscribes to the same anchor. M1 per-`request_id` attribution (per §14.3 marketSlug echo) is clean within a cell but identical across cells — M1 cross-cell comparisons cannot distinguish cell-shape-effects from anchor-identity-effects because anchor identity is held constant.
+
+**Q1=multi structural properties.** Selector returns N anchor slugs (one per default cell, or a distribution across cells). Cell-level variance in anchor identity is nonzero. M1 per-`request_id` attribution remains clean within a cell; M1 cross-cell comparisons can now distinguish subscribe-count-effects from anchor-identity-effects because anchor identity varies across cells. Structurally sharper for M1 resolution per §17.6 item 3 / §18.6 M1 dependency edge.
+
+**Implementation cost.** Q1=multi requires changes to `_fetch_anchor_slug` signature (return list or per-cell callable), changes to `_build_default_slug_list` composition logic (accept per-cell anchor input), and changes to sweep-run setup (multi-anchor selection call). Q1=single requires no signature changes — it matches current implementation.
+
+**Reliability risk.** Q1=multi amplifies reliability risk: selecting N live tennis slugs is strictly a higher bar than selecting one. If the selector's live-reliability is P for a single slug, the probability of getting all N needed is approximately P^N under independence — worse under correlation. A selector that works 95% of the time for single-slug selection but needs 4 slugs for a 1/2/5/10 sweep grid becomes ~81% at best. This is a structural cost §18.6 named but §19.4 sharpens: Q1=multi amplifies the importance of criterion (a).
+
+**Recommendation for Q1:** **single.** Reasoning: (i) Q1=multi's sharper M1 attribution is downstream-beneficial but M1 resolution is a later session's work per §17.6 item 3; (ii) Q1=single matches current implementation's signature; the redesign work is scoped to changing the selection *source*, not the output *shape*; (iii) Q1=multi's reliability compounding is a material cost when at least one live candidate (D) has operator-in-loop reliability properties that don't extend cleanly to multi-anchor without CLI changes; (iv) If M1 resolution work at a later session surfaces that Q1=multi is needed to discriminate cell-shape from anchor-identity, Q1 can be revisited at that time as a narrower follow-on change. **§19 does not commit the project to Q1=single permanently; it commits the current redesign to Q1=single and defers the Q1=multi question to M1 resolution scope where the need becomes concrete.**
+
+### 19.5 Q2 discrimination (signal preference conditional on Q1=single)
+
+With Q1=single ruled in §19.4, Q2 asks: **what signal does the selector prefer when picking the one anchor?** §18.3 noted §17.4.4 enumerated five example candidates (live-state, match-format, surface, recency, "other"). §19.5 evaluates against what the live candidate set A / B' / C / D / E / F actually admits.
+
+**Signals available per candidate.**
+
+- **Candidate A (`markets.list`)**: via `MarketDetail` fields — `active: bool`, `closed: bool`, `liquidity: float`, `volume: float`, `eventSlug: str`, `team: Team` (where `team.league ∈ {"wta", "atp", ...}`). No direct surface / match-format / recency fields. Live-state (`active=true AND closed=false`) available; tour-discrimination via `team.league` filter. No direct way to distinguish currently-in-play from scheduled-but-not-started.
+- **Candidate B' (meta.json HTTP bridge)**: inherits from `pm-tennis-api`'s meta.json schema — `live_at_discovery`, `start_time`, `moneyline_markets`, `startDate`, participant fields. `live_at_discovery` is a direct in-play signal the gateway-facing surface does not expose. Richest signal set by construction (meta.json is curated from `pm-tennis-api` discovery).
+- **Candidate C (gateway direct)**: inherits from `gateway.polymarket.us/v2/sports/tennis/events` response shape — participants, live state, event date/time. Same signal set meta.json is built from, one step upstream.
+- **Candidate D (`--seed-slug` primary)**: operator-supplied; signal selection happens at the operator's cognitive layer, not the code's. Effective signal set is whatever the operator uses to pick (iPhone app, `pm-tennis-api` meta.json inspection, etc.).
+- **Candidate E (hybrid)**: inherits from composed paths.
+- **Candidate F (`events.list`)**: `Event` fields — `startTime: str`, `endTime: str`, `active: bool`, `closed: bool`, `liquidity: float`, `volume: float`, `tags: list[Tag]`, plus nested `markets: list[Market]`. `startTime`/`endTime` enables live-state discrimination (event started but not ended) that `MarketsListParams` cannot express directly. `tags` is the richest signal surface for category narrowing.
+
+**Signal preference in priority order (for Q1=single selection).**
+
+1. **Live-state.** Preference for currently-in-play tennis matches. Rationale: H-023 run 1's failure was settled NFL returned; the most direct fix is to filter on live-state. Candidates with direct live-state signal: B' (via `live_at_discovery`), C (via gateway state), D (operator), F (via `startTime ≤ now ≤ endTime` or `active=true AND startTime ≤ now` if the server interprets these correctly).
+2. **Tennis narrowing.** Preference for tennis-specific rather than global filtering. All candidates except D admit tennis narrowing; D is tennis-narrowed by operator selection.
+3. **Liquidity.** Preference for actively-traded markets (higher book traffic → more M1-attributable signal). All candidates with `liquidity`/`volume` fields admit this.
+4. **Recency of market open.** Preference for recently-opened markets. Only F surfaces this directly (via `startTime`).
+
+**Signal availability by candidate (compressed):**
+
+| Signal | A | B' | C | D | E | F |
+|---|---|---|---|---|---|---|
+| Live-state (in-play) | ~ (no direct field) | ✓ (`live_at_discovery`) | ✓ | ✓ (operator) | inherit | ✓ (`startTime ≤ now ≤ endTime`) |
+| Tennis-narrowed | ✓ (`team.league`) | ✓ (schema-filtered) | ✓ (endpoint-filtered) | ✓ (operator) | inherit | ✓ (`tagSlug`/`categories`) |
+| Liquidity | ✓ | ✓ | ✓ | ✓ (via app) | inherit | ✓ |
+| Recency | ✗ | ~ | ~ | ✓ (operator) | inherit | ✓ |
+
+**Q2 preference.** Live-state is the highest-priority signal because it is the direct counter to H-023 run 1's settled-market failure mode. Candidates that surface live-state as a first-class filter rather than inferring it post-fetch are structurally better-fit for Q2 than candidates that don't. F and B' and C are the three candidates with direct live-state signal on the automated side; D has it via operator cognitive layer.
+
+### 19.6 Recommended strategy
+
+**Recommendation: Candidate E (hybrid) composing D then F with explicit precedence.**
+
+**Composition.** The selector tries `--seed-slug` (D) first; if not provided, tries `events.list()` with tennis filtering (F); if F returns no live tennis match, exits `EXIT_NO_ANCHOR_SLUG` with a message pointing the operator at the `--seed-slug` path.
+
+**Why this composition.**
+
+- **D first preserves D-027's operator-supplied precedent** as the authoritative path when the operator is present and has a specific match in mind (§18.5 criterion (f); already-implemented per §18.2 lines 1454–1458).
+- **F as automated fallback** is the candidate with the richest filter-parameter surface for time-windowed and tag-based tennis narrowing (§19.5 signal analysis). F dominates A on signal availability for the Q2-highest-priority signal (live-state), and F's filter surface is a strict superset of A's for this use case.
+- **Hybrid E over pure D** because operator-in-loop on every invocation is friction the instrument should not *require* when an automated path is available and the operator's signal is not available or not desired at that invocation. H-023 run 2 demonstrated D's cleanness when exercised; the project should retain automated capability for sessions where operator supply is not practical.
+- **Hybrid E over pure F** because `events.list()` with tennis filtering is empirically unvalidated at H-027 (criterion (a) qualification [F1]). D-as-override-first protects against F's failure modes during early characterization.
+- **Hybrid E over three-way composition (D → F → C or D → F → A)** because each added composition path adds test surface (criterion (g)) and adds the need to maintain path-precedence logic. Two-path D→F is the minimum composition that delivers the automated fallback benefit; adding C or A as tertiary fallback would double the test matrix for marginal reliability gain, and C adds a new external dependency on the public gateway that the stress-test service does not otherwise touch.
+
+**Trade-offs explicitly named.**
+
+- **F's live-reliability is unvalidated at H-027.** The recommendation commits the project to validating F's filter-parameter behavior at code-turn live smoke per D-021. If F's tennis-filtering behavior surfaces surprises (empty results, non-tennis results from ambiguous `categories`/`tagSlug` values), the composition may need to extend to tertiary fallback. §19.6 does not pre-commit to the tertiary fallback shape; that is a code-turn or follow-up research question.
+- **Hybrid E adds precedence logic to `_fetch_anchor_slug`** — a signature change (the function's internal flow) but not an interface change (still returns `Optional[str]`). Test surface expands to cover both paths' success and failure modes plus the precedence behavior. Per D-021, this is unit-testable without SDK-import overhead (mock `AsyncPolymarketUS.events.list` and the `--seed-slug` CLI value).
+- **B' and C are not in the recommended composition.** B' was deprioritized on (b) isolation-weakening and (g) two-service-coordination test burden; C was deprioritized on marginal benefit over F given F's richer filter surface. Neither is *wrong*; both are structurally live candidates. The recommendation is a best-fit call, not an only-defensible call.
+- **Q1=single is committed per §19.4.** If M1 resolution work at a later session needs Q1=multi, `_fetch_anchor_slug` will need a second redesign. §19.6 accepts this cost rather than pre-optimizing for a downstream need that is not yet concrete.
+- **G (sports.*) remains un-characterized.** If a later session surfaces that G offers a signal not available via F (for example, a sport-level enumeration returning currently-active matches for a given sport), G becomes a live candidate that may supersede F or compose with F in an updated E. §19.6 does not commit to never revisiting this.
+
+**What the recommendation does not decide.**
+
+- Specific `events.list()` filter-parameter values. Whether `categories=["tennis"]` or `tagSlug="tennis"` or `startTimeMin=<now-1h>&startTimeMax=<now+3h>` or some combination is the right narrowing is code-turn scope, gated by live smoke.
+- Specific precedence-exhaustion exit behavior beyond `EXIT_NO_ANCHOR_SLUG`. Whether to emit a log line suggesting `--seed-slug` to the operator, or exit silently, is a code-turn UX call.
+- M1 re-sweep strategy. §17.6 item 3 remains deferred; §19 does not pre-scope what the M1 resolution experiment looks like post-redesign.
+- D-033 frame extension for error_events (§17.6 item 2 / Phase B of H-027). Orthogonal per §18.6; discriminated independently in §20 this session.
+
+### 19.7 What §19 does not change
+
+- **§19 does not amend §§1–18.** §§1–18 content is preserved byte-identical from the H-026 close state (SHA-256 baseline `1cbd6c0a1412d8f421302d2e6c2229251fe0d10d623395db83e0949a0562a3f2` over the byte range from the `## 1.` heading through §18.7's last bullet; verified at H-027 by computing the baseline against the file pre-write and re-computing against the post-write file, both matching). §19 is a purely additive section appended after §18.7 per the §14 / §15 / §16 / §17 / §18 additive precedent. No claim in §§1–18 is revised; no wording in §§1–18 is edited. Two legitimate edits outside §§1–18 content occurred as part of landing §19, each following prior-session precedent: (a) the version-history header at the document's top received a new `v4 §19 additive (H-027): ...` entry following the §13 / §15 / §18 precedent; (b) the end-of-document summary line updated to reference §19 as the new closing addendum, matching H-024's (§17) and H-026's (§18) end-of-document summary updates. Neither edit is inside §§1–18 content.
+- **§19 does not commit the project to code.** The recommended strategy (Candidate E composing D→F) is the output of research-first phase per D-019. A subsequent Claude turn produces code against §19.6's recommendation with its own pre-registration discipline and Auto-Deploy=Off pre-flight per H-022 §9 Observation 1 and H-026-Claude's letter.
+- **§19 does not close §17.6 item 1.** The item's research-first arc runs research → code → validation. §19 delivers the research; code and validation follow in subsequent sessions. §17.6 item 1 closes when `_fetch_anchor_slug` has been redesigned and live-validated; §19 advances the arc one step.
+- **§19 does not re-open §18.** §18 remains the frozen frame §19 builds on. Candidates F and G were surfaced at H-027 pre-draft introspection and closure-checked in §19.2; this is §18's enumeration being extended additively, not §18's text being edited.
+- **D-019 research-first discipline stands.** §19 is the research-document phase of the `_fetch_anchor_slug` redesign arc; the code turn begins only after operator review of this document.
+- **D-027 stands.** The `--seed-slug` operator-supplied path is preserved as precedence-first in the recommended composition.
+- **D-024 commitment 1 and D-020/Q2=(b) isolation stand.** The recommended composition (D→F) operates within `pm-tennis-stress-test` service; no change to `pm-tennis-api/requirements.txt`, no cross-service disk access.
+- **D-032 Reading B and D-033 exception-type partition stand.** §19's anchor-slug redesign is orthogonal to classifier behavior; `classify_cell` step 5's anchor-slug-traffic predicate operates unchanged on the anchor the redesigned selector returns.
+- **§16's five measurement questions (M1–M5) remain as scoped.** The redesign enables cleaner M1 re-sweep capability per §18.6; it does not re-open or re-frame any M-question.
+- **§16.7's classification state machine is not revised.**
+- **§16.6's outcome record shapes stand.**
+- **No plan-text revisions cut by §19.** `pending_revisions` v4.1-candidate / -2 / -3 / -4 / -5 remain queued.
+- **No commitment files are touched.** `fees.json`, `breakeven.json`, `signal_thresholds.json` (does not exist), `data/sackmann/build_log.json` — none in §19's path.
+- **No Phase 2 source files are touched.** `src/capture/discovery.py`, `main.py` — untouched.
+- **No RAID entries added or modified by §19 itself.** Risks or issues motivated by the recommendation (e.g., F-reliability-unvalidated-until-code-turn) could be raised at the code turn if warranted.
+- **`pm-tennis-stress-test` Render service state is unchanged by §19.** No Manual Deploy, no code push, no env-var change. Session is governance/research-doc-only for the §19 deliverable.
+
+---
+
+## 20. H-027 D-033 frame-extension research-first scope addendum (second deliverable)
+
+This section is additive to v4. Written at H-027 (2026-04-22) as the second deliverable of the session per operator-ruled bundling authorization; Phase A = §19 (`_fetch_anchor_slug` redesign strategy discrimination), Phase B = §20 (D-033 frame extension for WebSocket error_events). §20 addresses §17.6 item 2: the shape of frame extension covering error_events as an orthogonal category to D-033's Python exception-type partition. §20 follows the §14 / §15 / §16 / §17 / §18 / §19 additive precedent: scope / why written, what D-033 covers and does not, empirical and structural record with honest substrate deferral, design space, recommendation with trade-offs, downstream implications, what §20 does not change. §§1–19 are unchanged by this section.
+
+§20 is research-first per D-019. The section scopes the frame extension and recommends a shape; it does not commit to code or to classifier behavior changes. A subsequent Claude turn produces any code-turn integration with its own pre-registration discipline. §20 also does not close §17.6 item 4 (error-event payload extraction) — that item is explicitly re-targeted to H-028 per operator ruling at §20's opening.
+
+### 20.1 Why §20 is written now and what it scopes
+
+§17.6 item 2 named D-033 frame extension as research-first per D-019 and held the shape of the extension open — "whether an amendment to §16's classification state machine, a new research-doc section, or something else — is itself research-first scope." §18 surfaced the `_fetch_anchor_slug` redesign as item 1 of the arc; §19 discriminated among candidate strategies. §20 addresses item 2. The ordering (§19 before §20) is operator judgment per H-027 Phase-A-then-Phase-B ruling, not a structural dependency — §17.4.3 established that error_events are orthogonal to anchor-slug redesign; the two deliverables do not depend on each other's output.
+
+§20 scopes how `'error'` events delivered by `MarketsWebSocket` fit into the classifier's category frame. It performs structural characterization of the delivery mechanism (which emit sites produce error_events, what payload types those sites deliver, what request-id attribution is available), records the empirical scaling evidence §17.4.3 captured, and recommends a frame-extension shape. It does not commit to specific classifier code; it does not extend the classifier's seven-step precedence; it does not modify `SweepCellOutcome` record shapes.
+
+One framing-precision discipline governs §20 throughout, carried from Pull B3 pre-registration. **§20 names error_events as a parallel-not-revisionary category to D-033.** The framing the section holds: "the classifier's category partition has two frames — D-033 (exception-type via frozenset string-matching) and §20 (error_event-payload via `on('error', ...)` registration) — jointly covering the classifier's surface." Additive, not revisionary. D-033 is not updated by §20; D-033's frozensets are not re-specified. §20 sits alongside D-033 as a distinct frame for a distinct category of signal.
+
+### 20.2 What D-033 covers and what it does not
+
+**D-033 scope, re-stated precisely.** D-033 (H-020) established the classifier's exception-type partition: `DOCUMENTED_REJECTED_EXCEPTION_TYPES` (five 4xx `APIStatusError` subclasses) and `DOCUMENTED_TRANSPORT_EXCEPTION_TYPES` (five transport/network/WS types). The classifier steps 1 and 2 consult these frozensets via string-matching against `exception_type` fields on outcome records. The partition covers Python exceptions raised by the SDK during sync or async call execution — `AuthenticationError`, `BadRequestError`, `PermissionDeniedError`, `NotFoundError`, `RateLimitError` on the rejected side; `APIConnectionError`, `APITimeoutError`, `TimeoutError`, `InternalServerError`, `WebSocketError` on the transport side.
+
+**What D-033 does not cover.** Protocol-level `'error'` events delivered asynchronously via the WebSocket's event-listener mechanism (`markets_ws.on('error', handler)`). These are not Python exceptions raised at call time; they are payloads dispatched into listener callbacks during `_message_loop` execution. `_run_cell_async` captures them into `ConnectionObservation.error_events: list[str]` via `_make_error_handler` at sweeps.py lines 1688–1698, storing `repr(payload)[:PREVIEW_TRUNCATION_CHARS]` per fired event. The classifier step 6 inspects `error_events` list-length as a predicate ("error_events fired during observation (N total)") to produce the degraded classification — but does not partition error_events by type or attribute them to specific subscribes.
+
+**Orthogonality re-stated.** D-033 and §20 address different signal-delivery channels. A subscribe call that completes without raising a Python exception can still produce error_events during the observation window — this is what H-023 run 2 demonstrated on cells 2, 3, 4, where Python-exception-clean subscribes produced 1, 4, 9 error_events scaling with subscribe count. D-033 would classify those cells as clean on exception partition (no rejected-type exception, no transport-type exception); §16.7's step 6 classifies them as degraded because error_events fired. The two frames are necessary because neither covers the other's signal — D-033 partitions nothing about error_events, and §20 partitions nothing about Python exceptions.
+
+### 20.3 Empirical and structural record
+
+**Empirical record from §17.4.3 (carried forward, not re-litigated).** H-023 run 2 produced error_events on cells 2, 3, 4 scaling 1 / 4 / 9 with subscribe counts 2 / 5 / 10 (single-connection configuration). Cells 1, 5, 6, 7 produced zero error_events. The scaling ratio suggests a per-subscribe-pair interaction effect on single-connection configurations, but payload-level characterization to validate this mechanism hypothesis requires structured extraction that §20 does not have.
+
+**Empirical substrate deferral (honest).** The structured payload extraction that would ground §20.4–§20.5 in specific error-code evidence is unavailable at §20 authoring. `/tmp/sweep_h023_run2.json` was evicted from the `pm-tennis-stress-test` Render Starter instance's ephemeral filesystem between H-023 and H-027 (confirmed at H-027 via operator-run `ls -la` check: "No such file or directory"). A re-sweep to regenerate the artifact was considered at H-027 and operator-deferred to H-028 for reasons including session-bandwidth and Auto-Deploy=Off discipline activation being appropriate to its own pre-flight rather than to Phase B compression. §20 therefore proceeds against structural grounds only. The consequence: §20.5's recommended frame-extension shape rests on delivery-mechanism structure (the three emit sites surfaced at Pull B5) and the §17.4.3 scaling evidence, not on specific observed error codes or request-id populations.
+
+**Structural record from Pull B5 SDK introspection (new material).** The `'error'` event has three distinct emit sites in `polymarket-us==0.1.2`, each producing a different payload type with different attribution properties:
+
+**Emit site (i) — `BaseWebSocket._message_loop` connection-failure path.** Source: `polymarket_us/websocket/base.py` L51–L52. Condition: any exception raised during `async for message in self._ws` other than `websockets.ConnectionClosed` (which emits `'close'`, not `'error'`). Payload: `PolymarketUSError(str(e))` — the base exception class wrapping the underlying error message as a string. Attribution: none — this is a connection-scope failure, not tied to any specific subscribe. Fires at most once per connection lifecycle (after which `_message_loop` exits).
+
+**Emit site (ii) — `MarketsWebSocket._handle_message` JSON-parse-failure path.** Source: `polymarket_us/websocket/markets.py` L54–L55. Condition: incoming WebSocket message is not valid JSON. Payload: `PolymarketUSError(f"Failed to parse message: {data}")` where `data` is the raw message string. Attribution: none at the exception layer; the raw message content is embedded in the exception message but not structurally separated. Fires per malformed message.
+
+**Emit site (iii) — `MarketsWebSocket._handle_message` protocol-error path.** Source: `polymarket_us/websocket/markets.py` L62–L66. Condition: parsed JSON message contains an `"error"` key. Payload: `WebSocketError(message["error"], message.get("requestId"))` — a `WebSocketError` instance carrying the protocol-level error message and a nullable `request_id` sourced from the JSON message's `requestId` field. **Attribution: per-subscribe via `request_id` when the server populates it.** Fires per server-delivered error message.
+
+**Implication: error_events are not homogeneous.** Emit sites (i) and (ii) produce transport/parse-category `PolymarketUSError` payloads without attribution; emit site (iii) produces protocol-category `WebSocketError` payloads with request-id attribution. The single category label "error_events" in `ConnectionObservation.error_events` flattens this distinction.
+
+**Existing code behavior (sweeps.py lines 1688–1698).** `_make_error_handler` currently (a) always appends `repr(payload)` to `ConnectionObservation.error_events: list[str]` truncated at `PREVIEW_TRUNCATION_CHARS`, and (b) calls `_handle_payload("error", payload)` which attempts request-id-based attribution to a subscribe via the existing payload-routing mechanism. Step (b) means the code already anticipates per-subscribe attribution when `request_id` is available; step (a) collapses all three emit sites into opaque string reprs. The existing code is not wrong — it captures evidence — but the category label "error_events" under-discriminates what it captures.
+
+### 20.4 Frame-extension design space
+
+This subsection enumerates candidate shapes for the frame extension. Compressed tabular form per steering. Each candidate is named with what it commits the classifier to and with closure-check-style verdicts on structural viability.
+
+**Shape Alpha — Record-level subtype split.** `ConnectionObservation.error_events: list[str]` is replaced or augmented with two typed lists distinguishing emit-site (iii) from emit-sites (i)+(ii). Classifier step 6 consults the subtype distinction. Schema change to `ConnectionObservation`.
+
+**Shape Beta — Classifier-level partition without schema change.** `error_events` remains `list[str]`; `repr()` output preserves enough information to inspect payload type at classification time (`PolymarketUSError(...)` vs `WebSocketError(...)` patterns in repr strings). Classifier step 6 adds payload-type inspection via string-matching on the repr output, parallel to D-033's exception-type-string-matching pattern. No schema change; additional classifier logic.
+
+**Shape Gamma — Separate record field for protocol errors with request-id attribution.** `ConnectionObservation.error_events` remains the catch-all for emit-sites (i)+(ii); a new `SubscribeObservation.protocol_errors: list[dict]` field captures emit-site (iii) payloads with structured `{"message": ..., "request_id": ..., "timestamp": ...}` entries. Attribution is structural rather than string-matched. Schema change to `SubscribeObservation`; `_handle_payload("error", payload)` path becomes the routing mechanism.
+
+**Shape Delta — Defer frame extension; document status quo.** The existing code already captures error_events via repr; classifier step 6 already treats presence as degradation. §20 records the three-emit-site structural detail for future reference and commits to no schema change, no classifier change. Future sessions may revisit if empirical evidence warrants.
+
+**Shape Epsilon — Hybrid (Gamma + classifier predicate refinement).** Shape Gamma's structured protocol-errors field combined with classifier step 6 refinement that distinguishes transport-category error_events (emit sites (i)/(ii) — no attribution, infrastructural signal) from protocol-category protocol_errors (emit site (iii) — per-subscribe attribution, server-response signal). The two categories may warrant different classification consequences: transport-category is analogous to D-033's transport-exception types (infrastructure failure, degrade connection); protocol-category is analogous to rejected-exception types (server refused a specific request, degrade subscribe).
+
+**Design-space evaluation (compressed).** Each candidate's consequences for the classifier's seven-step precedence, for `SweepCellOutcome` record shapes, and for downstream interpretation:
+
+| Shape | Schema change | Classifier change | Request-id attribution | Empirical-evidence dependency |
+|---|---|---|---|---|
+| Alpha — record subtype split | ConnObs: two typed lists | step 6 consults split | repr-level only | low — structural grounds sufficient |
+| Beta — classifier partition only | none | step 6 + repr-string match | repr-level only | medium — need to confirm repr format stability |
+| Gamma — structured protocol_errors field | SubObs: new field | `_handle_payload` routing | structural via request_id | low — structural grounds sufficient |
+| Delta — document-only | none | none | none beyond current | none |
+| Epsilon — Gamma + classifier refinement | SubObs: new field | step 6 partition + new predicate | structural via request_id | medium — need to confirm categorization rules against empirical payloads |
+
+### 20.5 Recommended frame-extension shape
+
+**Recommendation: Shape Gamma (structured `SubscribeObservation.protocol_errors` field) at the scoping level; Shape Epsilon's classifier refinement deferred to a later session pending empirical payload characterization.**
+
+**Composition.** `ConnectionObservation.error_events: list[str]` is preserved unchanged as the transport/parse catch-all (emit sites (i) and (ii) — connection-scope, no attribution). A new field `SubscribeObservation.protocol_errors: list[dict]` is added to capture emit site (iii) payloads with structured `{"message": str, "request_id": str | None, "timestamp": str}` entries routed via the existing `_handle_payload("error", payload)` mechanism. The routing already anticipates per-subscribe attribution when `request_id` is present; Shape Gamma makes that attribution structural rather than repr-encoded.
+
+**Why this composition.**
+
+- **Gamma preserves the three-emit-site structural distinction** without collapsing protocol-category errors (which have attribution) into the transport-category bucket (which does not). The `_make_error_handler` code already handles the distinction at call time but discards it at record time; Gamma preserves it.
+- **Gamma is structurally grounded, not empirically gated.** The three emit sites are confirmed in the SDK source; the payload types are confirmed in `WebSocketError.__init__`'s signature. Shape Gamma can be designed and unit-tested per D-021 without live-smoke evidence for the classification consequences.
+- **Shape Epsilon's classifier refinement is deferred because it requires empirical grounding §20.3 does not have.** Whether transport-category error_events should classify differently from protocol-category protocol_errors depends on what the server actually sends under what conditions — which payload messages, which request_id populations, which timing patterns relative to subscribes. §20.5 does not commit the classifier to a specific partition without that evidence. H-028's re-sweep + payload extraction is the natural session to ground Epsilon.
+- **Shape Delta (defer entirely) was not selected** because the structural finding of three emit sites with differential attribution is material enough to warrant preserving in the record shape. Delta would leave the `_handle_payload` routing code as anticipating a distinction that the record shape discards — a structural inconsistency that future sessions would need to resolve anyway.
+- **Shape Alpha (subtype split in ConnectionObservation) was not selected** because emit site (iii) is attributable per-subscribe; placing it in ConnectionObservation duplicates information into the connection scope when it belongs at the subscribe scope. Gamma puts it where the attribution naturally lives.
+- **Shape Beta (classifier-only, no schema change) was not selected** because it would require classifier logic to parse repr strings — a layer of implicit coupling between the string format and the classifier that is fragile under SDK version changes. D-033's frozenset string-matching is on exception *type names* which are stable SDK surface; Beta would string-match on `repr()` output which is not a stable contract.
+
+**Trade-offs explicitly named.**
+
+- **Gamma adds a new field to `SubscribeObservation`**, a schema change. Per §16.6, outcome record shapes are committed; adding a field is additive (existing consumers unaffected) but requires updating the record-write path, the JSON serialization, and unit tests covering the new field. Modest surface, not trivial.
+- **The classifier does not change under Shape Gamma alone.** Step 6 continues to consult `error_events` list-length; protocol_errors remain a record-level detail without classification consequence. This is honest but also means Gamma alone does not sharpen the classifier's partition — it adds record-level substrate for future classifier refinement (Epsilon) without committing to the refinement now.
+- **Shape Gamma does not retroactively re-characterize H-023 run 2's error_events.** Those remain in `ConnectionObservation.error_events` as `repr()` strings. Any cross-session comparison of H-023 data against post-Gamma data will need to account for the format change.
+- **Shape Epsilon is the natural next step, not a discarded option.** §20 defers Epsilon to a later session with empirical grounding; §20 does not preclude Epsilon and explicitly flags it as the intended follow-on.
+
+**What the recommendation does not decide.**
+
+- **Specific field names.** Whether `protocol_errors`, `ws_protocol_errors`, `server_error_events`, or some other label is right is a code-turn question. §20 names the concept; the label is not committed.
+- **Whether the timestamp is absolute (UTC ISO-8601) or relative-to-connection-open.** Code-turn question.
+- **How Shape Epsilon's classifier refinement should partition.** §20.4 identified the analogy to D-033's rejected/transport split; the specific predicates are deferred to H-028+ with payload-level evidence.
+- **Whether the `_handle_payload("error", payload)` call in `_make_error_handler` should be replaced or augmented under Shape Gamma.** Code-turn question.
+- **M1 resolution implications.** Shape Gamma's per-subscribe attribution could in principle sharpen M1 per-subscribe observability for error-scenario cells, but M1 resolution remains gated on §17.6 item 3 (anchor-slug redesign + re-sweep). §20 does not pre-scope how M1 uses protocol_errors.
+
+### 20.6 Downstream implications
+
+The frame extension composes with several downstream elements. §20.6 names the dependency edges without pre-committing to follow-on work.
+
+**§17.6 item 4 — error-event payload extraction.** Re-targeted to H-028 per H-027 operator ruling. H-028 re-sweep (which operator has already tentatively scoped for H-028 anchored as "re-sweep for payload extraction + initial live-smoke validation of §19.6's D→F recommendation") provides the payload-level evidence Shape Epsilon requires. §20.5's deferral of Epsilon and item 4's re-targeting are aligned.
+
+**Classifier step 6 (`_cell_has_error_events`).** Currently consults `ConnectionObservation.error_events` list-length. Under Shape Gamma unchanged. Under Shape Epsilon the step 6 predicate would need to split into transport-category and protocol-category branches; the specific split is deferred.
+
+**`_make_error_handler` (sweeps.py lines 1688–1698).** Under Shape Gamma: the handler logic branches on `isinstance(payload, WebSocketError)` to route emit-site (iii) to `protocol_errors` versus emit-sites (i)/(ii) to `error_events`. The `_handle_payload("error", payload)` call remains (preserving the request-id-based attribution path). Code-turn implementation detail; §20 does not specify the branch predicate exactly.
+
+**`SweepRunOutcome` JSON serialization.** New field requires inclusion in the JSON output for replay. Existing consumers ignore unknown fields by convention; backward-compatible.
+
+**D-033 frozenset partitions.** Unchanged. D-033 scopes Python exceptions caught by `try/except` at call sites; §20 scopes event-listener payloads. The two partitions address disjoint signal channels and do not interact at the classifier level under Shape Gamma.
+
+**M1 / M3 / M5 measurement questions.** M1 resolution may benefit from per-subscribe protocol-error attribution under Shape Gamma + Epsilon (cleaner per-`request_id` evidence of server-side rejection vs traffic silence). M3 and M5 do not depend on the frame extension. §20 does not re-open the measurement questions.
+
+**Plan-text revisions.** None cut by §20. Plan §5 data architecture does not describe SubscribeObservation record shape at the field level; no plan-text update is motivated by the schema change.
+
+### 20.7 What §20 does not change
+
+- **§20 does not amend §§1–19.** §§1–19 content is preserved byte-identical from the post-§19 state (SHA-256 baseline `420c1bfd1636ec4bc9f7bca0fd5b4a5ebeb0bd75cd528aafc7684a04e353d79c` over the byte range from the `## 1.` heading through §19.7's last bullet; verified at §20 drafting by computing the baseline against the file pre-write and re-computing against the post-write file, both matching). §20 is a purely additive section appended after §19.7 per the §14 / §15 / §16 / §17 / §18 / §19 additive precedent. No claim in §§1–19 is revised; no wording in §§1–19 is edited. Two legitimate edits outside §§1–19 content occurred as part of landing §20, each following prior-session precedent: (a) the version-history header at the document's top received a new `v4 §20 additive (H-027, second deliverable): ...` entry following the §13 / §15 / §18 / §19 precedent; (b) the end-of-document summary line updated to reference §20 as the new closing addendum, matching H-024's / H-026's / §19's end-of-document summary updates. Neither edit is inside §§1–19 content.
+- **§20 does not revise D-033.** D-033's frozenset partitions for Python exception types remain as committed. §20 introduces a parallel frame for a distinct signal channel (WebSocket error_events via `on('error', ...)` registration); the two frames are orthogonal and cover disjoint surfaces.
+- **§20 does not commit the project to code.** Shape Gamma is the recommended frame-extension shape; code implementation is deferred to a subsequent Claude turn with its own pre-registration discipline and Auto-Deploy=Off pre-flight per H-022 §9 Observation 1.
+- **§20 does not close §17.6 item 2 beyond the scoping level.** The frame-extension shape is recommended; the code-turn integration and Shape Epsilon's classifier refinement remain follow-on work.
+- **§20 does not close §17.6 item 4.** Error-event payload extraction remains deferred and re-targeted to H-028 per operator ruling at §20's opening.
+- **§20 does not modify `SweepCellOutcome`, `ConnectionObservation`, `SubscribeObservation`, or `SweepRunOutcome` record shapes.** Shape Gamma recommends adding `protocol_errors` to `SubscribeObservation` at the code-turn session; §20 itself does not commit the schema change.
+- **§20 does not extend §16.7's classification state machine.** Step 6 remains as written. Shape Epsilon's classifier refinement is named as deferred follow-on, not committed.
+- **§20 does not re-open §16's five measurement questions (M1–M5).** Possible downstream sharpening of M1 via Shape Gamma+Epsilon is flagged but not pre-scoped.
+- **§20 does not modify D-019 research-first discipline.** §20 is research-first scoping; the code turn that implements Shape Gamma begins only after operator review of this document and of any subsequent strategy-discriminating research if Shape Epsilon becomes scoped.
+- **§20 does not modify D-027 or D-032.** No supersession, no extension.
+- **§20 does not change §19's recommendation.** The `_fetch_anchor_slug` redesign arc proceeds independently; §20 addresses an orthogonal classifier concern.
+- **No plan-text revisions cut by §20.** `pending_revisions` v4.1-candidate / -2 / -3 / -4 / -5 remain queued.
+- **No commitment files are touched.** `fees.json`, `breakeven.json`, `signal_thresholds.json` (does not exist), `data/sackmann/build_log.json` — none in §20's path.
+- **No Phase 2 source files are touched.** `src/capture/discovery.py`, `main.py` — untouched.
+- **No RAID entries added or modified by §20 itself.** Risks or issues motivated by the frame-extension recommendation (e.g., schema-change-to-SubscribeObservation requires code-turn coordination across serialization, tests, replay) could be raised at the code turn if warranted.
+- **`pm-tennis-stress-test` Render service state is unchanged by §20.** No Manual Deploy, no code push, no env-var change, no live execution. Session remains governance/research-doc-only across both deliverables.
+
+---
+
+*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive + §16 H-019 main-sweeps-scope addendum + §17 H-024 main-sweeps-outcome addendum + §18 H-026 `_fetch_anchor_slug` redesign scope addendum + §19 H-027 strategy-discriminating research addendum + §20 H-027 D-033 frame-extension scope addendum.*

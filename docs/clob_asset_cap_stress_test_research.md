@@ -9,6 +9,7 @@
 - v3 (H-010, later turn): operator ruling Q5=(a). Polymarket US Python SDK README fetched and read. §4.3.1 resolved in favor of Markets WebSocket page's camelCase wire shape. §4.7 resolved: SDK uses a single slug namespace across REST and WebSocket on `api.polymarket.us`; bridging gateway slugs remains unverified but a cleaner path is now visible (§4.7.1). §12 added summarizing SDK-vs-hand-rolled code decision now surfaced. Scope tightened: v3 does not re-open any section not directly affected by the SDK read.
 - **v4 (H-012): three H-012 rulings resolved and the §6 meta.json survey executed. §13 added capturing (a) the ruling on POD-H010-§12 = SDK (D-024), (b) the ruling on POD-H010-Q5′ = hybrid probe-first (D-025), (c) the authorization and execution of POD-H010-§6-survey (D-026), (d) the survey findings, (e) the probe-slug default for the Q5′=(c′) probe. v4 is additive only: §§1–12 are unchanged from v3. §5's "actual asset count we expect" estimate (≈38 at H-009 close) and §7's placeholder-bracket discussion are explicitly not revised; §13 cross-references them and notes the updated N=74 baseline instead, preserving v3's operator-accepted text.**
 - **v4 §15 additive (H-014): three H-013 code-turn-research tasks resolved against authoritative sources (Ed25519 signing fully internal to SDK; timestamp unit milliseconds; SDK transitive-dep footprint 12 wheel-available packages). D-027 supersession of D-025 commitment 1 after Render disks confirmed strictly single-service — probe slug is now operator-supplied via `--slug=SLUG` CLI arg; D-025's other commitments unaffected. Probe scaffolding at `src/stress_test/` (H-013) documented. Known-stale artifacts from H-013's Option X cut (`src/stress_test/README.md`, `runbooks/Runbook_RB-002_Stress_Test_Service.md`) rewritten at H-014 start. §14 reserved for H-015 probe-outcome addendum. No sections in §§1–14 revised.**
+- **v4 §18 additive (H-026): `_fetch_anchor_slug` redesign research-first scope addendum. First element of the H-025+ multi-session research-first arc §17.6 deferred past H-024; research-first per D-019. §18 scopes the redesign question (not the answer): two structurally-coupled open questions surfaced — Q1 single-anchor vs multi-anchor selector output shape, structurally upstream of Q2 signal preference. Five candidate access paths enumerated with closure-check findings (SDK `markets.list()` with filter parameters not-closed per H-026 SDK source inspection confirming `MarketsListParams` exposes `categories` / `active` / `closed` / pagination / ordering / liquidity-volume filters; meta.json bridge direct-disk variant closed by D-027, HTTP-endpoint variant not-closed; gateway-direct not-closed; operator-supplied `--seed-slug` elevated not-closed; hybrid composition not-closed). Seven evaluation criteria named as deliverables any candidate must meet, admitting both Q1 modes. Downstream dependency edges named (M1 resolution, M3 observability, M5 upper-bound probes, `classify_cell` step 5 predicate, error-event extraction orthogonality). No strategy-discriminating research performed; no candidate pre-selected; no code motivated. Strategy-discriminating research document deferred to subsequent Claude turn per D-019 sequencing. No sections in §§1–17 revised.**
 **Status:** Draft document; v3 operator-accepted at H-010, §13 operator-accepted at H-012, §15 produced at H-014. Scaffolding code at `src/stress_test/` produced at H-013 per §13.5 (operator-committed, 38 unit tests passing, zero SDK mocking, live-probe deferred to H-015 per operator Option X cut). No live probe has been run against Polymarket US; no main-sweep run has been executed. Every external fact in §4 is cited with URL and excerpt per Ruling 2(a) and Tripwire 1. §15 findings extend the same discipline: SDK source and Render docs were fetched and cited before code was written or runbook procedures finalized.
 
 ---
@@ -1293,4 +1294,158 @@ H-023 made zero code changes, zero test changes, zero DJ entries, zero RAID chan
 
 ---
 
-*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive + §16 H-019 main-sweeps-scope addendum + §17 H-024 main-sweeps-outcome addendum.*
+## 18. H-026 `_fetch_anchor_slug` redesign research-first scope addendum
+
+This section is additive to v4. Written at H-026 (2026-04-21) to scope the `_fetch_anchor_slug` redesign question flagged at §17.6 item 1 as the first element of the multi-session research-first arc §17 deferred past H-024. §18 follows §14 / §15 / §16 / §17 precedent for additive sections: scope / why written, baseline record, open questions, candidate enumeration, evaluation criteria, downstream dependencies, what §18 does not change. §§1–17 are unchanged by this section.
+
+§18 is a research-first scope per D-019. The section commits to naming the redesign *question* and the space of candidate *strategies*; it does not commit to a selected strategy, does not perform strategy-discriminating research (comparative evidence among live candidates), and does not motivate code. A subsequent Claude turn produces the strategy-discriminating research against §18's frame; a turn after that begins code, per D-019's research-document-then-code sequencing.
+
+### 18.1 Why §18 is written now and what it scopes
+
+§17.6 item 1 named `_fetch_anchor_slug` redesign as research-first per D-019 and deferred it past H-024. H-025 closed POD-H017-D029-mechanism via D-034, clearing narrow-deliverable governance debt. H-026 opens the substantive research-first arc §17 pointed toward, starting with element 1. §17.6 enumerated `_fetch_anchor_slug` redesign first because M1 resolution work (§17.6 item 3) depends on a cleanly-sourced live anchor as prerequisite; redesign is the structurally upstream element in the arc.
+
+§18 scopes the redesign *question*, not the *answer*. It enumerates candidate signals, candidate access paths to those signals, and evaluation criteria any viable redesign must satisfy. It performs closure-check due diligence on the candidate enumeration — naming candidates closed by prior decisions or by capability-absence — but does not perform strategy-discriminating research among live candidates. Where the line sits between closure-check (binary existence question answered from existing artifacts) and strategy-discrimination (comparative question requiring performance evidence) was an operator pre-registration judgment call at H-026; closure-check findings surfaced in §18.4 name specifically which prior-decision constraint or capability-inspection answers the existence question for each candidate.
+
+One framing-precision discipline governs §18 throughout and warrants naming at the top. **§18 does not pre-select a strategy.** Candidate enumeration is neutral: candidates are named with their closure-check outcomes and their prima-facie alignment against evaluation criteria, not ranked against each other. The strategy-selection move is explicitly deferred to the session that produces strategy-discriminating research against §18's frame. §18 does not tilt toward any candidate — not the current implementation, not the simplest-to-implement, not the most-recently-exercised, not the operator's stated preference. The discipline the project has built around research-first scoping (H-019's §16 precedent, H-024's §17 correction-cycle-pass on M1-mechanism-speculation) applies with full force to §18.
+
+### 18.2 Current default strategy empirical record
+
+This subsection records the empirical record of the current `_fetch_anchor_slug` default strategy on its own terms. The same empirical record is interpreted in §17.4.4 for its implications on the `markets.list()` default-ordering finding; §18.2 records the record itself so §18 stands as a self-contained scoping of the redesign question. A future reader should not need to read §17.4.4 to understand §18.2's baseline.
+
+**Current default strategy.** `src/stress_test/sweeps.py` `_fetch_anchor_slug` (lines 1422–1520) implements the following precedence when invoked without `--seed-slug`:
+
+1. Call `client.markets.list({"limit": 1})` via the SDK's `AsyncPolymarketUS.markets.list` async method, passing only `limit=1` as parameter.
+2. Extract the first element of the returned `{"markets": [...]}` dict.
+3. Try field names in order on that first element: `"marketSlug"`, `"market_slug"`, `"slug"`. Return the first one that resolves to a non-empty string.
+4. If no field resolves, return `None`. Caller exits with `EXIT_NO_ANCHOR_SLUG` unless the M4 control cell is being run.
+
+**The `--seed-slug` precedence path.** If the `--seed-slug=<slug>` CLI argument is provided, `_fetch_anchor_slug` short-circuits the default path entirely (sweeps.py lines 1454–1458) and returns the operator-supplied slug directly. Under the current implementation, `--seed-slug` is a fallback from the operator's perspective but acts as primary precedence when provided.
+
+**H-023 Run 1 observation (default path exercised).** Invocation: `python -m src.stress_test.sweeps --sweep=both --log-level=INFO` (no `--seed-slug`). `_fetch_anchor_slug` default path resolved via third fallback field-name `'slug'` (not `'marketSlug'` or `'market_slug'` — empirical confirmation of the §16.1-flagged note that inner element shape was not pinned at §16 authoring). The returned slug was `aec-nfl-lac-ten-2025-11-02` — a settled NFL game from November 2025. Zero traffic resulted from subscribes against this slug on cells 1–7; every cell 1–7 classified `degraded` via step 6 anchor-zero-traffic anomaly. The M4 control cell (cell 0) was unaffected (its relaxed-clean criterion does not require anchor traffic).
+
+**H-023 adjacent observation (exploratory `markets.list({"limit": 100})`).** During H-023 run-2 remediation investigation, an operator-side exploratory query from the `pm-tennis-stress-test` Shell called `client.markets.list({"limit": 100})`. The returned 100 markets distributed as 57 NBA + 43 NFL — zero tennis markets in the top 100 under the default (no-filter) ordering. Tennis content exists on Polymarket US (the `pm-tennis-api` discovery loop had written 126 active tennis event meta.json files as of H-016 and growth continued; §17.4.4 references this as confirmation that tennis content is present in the Polymarket US market set). It does not surface via `markets.list()`'s default-ordering at top rank.
+
+**H-023 Run 2 observation (`--seed-slug` path exercised).** Invocation: `python -m src.stress_test.sweeps --sweep=both --log-level=INFO --seed-slug=aec-atp-nickic-aidmay-2026-04-21`. The operator sourced the slug from `/data/matches/9579/meta.json` on the `pm-tennis-api` service's persistent disk (event 9579 = Nicolas Kicker vs Aidan Mayo, Challenger Savannah, ATP, live in-play first set at invocation time; operator-confirmed on the Polymarket US iPhone app). `_fetch_anchor_slug` short-circuited to the `--seed-slug` path without exercising the `markets.list()` default; stderr log confirmed path taken verbatim: "anchor slug: using operator-supplied --seed-slug=aec-atp-nickic-aidmay-2026-04-21". Traffic was received across all cells where the harness was configured to receive it; cells 1, 5, 6, 7 classified `clean` via step 5 with anchor-slug traffic received.
+
+### 18.3 The open questions §18 scopes
+
+§18 scopes two structurally-coupled open questions. Q1 is structurally upstream of Q2 — the viable signal-set depends on the selector's output shape, because per-cell candidate selection requires per-cell query capability while global single-anchor selection does not.
+
+**Q1 — Single-anchor vs multi-anchor selector output shape.** Does the redesigned `_fetch_anchor_slug` return one slug globally (used across all default cells in a run), or N slugs (per-cell selection, potentially different anchors in different cells)? The current implementation is Q1=single: one `_fetch_anchor_slug` call per run, returning one anchor slug used across all cells via `_build_default_slug_list` composition. Multi-anchor would be a structural change to both `_fetch_anchor_slug`'s signature (returning list or per-cell callable) and to the sweep loop's composition logic. Q1 is open per H-026 operator ruling.
+
+**Q2 — What signal the selector prefers.** §17.4.4 enumerated five example candidate signals (live-state, match-format, surface, recency, "other"). Q2 factored by Q1: under Q1=single, the selector picks one slug optimizing the chosen signal; under Q1=multi, the selector picks N slugs optimizing the signal per-cell or as a batch-distribution property.
+
+### 18.4 Candidate signal surfaces and candidate access paths (closure-check results surfaced)
+
+This subsection enumerates candidate access paths for the anchor-slug selector, factored by Q1 where the distinction matters, and records closure-check findings for each candidate — whether it is structurally closed by a prior decision or by a capability-absence observable from existing artifacts. Closure-check is binary existence ("does this candidate exist as a live option at all") answered from prior DJ entries, SDK source inspection, and documented endpoint behavior. Strategy-discriminating characterization (performance under real conditions, reliability rates, coverage breadth) is not in §18's scope.
+
+**Candidate access path A — SDK `markets.list()` with filter parameters.**
+
+Access path description: invoke `AsyncPolymarketUS.markets.list(params)` via the pinned SDK `polymarket-us==0.1.2`, passing filter parameters to narrow the returned set to tennis-relevant active markets at invocation time. The selector picks from the filtered set per Q2.
+
+Closure-check finding: **NOT closed.** Inspection of the installed SDK surface at H-026 (via `inspect.getsource` on `polymarket_us.types.markets.MarketsListParams`) confirms that the SDK exposes a rich filter-parameter surface including `categories: list[str]`, `active: bool`, `closed: bool`, `archived: bool`, `liquidityMin/Max`, `volumeMin/Max`, `slug: list[str]`, `eventSlug: list[str]`, `id: list[int]`, `gameId: int`, plus `orderBy: list[str]` and `orderDirection: Literal["asc", "desc"]`, plus `limit` and `offset` via inherited `PaginationParams`. Filter-parameter-based anchor-slug selection is a live candidate. H-023 run 1's observation that `markets.list({"limit": 1})` returned a settled NFL game is evidence that the *current default strategy does not pass any tennis-filtering parameters*, not that such parameters are unavailable.
+
+The returned `MarketDetail` elements expose `slug: str`, `title: str`, `active: bool`, `closed: bool`, `liquidity: float`, `volume: float`, `eventSlug: str`, `team: Team` — signals usable for per-cell or global selection under Q1. `MarketDetail` does not expose surface / match-format / recency fields directly; those signals if desired require either filter-parameter-level selection (via `categories` and the `active` flag) or post-fetch inspection against match metadata.
+
+Q1 compatibility: supports both Q1=single (select first element of filtered result, possibly with `orderBy`) and Q1=multi (take N from filtered result up to `limit`). Fully Q1-agnostic at the access-path level.
+
+**Candidate access path B — `pm-tennis-api` meta.json corpus bridge.**
+
+Access path description: the `pm-tennis-api` Render service writes per-match meta.json files at `/data/matches/{event_id}/meta.json` on its persistent disk (per §5 data architecture; H-016 observation at 126 files growing). A redesigned selector running on `pm-tennis-stress-test` reads from that corpus via some bridge mechanism.
+
+Closure-check finding: **partially closed by D-027.** D-027 (H-013) established authoritatively via `render.com/docs/disks` that Render persistent disks are strictly single-service: *"A persistent disk is accessible by only a single service instance, and only at runtime. This means: You can't access a service's disk from any other service."* This closes the *direct-disk-attach* variant of the bridge candidate — `pm-tennis-stress-test` cannot mount `pm-tennis-api`'s disk read-only, cannot access it via shared mount, cannot read its files via cross-service filesystem primitives. That variant is closed.
+
+The closure does not extend to all bridge variants. D-027's considered-alternatives list (H-013 chat exchange documented in D-027 Considered section) included Option (B): *"Expose an HTTP endpoint on `pm-tennis-api` that returns eligible candidates as JSON; stress-test service fetches via HTTPS."* Option (B) was rejected at H-013 not on feasibility grounds but on governance-cost grounds — it "requires a behavior change to the production discovery service and adds an auth surface (shared-secret reuse)." That rejection was scoped to D-025/D-027's context (probe-slug transport); it is not a feasibility closure for anchor-slug-redesign scope. HTTP-endpoint-bridge remains open as a candidate access path, with the D-027-cited governance-costs as a strategy-discrimination consideration (not a closure).
+
+Q1 compatibility: supports both Q1=single (selector queries bridge for one slug) and Q1=multi (selector queries bridge for N slugs or a candidate set). The bridge's query semantics depend on implementation. Fully Q1-agnostic at the access-path level.
+
+**Candidate access path C — Gateway direct: `gateway.polymarket.us/v2/sports/tennis/events`.**
+
+Access path description: invoke the Polymarket US public gateway directly from `pm-tennis-stress-test`, fetching tennis events at invocation time, extracting candidate slugs from the response. This is the same endpoint `pm-tennis-api`'s discovery loop polls every 60 seconds per §5.1 data architecture.
+
+Closure-check finding: **NOT closed.** The endpoint is a documented public gateway with no authentication required for reads (per STATE architecture_notes: "Polymarket US public gateway: gateway.polymarket.us (no auth for reads)"). D-027's considered-alternatives list included Option (C) — direct gateway fetch for probe-slug transport — and rejected it on governance-cost grounds ("conflicts with D-025's commitment-1 language literally" and "pulls a new external dependency onto the probe critical path"). Those rejections were scoped to D-025/D-027's context (probe-slug transport, where D-025 Commitment §1 required gateway-sourced slug read from Phase 2's archive rather than fresh at probe time). That D-025-scoped language constraint does not apply to anchor-slug selection for the stress-test sweeps harness. Gateway-direct remains open as a candidate access path.
+
+Q1 compatibility: supports both Q1=single (first event from response, possibly filtered) and Q1=multi (N events). Gateway response shape is documented at research-doc §5.1-adjacent and is observationally validated by `pm-tennis-api` discovery loop behavior.
+
+**Candidate access path D — Operator-supplied `--seed-slug` elevated to primary.**
+
+Access path description: the current implementation's `--seed-slug` fallback path is elevated to required primary source. The selector has no default; invocation without `--seed-slug` fails cleanly.
+
+Closure-check finding: **NOT closed.** Already implemented (sweeps.py lines 1454–1458); H-023 run 2 exercised it cleanly and produced the first clean-classification cells in sweep history. Live candidate; the change from current implementation would be eliminating the `markets.list()` default path rather than adding new capability.
+
+Q1 compatibility: Q1=single by construction under current implementation; extending to Q1=multi would require CLI changes to accept `--seed-slug=slug1,slug2,...` or a slug-list file.
+
+**Candidate access path E — Hybrid across any of A / B / C / D with explicit precedence.**
+
+Access path description: the selector tries access paths in an explicit precedence order — for example, `--seed-slug` first, then SDK-filtered, then gateway-direct, then error. Or bridge-first, then SDK-filtered, then error. The precedence itself is a design parameter.
+
+Closure-check finding: **NOT closed.** Hybrid is a composition of the live candidates above; it inherits its closure status from the composed paths. Each path in the hybrid must itself be closure-check-OK; the hybrid then proceeds under precedence.
+
+Q1 compatibility: inherits from composed paths.
+
+**Summary of closure-check outcomes:**
+
+| Candidate | Closure-check | Reason |
+|---|---|---|
+| A — SDK `markets.list(filter_params)` | NOT closed | Filter-parameter surface confirmed via SDK source inspection |
+| B — meta.json bridge (direct disk) | CLOSED | D-027 single-service-disk constraint |
+| B' — meta.json bridge (HTTP endpoint) | NOT closed | D-027 Option (B) governance-cost rejection scoped to probe transport; not anchor-redesign closure |
+| C — Gateway direct `gateway.polymarket.us` | NOT closed | D-027 Option (C) governance-cost rejection scoped to probe transport; public gateway no-auth-for-reads |
+| D — Operator-supplied `--seed-slug` as primary | NOT closed | Already implemented; H-023 run 2 precedent |
+| E — Hybrid with explicit precedence | NOT closed | Composition of live candidates |
+
+### 18.5 Evaluation criteria any candidate must satisfy
+
+This subsection names what a candidate strategy must deliver to be viable. Criteria are phrased as deliverables any candidate must meet, not as thresholds calibrated to exclude specific candidates. Criteria admit both Q1 modes.
+
+**(a) Returns live tennis anchor(s) appropriate to the selector's Q1 mode with acceptable reliability at invocation time.** Under Q1=single, one live tennis slug; under Q1=multi, N live tennis slugs where N is per the design. "Acceptable reliability" is deferred to strategy-discrimination — §18 does not pre-commit to a reliability threshold.
+
+**(b) Preserves D-024 commitment 1** (`pm-tennis-api/requirements.txt` not modified by stress-test lifecycle) and D-020/Q2=(b) isolation (stress-test code runs in `pm-tennis-stress-test` service, not in `pm-tennis-api`).
+
+**(c) Preserves D-027's single-service-disk constraint.** No candidate may require cross-service disk access.
+
+**(d) Compatible with `pm-tennis-stress-test`'s environment.** No persistent disk; Render Starter instance; deployed from `main` via the Auto-Deploy-Off manual convention per RB-002 Step 1.
+
+**(e) Fails gracefully when no live tennis match is available.** Observation windows during tennis-calendar gaps (e.g., between slam weeks with sparse scheduling) are real operational cases. The selector must distinguish between "no live match available" and "selector failure" and return or error in a way the caller can route to the appropriate `EXIT_*` code.
+
+**(f) Preserves the `--seed-slug` operator-supplied path as override.** D-027's operator-supplied-slug precedent applies; any redesigned selector must retain operator-override capability even if `--seed-slug` is not the primary source. This is a governance-level criterion — operator override of automated anchor selection is the established pattern since D-027 (H-013).
+
+**(g) Testable per D-021** (unit tests + lightweight live smoke test before deliverable is considered complete). Candidates must admit testable observation; strategies that require production-scale live traffic to validate their selection logic do not satisfy D-021.
+
+### 18.6 Downstream implications the redesign touches
+
+The `_fetch_anchor_slug` redesign is not standalone; it composes with downstream sweep behavior. §18 names the dependency edges without pre-committing to what downstream work follows.
+
+**M1 resolution dependency (§17.6 item 3).** M1 resolution requires anchor-slug traffic for per-`request_id` attribution (§14.3 marketSlug echo mechanism). Under any redesign that produces live-traffic anchors, M1 resolution becomes re-sweep-addressable. Under Q1=multi specifically, per-cell anchors could sharpen M1's per-cell attribution by eliminating cross-cell anchor-slug sharing as a variable. Whether M1 re-sweep is the appropriate follow-up experiment after redesign, or whether a differently-shaped experiment is needed, is strategy-discrimination scope for the next research-first output, not §18.
+
+**M3 per-subscription cap dependency (§17.6 item 4 adjacent).** M3 measurement (per-subscription cap behavior at 100 slugs) assumes a real anchor producing attributable traffic under the 1+99 composition rationale (§16.5). The redesign's Q1 choice affects M3 observability: under Q1=single, one anchor per subscription in the 1+99 composition; under Q1=multi, potentially different anchors per cell (but still 1+99 within any one subscription). M3 at the grid boundary (101P/0R negative control) is not anchor-dependent and is unaffected.
+
+**M5 concurrent-connection dependency (§17.4.5).** M5 resolved `≥4 concurrent OK` at H-023 run 2 for the tested configuration; the tested configuration used a single operator-supplied anchor. M5 observability at higher N or at upper-bound configurations is likely insensitive to anchor-selector redesign as long as the anchor produces live traffic; the redesign does not re-open M5 but may enable cleaner upper-bound probes.
+
+**`classify_cell` dependency (§16.7 / D-032 Reading B).** `classify_cell` step 5's anchor-slug-traffic predicate (`_cell_has_anchor_slug_traffic_qualifying`) is unchanged by the redesign but depends on the anchor being a live-traffic source. Redesigns producing live anchors restore step 5's intended operational path (which H-023 run 2 exercised for the first time in sweep history); redesigns producing non-live anchors reproduce H-023 run 1's uniform-step-6-degraded outcome.
+
+**Error-event payload extraction (§17.6 item 4).** Orthogonal to anchor-slug redesign per §17.4.3 framing (error_events are protocol-level, not subscription-attributable in a way anchor selection affects). Named here for completeness; error_event extraction is element 2's prerequisite, not a `_fetch_anchor_slug` redesign dependency.
+
+**D-033 frame extension (§17.6 item 2).** Orthogonal to anchor-slug redesign. Named for completeness.
+
+### 18.7 What §18 does not change
+
+- **§18 does not amend §§1–17.** §§1–17 content is preserved byte-identical from the H-024 close state (SHA-256 baseline `cfacae21859f07945623ca06bdca0a4a2a15062d43d60500560c5cb1febcb0be` over the byte range from the `## 1.` heading through §17.7's last bullet; verified at H-026 by computing the baseline against git HEAD and re-computing against the post-write file, both matching). §18 is a purely additive section appended after §17.7 per the §14 / §15 / §16 / §17 additive precedent. No claim in §§1–17 is revised; no wording in §§1–17 is edited. Two legitimate edits outside §§1–17 content occurred as part of landing §18, each following prior-session precedent: (a) the version-history header at the document's top received a new `v4 §18 additive (H-026): ...` entry following the §13 / §15 precedent of each additive section updating the header with its own line; (b) the end-of-document summary line updated to reference §18 as the new closing addendum, matching H-024's end-of-document summary update at §17 landing. Neither edit is inside §§1–17 content.
+- **§18 does not pre-select a candidate strategy.** Q1 (single-vs-multi-anchor selector output) and Q2 (signal preference) remain open questions for the next research-first output. Closure-check in §18.4 is binary existence only; strategy-discriminating characterization is deferred per D-019.
+- **D-019 research-first discipline stands.** §18 is research-first scoping; the strategy-discriminating research document that follows §18 in a subsequent Claude turn is the mid-arc research output; code begins only after operator review of that subsequent document.
+- **D-027 stands.** The `--seed-slug` operator-supplied path precedent applies to any redesign; D-024 commitment 1 and D-020/Q2=(b) isolation stand.
+- **D-032 Reading B stands.** The anchor-slug-traffic predicate in `classify_cell` step 5 is unchanged by redesign scope.
+- **D-033 stands.** Exception-type partition unchanged; error_events remain orthogonal to both D-033 and to anchor-slug selection per §17.4.3.
+- **§16's five measurement questions (M1–M5) remain as scoped.** The redesign enables cleaner downstream M1 re-sweep work but does not re-open or re-frame any M-question.
+- **§16.7's classification state machine is not revised.**
+- **§16.6's outcome record shapes stand.**
+- **No plan-text revisions cut by §18.** `pending_revisions` v4.1-candidate / -2 / -3 / -4 / -5 remain queued.
+- **No commitment files are touched.**
+- **No Phase 2 source files are touched.** `src/capture/discovery.py`, `main.py` — untouched.
+- **No RAID entries added or modified by §18 itself.** Any new risks or issues motivated by redesign work would be raised at the session producing the strategy-discriminating research or the code turn, not in §18.
+- **No code changes motivated by §18.** §18 is research-first phase per D-019.
+- **`pm-tennis-stress-test` Render service state is unchanged by §18.** No Manual Deploy, no code push, no env-var change. Session is governance/research-doc-only.
+
+---
+
+*End of research document — v4, §13 H-012 additive + §14 H-016 probe-outcome addendum + §15 H-014 additive + §16 H-019 main-sweeps-scope addendum + §17 H-024 main-sweeps-outcome addendum + §18 H-026 `_fetch_anchor_slug` redesign scope addendum.*

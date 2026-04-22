@@ -60,6 +60,12 @@ only the slug-to-probe transport changes.
 
 ---
 
+## Step 0 — Pre-flight: verify service deploy state against main
+
+Before proceeding to any step that exercises `pm-tennis-stress-test`'s deployed code (live probe, live sweep, shell-based diagnostic that imports from `src/stress_test/*`), verify the service's current deploy state. Auto-Deploy is Off by design (Step 1) — pushes to `main` do not redeploy the service automatically. Check the Render dashboard Events tab for `pm-tennis-stress-test` and note the last successful deploy's commit. Compare against `main` HEAD. If any change to `src/stress_test/*` or its requirements has landed on `main` since that commit, click Manual Deploy (optionally with `'Clear build cache & deploy'` for dependency changes) before proceeding. A deploy where the start command exits cleanly after the self-check output is RB-002-expected behavior per Step 4, even though Render's UI may label it "Deploy failed: Application exited early" (see H-022 §9 Observation 2 for context). Per D-035, the pre-flight check is a session-convention discipline for any session scoping live execution on this service; this Step 0 is the runbook anchor for that discipline.
+
+---
+
 ## Step 1 — Create the new web service in Render
 
 1. Go to `https://dashboard.render.com`.

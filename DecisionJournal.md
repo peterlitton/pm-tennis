@@ -18,6 +18,129 @@ The Decision Journal is a project artifact, not a session summary. It accumulate
 
 ---
 
+## D-036 — Phase 3 exit on integration-readiness grounds; asset-cap stress-test arc retired on scope-framing reversal
+
+**Date:** 2026-04-22
+**Session:** H-028
+**Type:** Scope-framing / Phase-exit
+
+**Source:** Operator ruling at H-028 mid-session following empirical surfacing of tennis tournament structure against build plan §5.4's 150-asset soft cap. The ruling reverses a premise that had governed six sessions of research-first work (H-019 through H-028 Deliverable 2): that the asset-cap stress test was the load-bearing evidence for Phase 3 exit. The reversal rests on scope-framing grounds — the ratio of build-plan-assumed cap to realistic operational surface — and was surfaced, not in a governance refinement, but in empirical observation that the research arc had not been calibrated against tennis tournament concurrency reality.
+
+**Finding:** The asset-cap stress test arc, as originally scoped in build plan §5.4 and §8 Phase 1 (deferred to Phase 3), rigorously measured subscription-and-connection composition approaching a 150-asset soft cap without the 150 number being derivable from operational requirements. The operational surface of the instrument — men's and women's singles tennis on Polymarket US, ATP/WTA/Grand Slams/Challenger — peaks at approximately 20 concurrent in-play matches at the heaviest possible moment (Grand Slam first-round day; parallel tour event; global Challenger coverage). Typical non-Grand-Slam-day peak: 5-12 concurrent. Typical day peak: single digits. Ratio of 150 to 20 is 7.5× headroom at peak, 15-30× on typical days. The research arc characterized a capacity envelope the instrument will never approach. H-028 D2's empirical finding — that the sweep harness's 1/4/9 error-event scaling for N=2/5/10 multi-subscribe was exactly (N-1) duplicate-slug rejections under per-connection slug-uniqueness enforcement, not a server-capacity signal — reinforces this: the arc wasn't measuring what it implicitly claimed to measure.
+
+**Decision:** Close Phase 3 via scope-framing reversal. The asset-cap stress test (D-018 first deliverable of Phase 3 attempt 2) is fulfilled on reframed-scope grounds: the empirical question it was posed to answer — "what is the capacity envelope approaching §5.4's 150-asset soft cap" — is retired as operationally unbinding. Phase 3 capture-component implementation (CLOB tick capture, Sports WS, correlation layer, handicap updater) is rebound to Phase 4 opening scope. Operationally useful research findings from the arc are preserved. Non-operationally-relevant research artifacts (sweeps.py and its test suite, research-doc §§16/17/20 specific to the retired arc) are retained in repo as historical record, not forward-maintained. Section 11 open issues tagged "Open — Phase 3" are individually rebound per the Commitment table below. Path-(α) Phase-2-health-in-situ observation is adjacent evidence of general Phase 2 capture worker health; not Phase 3 exit-specific evidence, but confirms that the system the project actually has continues to behave under continuous operation.
+
+**Considered:**
+
+- **Continue the sweep arc** — carry forward the §20 Shape Gamma implementation and M1 resolution re-sweep work as originally scoped through post-H-028. Rejected on scope-framing grounds: additional rigor on a non-binding capacity question does not earn its session cost when Phase 3 exit is the binding question.
+- **Pause without closing Phase 3** — hold the exit decision pending more operational evidence. Rejected: leaves Phase 3 indefinitely open and Phase 4 indefinitely deferred; defers the scope-framing diagnosis without acting on it.
+- **Close Phase 3 on design grounds without the integration test** — skip path-(α) entirely. Rejected: leaves Phase 2 capture-worker behavior under continuous operation unvalidated at Phase 3 exit. Path-(α) re-scoped to Phase-2-health-in-situ is cheap evidence; the full original path-(b) framing was the rejected move.
+
+**Reasoning (compressed):**
+
+The build plan's Phase 3 was originally specified against a capacity envelope that the operational surface of the instrument doesn't approach. §5.4's 150-asset soft cap was stated without derivation. The research arc treated 150 as given and built measurement infrastructure to characterize approach-to-cap behavior. Across H-019 through H-028 D2, no session surfaced the question "does the operational surface approach 150 concurrent assets?" — research-first discipline (D-019) protected sub-scope integrity within the stress-test frame, but the frame itself was not re-examined.
+
+Tennis tournament structure, per operator's empirical surfacing at H-028, not verified against current venue configurations: Grand Slam singles draws are 128 players per gender, single-elimination. Round 1 schedules 128 matches across two days, played on roughly 15-18 courts at the largest venues. Peak concurrent in-play during a Grand Slam first-round day is approximately 12-16 matches, accounting for changeovers and set ends. Parallel ATP/WTA tour events and global Challenger coverage add perhaps 5-8 concurrent. Heaviest-possible-moment upper bound: approximately 20 concurrent in-play matches.
+
+H-028 D2 established that the sweep harness's scaling pattern (1/4/9 error-events for N=2/5/10) was exactly (N-1) duplicate-slug collisions on the repeated anchor — a harness-configuration artifact under per-connection slug-uniqueness server enforcement, not a server-capacity signal. The sweep was characterizing uniqueness-enforcement behavior, not concurrency capacity.
+
+Path-(α) Phase-2-health-in-situ observation at H-028 (21:18Z-21:43Z, 25-minute window on `pm-tennis-api`): poll cadence held at 60s across 25 cycles; active event count stable at 101; zero unhandled exceptions in the window; zero service restarts; raw-poll archive grew +22.6 MB (~54 MB/hour, consistent with project's sustained 1.17-1.43 GB/day baseline); discovery delta writer confirmed live. Adjacent evidence: general Phase 2 capture worker health under continuous operation. Not Phase 3 exit-specific evidence.
+
+**Commitment:**
+
+**Operationally useful research findings (preserved, forward-binding):**
+
+- `_fetch_anchor_slug` redesign research (§18, §19): Candidate E hybrid D→F recommendation feeds Phase 5 dashboard's live-tennis anchor sourcing for manual-trade-entry context. Validated at H-028 D3: `events.list({"tagSlug":"tennis", "active":True, "ended":False})` returns clean tennis-pure results at the server; the filter surface works as §19.5 signal analysis anticipated.
+- SDK characterization findings (§15; portions of §16): `events.list()` filter parameter surface (EventsListParams fields), `AsyncPolymarketUS` client construction (`key_id`/`secret_key` per H-028 D3 correction, not `api_key_id`/`api_secret_key`), credential env var names (POLYMARKET_US_API_KEY_ID / POLYMARKET_US_API_SECRET_KEY per D-023), general SDK surface knowledge. Feeds Phase 4 API and Phase 5 dashboard implementation.
+- **D-033 preserved as SDK exception-surface reference** (distinct from sweeps.py retirement). D-033's twelve-exception hierarchy characterization and docstring-based partition by HTTP semantic remain operationally useful as general SDK knowledge for future code that consumes the SDK. Operationalization of D-033's frozensets in sweeps.py is retired with sweeps.py itself; the structural knowledge the entry preserves is not.
+- M4 silent-filter finding (§17.4.3): three independent samples across H-023 runs 1+2 and H-028 D2, 2.5-day wall-clock spread, three distinct matches, field-for-field identical — defensive-programming-not-required evidence for placeholder-slug edge cases. Production doesn't use placeholder slugs; finding is reference-level, not Phase 5 load-bearing.
+- M2 `independent` at small N (§17.4.4; H-028 D2): multi-connection capture architecture validated at the operational scale the instrument actually requires.
+- Sackmann P(S) tables, fees.json, breakeven.json: Phase 1 artifacts, unchanged by D-036.
+
+**Governance artifacts (preserved; general-purpose):**
+
+- D-034 (drag-and-drop deploy mechanism): applies to all Render services.
+- D-035 (Auto-Deploy discipline + RB-002 Step 0): applies to all Render services with Auto-Deploy=Off.
+- D-027 (probe-slug transport via CLI argument; single-service-disk constraint): applies to probe.py; probe retained as working SDK-sanity-check utility.
+- D-023 (credential env vars on Render): general infrastructure.
+- D-021 (testing posture: unit + live smoke): general infrastructure.
+- Handoff protocol, session discipline, doc-code coupling, pre-registration discipline, verbatim-check discipline, correction-cycle-pass-named-honestly: general-purpose, transfers to Phase 4/5 work directly.
+- Eighteen-session clean-discipline streak (H-010 → H-027): preserved; D-036 is the reshape under session-level authority, not a discipline break.
+
+**Research artifacts retained in repo as historical record; not forward-maintained:**
+
+- `src/stress_test/sweeps.py` (2,422 lines): research artifact. If the SDK updates and D-033 frozensets drift, we do not notice because the code is not run. Re-exercising sweeps.py in the future requires fresh SDK introspection per §16.9 step 1a+1b discipline; any user of this code takes responsibility for that drift check.
+- `tests/test_stress_test_sweeps.py` (1,330 lines): research artifact. Tests run in CI but do not exercise live gateway; they verify internal invariants of code D-036 retires as operationally unbinding.
+- Research-doc §§16 (main sweeps scope), 17 (sweeps outcome), 20 (D-033 frame extension for error_events): preserved as historical record; no further additive sections in this arc. §§18 and 19 (which produced the `_fetch_anchor_slug` / Candidate E recommendation forward-useful to Phase 5) are distinctly preserved per the forward-binding list above.
+- D-032 (classification-state edge case in sweeps clean-(iii) predicate): unchanged as historical DJ entry; no further rulings on clean-(iii) semantics. Applies to sweeps.py code which D-036 retires.
+
+**Infrastructure disposition:**
+
+- `pm-tennis-stress-test` Render service: retained. Operational cost is small; retaining preserves the ability to re-run `probe.py` for SDK sanity check if some future scope question reopens. Auto-Deploy=Off preserved per D-035. No active session work runs against it by default.
+
+**Open questions explicitly not pursued further:**
+
+- §20 Shape Gamma implementation (structured `SubscribeObservation.protocol_errors` field): not implemented; the code it would modify (sweeps.py) is retired as non-maintained.
+- §20 Shape Epsilon classifier refinement: not implemented; same reason.
+- M1 resolution in the "can multi-distinct-subscribe compose independently" shape: not pursued; the production instrument exercises this by its normal operation at Phase 5+.
+- M5 upper bound beyond N=4: not pursued; operational surface stays well below the observed-operational range.
+
+**Section 11 open issues rebinding (per Pull 3 individual-binding discipline):**
+
+| Item | Original tag | Rebound to | Reason |
+|---|---|---|---|
+| First-server identification at match start | Open — Phase 3 | **Phase 4** | meta.json discovery-time write; capture worker correctness scope |
+| Retirement and suspension handling | Open — Phase 3 | **Phase 4** | Sports WS status handler; capture worker correctness scope |
+| Tiebreak state representation | Open — Phase 3 | **Phase 5** | fair-price model consumes `in_tiebreak` + `tb_points_a/b` counters |
+| Stale pre-match handicap on lightly-traded matches | Open — Phase 3 | **Phase 4** | meta.json last-5-tick median with staleness flag; discovery correctness |
+| Maker-rebates-program artifact vs real mispricing | Open — Phase 4/5 | Phase 5 (no change) | recent-taker-activity filter in signal qualification |
+| Two-client sync and manual-log race | Open — Phase 7 | Phase 7 (no change) | trade-logging discipline |
+| Operator fatigue and coverage | Open — Phase 7 | Phase 7 (no change) | observation window operations |
+| Sackmann pooling across tours | Open — post-window | post-window (no change) | post-build re-calibration |
+
+**Plan-document revision queue:**
+
+- New entry added to STATE `pending_revisions` as **v4.1-candidate-6**: "Build plan §5.4 stress-test framing, §11.3 CLOB asset-cap item disposition, §8 Phase 1 table row — update per D-036." Single candidate covering all three plan-text touches for a future Playbook §12 batch cycle. Build plan v4 text itself not modified this session.
+
+**Effect on other decisions and governance artifacts:**
+
+- **D-018 (first deliverable of Phase 3 attempt 2 = asset-cap stress test):** fulfilled on reframed-scope grounds. The original "characterize capacity envelope up to 150-asset soft cap" scope is retired. D-018 commitment text is preserved as historical record; the reframing is D-036's decision.
+- **D-019 (research-first discipline):** preserved. The scope-framing lesson D-036 memorializes becomes received-discipline for Phase 4+: scope-framing questions need explicit re-examination at phase-open and during multi-session arcs, not assumed to persist from the build plan's original scoping. Research-first protects sub-scope integrity; it does not substitute for periodic scope-calibration check.
+- **D-020 (definition of done for first deliverable):** preserved as historical; applied to D-018's original scope which D-036 retires.
+- **D-021 (testing posture: unit + live smoke):** unchanged.
+- **D-023 (credentials on Render env vars):** unchanged.
+- **D-027 (probe-slug transport; single-service-disk constraint):** unchanged.
+- **D-029 (drag-and-drop deploy):** unchanged.
+- **D-032 (§16.7 clean-(iii) Reading B):** preserved as historical; applies to sweeps.py which D-036 retires.
+- **D-033 (polymarket-us exception hierarchy):** preserved as SDK reference; operationalization in sweeps.py retired. See Commitment "operationally useful research findings" above.
+- **D-034 (permanent deploy mechanism):** unchanged.
+- **D-035 (Auto-Deploy pre-flight discipline):** unchanged. Applies to `pm-tennis-stress-test` which is retained (not decommissioned) per Infrastructure disposition.
+- **Build plan §§5.4 / 11.3 / 8 Phase 1:** queued for v4.1-candidate-6 plan revision. Text not modified this session.
+- **Build plan §8 Phase 3 acceptance criteria:** re-interpreted on scope-framing grounds. Phase 3 capture-component implementation rebinds to Phase 4; Phase 4 inherits §8 Phase 3's acceptance criteria (48-hour unattended run, CLOB pool stale-connection handling, Sports WS retirement handler, handicap median) as its own acceptance bar once the capture code is implemented.
+
+**What this decision does not decide:**
+
+- Whether the capture worker handles 48-hour continuous operation (Phase 4 implementation + validation scope).
+- Whether the fair-price model works (Phase 5 scope).
+- Whether signal qualification produces real edge (Phase 7 observation window scope).
+- Whether the observation window's results support H1 or H2 (window-close analysis scope).
+- The `c89c021` cross-project docstring contamination on `src/__init__.py` (operator's out-of-session contamination, see Handoff §9). Preserved as independent cleanup item, not Phase 3 exit-gating; not within D-036's scope; folded into whatever future session has incidental scope to revert.
+
+D-036 addresses Phase 3 exit specifically. Downstream phases inherit their own acceptance criteria unchanged.
+
+**Evidence trail:**
+
+- **H-028 D3 result (2026-04-22T~17:30Z):** `events.list({"tagSlug":"tennis","active":True,"ended":False,"limit":20})` returned 12 live/upcoming tennis events, 5/5 sampled tennis-pure, 5/5 sampled live-state consistent with filter. Empirical evidence of `events.list()` tennis-filter viability.
+- **H-028 D2 result (2026-04-22T~18:34Z-18:38Z):** sweep re-run against `aec-atp-sasmuk-yanere-2026-04-21`; exit code 5 (`EXIT_SWEEP_PARTIAL`); field-for-field match against H-023 Run 2 on per-cell classifications; 1/4/9 error-events per subscriptions-axis-N=2/5/10 cells. error_events payload extraction surfaced all 14 events as uniform `WebSocketError(message='slug already subscribed: <anchor>', request_id='<sweep-specific-attribution>')` strings. Third independent sample of M4 `silent_filter`. Harness-configuration-artifact finding for 1/4/9 scaling.
+- **H-028 Phase-2-health-in-situ observation (2026-04-22T21:18:39Z - 21:43:41Z, 25 min):** poll cadence held at 60s across 25 cycles; active event count 101 (stable, one removal during window); zero unhandled exceptions; zero service restarts; `2026-04-22.jsonl` grew +22.6 MB (~54 MB/hour, matches baseline); `discovery_delta.jsonl` mtime advanced. Adjacent evidence of Phase 2 health in situ.
+- **Tennis tournament structural facts** (per operator's empirical surfacing at H-028, not verified against current venue configurations): 128-player Grand Slam singles draw; ~15-18 courts at largest venues; ~12-16 concurrent Grand Slam peak; ~20 absolute-peak operational concurrency; 5-12 concurrent non-Grand-Slam-day peak; single digits typical.
+- **Project observation supporting concurrency range:** `/data/matches/` at H-028 = 339 event directories cumulative; discovery poll at T=0 returned `active=102`, `live_at_discovery` mostly False pre-H-016-fix, populated post. Event count at any given moment order-of-tens, not hundreds.
+- **Build plan §5.4 soft 150-asset cap statement:** no derivation chain in the build plan text.
+- **Build plan §8 Phase 3 acceptance criteria:** no explicit reference to 150-asset stress test; acceptance criteria are operational-continuity-focused (48-hour unattended, pool stale-connection handling, retirement handler, handicap median, first-server identification).
+- **Operator ruling at H-028 mid-session** on empirical grounds following the "measuring for what purpose" and "100+ concurrent matches how was that calculated" question sequence. Ratify-with-adjustments on five pre-registration details; full adjustments absorbed as drafting guidance.
+
+---
+
 ## D-035 — Auto-Deploy=Off session discipline for `pm-tennis-stress-test`: session convention + RB-002 Step 0 addition (H-022 §9 Observation 1 resolved)
 
 **Date:** 2026-04-22

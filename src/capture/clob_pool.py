@@ -314,6 +314,20 @@ class ClobPool:
         # GC-eligible the moment its other references drop.
         conn.ws = None
 
+        # H-033 file-handle cache teardown. Same unsubscribe-cleanup
+        # discipline as Issue A: per-match resources released on
+        # unsubscribe, not deferred to process shutdown. release_slug
+        # is idempotent and safe even if no handles were ever opened
+        # for this slug (e.g., subscribe succeeded but no messages
+        # arrived before recycle).
+        try:
+            self._archive.release_slug(conn.market_slug)
+        except Exception:
+            log.exception(
+                "unsubscribe_match: archive.release_slug failed event_id=%s slug=%s",
+                event_id, conn.market_slug,
+            )
+
     async def close_all(self) -> None:
         """Shutdown path: unsubscribe every match."""
         self._closed = True
@@ -324,6 +338,16 @@ class ClobPool:
                 await self.unsubscribe_match(eid)
             except Exception:
                 log.exception("close_all: unsubscribe_match raised event_id=%s", eid)
+
+        # H-033 file-handle cache teardown. After every connection is
+        # unsubscribed, release_slug has handled all slug-keyed handles.
+        # Misc handles (_misc/heartbeats, _misc/errors, etc.) are global
+        # and persist across connection lifecycles; close_all on the
+        # writer flushes those at process shutdown.
+        try:
+            self._archive.close_all()
+        except Exception:
+            log.exception("close_all: archive.close_all raised")
 
     # ----- callback factories (Phase 2 §3.6) -----
 

@@ -112,12 +112,22 @@ class RecordingArchive:
     def __init__(self):
         self.writes: list[dict] = []
         self.errors: list[tuple[BaseException, str, str]] = []
+        # H-033 cache surface — record release/close calls so tests can
+        # assert on the unsubscribe-cleanup discipline.
+        self.released_slugs: list[str] = []
+        self.close_all_calls: int = 0
 
     def write(self, envelope: dict) -> None:
         self.writes.append(envelope)
 
     def write_error(self, exc, event_id, market_slug):
         self.errors.append((exc, event_id, market_slug))
+
+    def release_slug(self, market_slug: str) -> None:
+        self.released_slugs.append(market_slug)
+
+    def close_all(self) -> None:
+        self.close_all_calls += 1
 
 
 # ---------------------------------------------------------------------------
@@ -736,3 +746,70 @@ async def test_unsubscribe_match_nulls_ws_reference(pool):
     assert captured_conn.ws is None, (
         "Issue B regression: conn.ws was not nulled after close"
     )
+
+
+# ---------------------------------------------------------------------------
+# H-033 archive-cache teardown wiring tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_unsubscribe_match_calls_archive_release_slug(pool):
+    """H-033: unsubscribe_match must call archive.release_slug with the
+    conn's market_slug. Same unsubscribe-cleanup discipline as Issue A —
+    per-match resources released on unsubscribe, not deferred."""
+    p, _client, archive, _matches_root, _delta_path = pool
+
+    await p.subscribe_match("evt-rel", "slug-rel")
+    assert archive.released_slugs == []  # not released until unsubscribe
+
+    await p.unsubscribe_match("evt-rel")
+
+    assert archive.released_slugs == ["slug-rel"], (
+        "H-033 regression: unsubscribe_match did not call archive.release_slug"
+    )
+
+
+@pytest.mark.asyncio
+async def test_close_all_calls_archive_close_all(pool):
+    """H-033: pool.close_all must call archive.close_all after unsubscribing
+    all connections. Misc handles are global and only this path drops them."""
+    p, _client, archive, _matches_root, _delta_path = pool
+
+    await p.subscribe_match("evt-1", "slug-1")
+    await p.subscribe_match("evt-2", "slug-2")
+    assert archive.close_all_calls == 0
+
+    await p.close_all()
+
+    assert archive.close_all_calls == 1, (
+        "H-033 regression: pool.close_all did not call archive.close_all"
+    )
+    # Per-slug release should have fired for each connection too.
+    assert sorted(archive.released_slugs) == ["slug-1", "slug-2"]
+
+
+@pytest.mark.asyncio
+async def test_partial_subscribe_failure_does_not_call_release_slug(
+    tmp_path, fast_lifecycle,
+):
+    """H-033 + Issue A interaction: a partial-subscribe failure raises before
+    the conn is registered. unsubscribe_match is never reached, so
+    release_slug is not called. (release_slug is only called on the
+    unsubscribe path; the subscribe-failure path's ws.close() teardown
+    is sufficient because no archive write ever fired for that slug.)"""
+    matches_root = tmp_path / "matches"
+    delta_path = tmp_path / "events" / "discovery_delta.jsonl"
+    matches_root.mkdir()
+    delta_path.parent.mkdir()
+
+    client = FailingMockClient(["subscribe_md"])
+    archive = RecordingArchive()
+    pool = ClobPool(client, archive, matches_root=matches_root, delta_path=delta_path)
+
+    with pytest.raises(RuntimeError, match="simulated subscribe_market_data"):
+        await pool.subscribe_match("evt-fail", "slug-fail")
+
+    # subscribe_match raised; conn not registered; no unsubscribe path.
+    assert archive.released_slugs == []
+    assert "evt-fail" not in pool._connections

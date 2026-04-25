@@ -220,9 +220,28 @@ class ClobPool:
         ws.on("error", self._make_error_handler(event_id))
         ws.on("close", self._make_close_handler(event_id))
 
-        await ws.connect()                                # §3.4
-        await ws.subscribe_market_data(md_req, [market_slug])  # §3.2
-        await ws.subscribe_trades(td_req, [market_slug])       # §3.2
+        # H-032 Issue A fix: if connect or either subscribe raises, the ws
+        # has been created and (after connect) has a running _message_task
+        # plus an open underlying socket. Without this guard the ws is
+        # orphaned — never registered, never closed, never GC'able — which
+        # is a permanent leak path that fires more often under memory
+        # pressure (when subscribe calls are likelier to fail).
+        try:
+            await ws.connect()                                     # §3.4
+            await ws.subscribe_market_data(md_req, [market_slug])  # §3.2
+            await ws.subscribe_trades(td_req, [market_slug])       # §3.2
+        except BaseException:
+            # Best-effort cleanup; ws.close() cancels _message_task and
+            # closes the underlying socket. Swallow cleanup errors so the
+            # original exception (which carries the diagnostic) propagates.
+            try:
+                await ws.close()
+            except Exception:
+                log.exception(
+                    "subscribe_match: cleanup ws.close() failed event_id=%s",
+                    event_id,
+                )
+            raise
 
         # Register before starting tasks so handlers can find the conn.
         self._connections[event_id] = conn
@@ -286,6 +305,14 @@ class ClobPool:
                 "unsubscribe_match: ws.close failed event_id=%s",
                 event_id,
             )
+
+        # H-032 Issue B fix: explicit reference release. Defense-in-depth.
+        # The conn dataclass has already been popped from self._connections
+        # (line ~235), but lifecycle-task cancellation tracebacks and any
+        # in-flight callback frames may briefly retain references to conn.
+        # Nulling conn.ws breaks one chain (conn -> ws) so the ws is
+        # GC-eligible the moment its other references drop.
+        conn.ws = None
 
     async def close_all(self) -> None:
         """Shutdown path: unsubscribe every match."""

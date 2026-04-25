@@ -18,10 +18,17 @@ import asyncio
 import datetime
 import logging
 import os
+import tracemalloc
 
 from fastapi import FastAPI
 
 log = logging.getLogger("pm_tennis.main")
+
+# H-032 instrumentation: start tracemalloc before any background tasks
+# launch so the heavy_snapshot_loop has trace data to surface. Cheap
+# in idle but adds per-allocation overhead — acceptable for diagnostic
+# observation window; revisit after Mechanism 1 source identified.
+tracemalloc.start()
 
 app = FastAPI(title="PM-Tennis API", version="0.1.0-phase3-capture")
 
@@ -113,6 +120,21 @@ async def start_clob_pool():
 
     asyncio.create_task(_run())
     log.info("CLOB pool background task started.")
+
+
+@app.on_event("startup")
+async def start_diagnostics_loops():
+    """
+    Launch H-032 diagnostics loops (5-min heavy snapshot, 1-min task
+    snapshot). Background tasks; references kept on app.state so asyncio
+    does not GC them per its create_task docs warning.
+    """
+    from src.capture.diagnostics import start_diagnostics
+    heavy_task, task_task = start_diagnostics()
+    # Hold references to prevent GC.
+    app.state.diagnostics_heavy_task = heavy_task
+    app.state.diagnostics_task_task = task_task
+    log.info("Diagnostics background tasks started.")
 
 
 # ---------------------------------------------------------------------------

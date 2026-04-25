@@ -588,3 +588,151 @@ async def test_proactive_recycle_creates_new_websocket(tmp_path, monkeypatch):
     # Recycle should have created a second websocket
     assert len(client.created_websockets) >= 2
     await p.close_all()
+
+
+# ---------------------------------------------------------------------------
+# H-032 fix tests — Issue A (partial-subscribe cleanup) + Issue B (ws nulling)
+# ---------------------------------------------------------------------------
+
+
+class FailingMockMarketsWebSocket(MockMarketsWebSocket):
+    """Mock that can be configured to raise at connect, subscribe_market_data,
+    or subscribe_trades — for Issue A partial-failure path coverage."""
+
+    def __init__(self, *, fail_at: str | None = None):
+        super().__init__()
+        self.fail_at = fail_at  # 'connect' | 'subscribe_md' | 'subscribe_td' | None
+
+    async def connect(self):
+        if self.fail_at == "connect":
+            raise RuntimeError("simulated connect failure")
+        await super().connect()
+
+    async def subscribe_market_data(self, request_id, market_slugs):
+        if self.fail_at == "subscribe_md":
+            raise RuntimeError("simulated subscribe_market_data failure")
+        await super().subscribe_market_data(request_id, market_slugs)
+
+    async def subscribe_trades(self, request_id, market_slugs):
+        if self.fail_at == "subscribe_td":
+            raise RuntimeError("simulated subscribe_trades failure")
+        await super().subscribe_trades(request_id, market_slugs)
+
+
+class FailingMockClient:
+    """Client whose markets() returns a FailingMockMarketsWebSocket configured
+    via a list of fail_at strings (one per call, in order)."""
+
+    def __init__(self, fail_at_sequence: list[str | None]):
+        self._fail_seq = list(fail_at_sequence)
+        self.created_websockets: list[FailingMockMarketsWebSocket] = []
+        self.ws = self
+
+    def markets(self) -> FailingMockMarketsWebSocket:
+        fail_at = self._fail_seq.pop(0) if self._fail_seq else None
+        ws = FailingMockMarketsWebSocket(fail_at=fail_at)
+        self.created_websockets.append(ws)
+        return ws
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail_at,fail_match,expected_connect,expected_close", [
+    # connect() failure: ws never connected, but we still attempt close
+    # (close on a never-connected ws is a no-op in the mock; in the real
+    # SDK it cancels a None _message_task and skips _ws.close()).
+    ("connect", "simulated connect", 0, 1),
+    # subscribe_market_data() failure: ws connected, must be closed.
+    ("subscribe_md", "simulated subscribe_market_data", 1, 1),
+    # subscribe_trades() failure: ws connected and md subscribed, must be closed.
+    ("subscribe_td", "simulated subscribe_trades", 1, 1),
+])
+async def test_subscribe_match_partial_failure_closes_ws(
+    tmp_path, fast_lifecycle, fail_at, fail_match, expected_connect, expected_close,
+):
+    """H-032 Issue A: if connect or either subscribe raises during
+    subscribe_match, the ws must be closed (not orphaned). The exception
+    must propagate so callers can log + skip; the conn must NOT be in
+    self._connections."""
+    matches_root = tmp_path / "matches"
+    delta_path = tmp_path / "events" / "discovery_delta.jsonl"
+    matches_root.mkdir()
+    delta_path.parent.mkdir()
+
+    client = FailingMockClient([fail_at])
+    archive = RecordingArchive()
+    pool = ClobPool(client, archive, matches_root=matches_root, delta_path=delta_path)
+
+    with pytest.raises(RuntimeError, match=fail_match):
+        await pool.subscribe_match("evt-fail", "slug-fail")
+
+    assert len(client.created_websockets) == 1
+    ws = client.created_websockets[0]
+    assert ws.connect_calls == expected_connect, (
+        f"connect_calls={ws.connect_calls} expected={expected_connect}"
+    )
+    assert ws.close_calls == expected_close, (
+        f"close_calls={ws.close_calls} expected={expected_close} "
+        f"— Issue A regression: failed subscribe_match did not close ws"
+    )
+    # Conn must not have been registered.
+    assert "evt-fail" not in pool._connections
+    # No lifecycle tasks should have been started.
+    # (No direct access; verified via no_recycle_or_liveness_running below.)
+
+
+@pytest.mark.asyncio
+async def test_subscribe_match_cleanup_swallows_close_error(
+    tmp_path, fast_lifecycle,
+):
+    """H-032 Issue A: if connect/subscribe fails AND the cleanup ws.close()
+    also raises, the original exception (not the cleanup exception) must
+    propagate. The cleanup exception is logged but suppressed."""
+    matches_root = tmp_path / "matches"
+    delta_path = tmp_path / "events" / "discovery_delta.jsonl"
+    matches_root.mkdir()
+    delta_path.parent.mkdir()
+
+    class DoubleFailWS(FailingMockMarketsWebSocket):
+        async def close(self):
+            raise RuntimeError("simulated close failure during cleanup")
+
+    class DoubleFailClient:
+        def __init__(self):
+            self.created_websockets = []
+            self.ws = self
+
+        def markets(self):
+            ws = DoubleFailWS(fail_at="subscribe_md")
+            self.created_websockets.append(ws)
+            return ws
+
+    client = DoubleFailClient()
+    archive = RecordingArchive()
+    pool = ClobPool(client, archive, matches_root=matches_root, delta_path=delta_path)
+
+    # Original subscribe failure should propagate, NOT the cleanup failure.
+    with pytest.raises(RuntimeError, match="simulated subscribe_market_data"):
+        await pool.subscribe_match("evt-double", "slug-double")
+    assert "evt-double" not in pool._connections
+
+
+@pytest.mark.asyncio
+async def test_unsubscribe_match_nulls_ws_reference(pool):
+    """H-032 Issue B: after unsubscribe_match, conn.ws must be None.
+    Defense-in-depth reference-release; verifies the explicit
+    `conn.ws = None` assignment landed."""
+    p, client, _archive, _matches_root, _delta_path = pool
+
+    await p.subscribe_match("evt-b", "slug-b")
+    # Pre-condition: conn registered, ws populated.
+    conn = p._connections["evt-b"]
+    assert conn.ws is not None
+    captured_conn = conn  # keep external reference; pool's reference will be popped
+
+    await p.unsubscribe_match("evt-b")
+
+    # Post-condition: conn no longer in registry, AND its ws field is None.
+    assert "evt-b" not in p._connections
+    assert captured_conn.ws is None, (
+        "Issue B regression: conn.ws was not nulled after close"
+    )

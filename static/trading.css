@@ -1,0 +1,635 @@
+/* ---------------------------------------------------------------------------
+ * Trading page styles — v0.3
+ *
+ * v0.3 changes from v0.2:
+ *   - Reduced top stats (P&L card, Closed/Return/Activity stats) by ~50%
+ *   - Added 3rd stat: Return on capital
+ *   - New Date column in closed-contracts table (after Player)
+ *   - Added Profitability % column (%)
+ *   - Replaced "How" column with Entry → Exit avg prices
+ *   - Click-to-expand row reveals: Held for (minutes), Fills breakdown,
+ *     Score at entry/exit (placeholder for Step 7 activation May 7)
+ *   - Smooth height transition on expand
+ *   - Multiple rows can be expanded simultaneously
+ *   - Refresh resets all rows to collapsed
+ *   - Footnote below table about weighted-average prices
+ *   - Header reframed with date selector dropdown (Today/Yesterday/Custom)
+ *   - LONG/SHORT direction tags removed
+ * --------------------------------------------------------------------------- */
+
+:root {
+  --bg-page: #f7f7f5;
+  --bg-card: #ffffff;
+  --bg-row-header: #f3f3ef;
+  --bg-positive: #e8f5ee;
+  --bg-negative: #fcebeb;
+  --text-primary: #1f1f1c;
+  --text-secondary: #5f5e5a;
+  --text-tertiary: #888780;
+  --text-positive: #166e3f;
+  --text-negative: #a32d2d;
+  --border-tertiary: rgba(0, 0, 0, 0.08);
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-page);
+  font-variant-numeric: tabular-nums;
+}
+
+.trading-page {
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--border-tertiary);
+  overflow: hidden;
+  padding: 24px 24px 16px;
+}
+
+/* ===========================================================================
+ * Header + date selector
+ * =========================================================================== */
+
+.t-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.t-title {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.t-date-selector {
+  position: relative;
+  display: block;
+  margin-top: 4px;
+}
+.t-date-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+.t-date-button:hover { color: var(--text-primary); }
+.t-date-current {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.t-date-full {
+  color: var(--text-tertiary);
+  margin-left: 4px;
+}
+.t-date-chevron {
+  width: 12px;
+  height: 12px;
+  margin-left: 4px;
+  color: var(--text-tertiary);
+  transition: transform 150ms ease;
+}
+.t-date-selector:has(.t-date-menu.open) .t-date-chevron {
+  transform: rotate(180deg);
+}
+.t-date-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 6px;
+  min-width: 160px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  padding: 4px 0;
+  display: none;
+  z-index: 10;
+}
+.t-date-menu.open { display: block; }
+.t-date-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.t-date-option:hover { background: var(--bg-row-header); }
+.t-date-option-active {
+  font-weight: 500;
+  color: var(--text-positive);
+}
+
+/* ===========================================================================
+ * P&L card and stats row — reduced 50% from v0.2
+ * =========================================================================== */
+
+.t-pnl-card {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+  text-align: center;
+}
+.t-pnl-card.pnl-positive { background: var(--bg-positive); }
+.t-pnl-card.pnl-negative { background: var(--bg-negative); }
+.t-pnl-card.pnl-zero     { background: var(--bg-row-header); }
+.t-pnl-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.t-pnl-value {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.pnl-positive .t-pnl-value { color: var(--text-positive); }
+.pnl-negative .t-pnl-value { color: var(--text-negative); }
+.pnl-zero     .t-pnl-value { color: var(--text-secondary); }
+
+.t-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.t-stat {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-row-header);
+  text-align: center;
+}
+.t-stat-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.t-stat-value {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.t-stat-wins { color: var(--text-positive); }
+.t-stat-divider { color: var(--text-tertiary); margin: 0 4px; }
+.t-stat-total { color: var(--text-primary); }
+.t-stat-sub {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.t-stat-roi-positive { color: var(--text-positive); }
+.t-stat-roi-negative { color: var(--text-negative); }
+
+/* ===========================================================================
+ * Closed contracts table
+ * =========================================================================== */
+
+.t-table-section {
+  margin-bottom: 16px;
+}
+.t-table-title {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+.t-table-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 8px;
+}
+
+.t-table {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* Grid template:
+ *   Player              | Date    | Cost   | P&L     | %      | Entry → Exit
+ *   minmax(0, 1.4fr)    | 75px    | 70px   | 80px    | 60px   | 110px
+ */
+.t-table-head, .t-tr-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 75px 70px 80px 60px 110px;
+  gap: 8px;
+  padding: 10px 12px;
+  align-items: center;
+}
+.t-table-head {
+  background: var(--bg-row-header);
+  border-bottom: 0.5px solid var(--border-tertiary);
+}
+.t-th {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.t-th-cost, .t-th-pnl, .t-th-pct, .t-th-prices { text-align: right; }
+.t-th-date { font-size: 11px; }
+
+/* Row container: holds head + expandable detail */
+.t-row {
+  border-bottom: 0.5px solid var(--border-tertiary);
+}
+.t-row:last-child {
+  border-bottom: none;
+}
+.t-tr-head {
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 100ms ease;
+}
+.t-tr-head:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+.t-row.profit .t-tr-head { background: rgba(22, 110, 63, 0.04); }
+.t-row.loss   .t-tr-head { background: rgba(163, 45, 45, 0.04); }
+.t-row.profit .t-tr-head:hover { background: rgba(22, 110, 63, 0.08); }
+.t-row.loss   .t-tr-head:hover { background: rgba(163, 45, 45, 0.08); }
+
+.t-td-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.t-chevron {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
+  transition: transform 200ms ease;
+}
+.t-row.expanded .t-chevron {
+  transform: rotate(90deg);
+}
+.t-player-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.t-td-date {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.t-td-cost {
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+.t-td-pnl {
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.t-row.profit .t-td-pnl { color: var(--text-positive); }
+.t-row.loss   .t-td-pnl { color: var(--text-negative); }
+
+.t-td-pct {
+  text-align: right;
+  font-weight: 500;
+}
+.t-row.profit .t-td-pct { color: var(--text-positive); }
+.t-row.loss   .t-td-pct { color: var(--text-negative); }
+
+.t-td-prices {
+  text-align: right;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.t-td-prices .t-arrow {
+  color: var(--text-tertiary);
+  margin: 0 3px;
+}
+
+/* ===========================================================================
+ * Expanded detail panel
+ * =========================================================================== */
+
+.t-detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 250ms ease;
+  background: rgba(0, 0, 0, 0.015);
+  border-top: 0.5px solid transparent;
+}
+.t-row.expanded .t-detail {
+  max-height: 600px;  /* generous to fit fills section (v0.4) */
+  border-top-color: var(--border-tertiary);
+}
+
+.t-detail-grid {
+  /* Indented L/R from row edges for easier visual scan */
+  padding: 14px 48px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 32px;
+  font-size: 13px;
+}
+
+.t-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.t-detail-label {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.t-detail-value {
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+}
+.t-detail-value-placeholder {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-style: italic;
+  text-align: right;
+}
+
+.t-table-footnote {
+  margin-top: 8px;
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* ===========================================================================
+ * Combined fills section (v0.4) — sits below the 2x2 grid in expanded panel.
+ * Shows operator-perspective trades after combining fills with same timestamp
+ * and side. Resolution shown as italic "Settled" row.
+ * =========================================================================== */
+.t-fills-section {
+  padding: 0 48px 14px;
+  margin-top: -4px;
+}
+.t-fills-divider {
+  border-top: 0.5px dashed var(--border-tertiary);
+  margin: 0 0 10px;
+}
+.t-fills-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.t-fills-table {
+  display: grid;
+  grid-template-columns: 50px 90px 60px 50px minmax(0, 1fr);
+  gap: 4px 12px;
+  font-size: 12px;
+}
+.t-fills-head {
+  display: contents;
+}
+.t-fills-head > div {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-bottom: 4px;
+  border-bottom: 0.5px solid var(--border-tertiary);
+}
+.t-fills-num {
+  text-align: right;
+}
+.t-fills-row {
+  display: contents;
+}
+.t-fills-row > div {
+  padding: 5px 0;
+  font-variant-numeric: tabular-nums;
+}
+.t-fill-side {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.t-fill-side.settled {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+.t-fill-time { color: var(--text-tertiary); }
+.t-fill-qty {
+  text-align: right;
+  color: var(--text-secondary);
+}
+.t-fill-price {
+  text-align: right;
+  color: var(--text-secondary);
+}
+.t-fill-amount {
+  text-align: right;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.t-fill-amount.cash-in { color: var(--text-positive); }
+.t-fill-amount.cash-out { color: var(--text-negative); }
+
+/* As-of and footer */
+.t-asof {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.t-footer {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--border-tertiary);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* ===========================================================================
+ * Mobile overrides — phones 640px wide and below.
+ * Per project decision (2026-04-29): desktop-first for v0.3, mobile may have
+ * minor display issues; will iterate in a later release.
+ * =========================================================================== */
+@media (max-width: 640px) {
+  body { padding: 0; }
+  .trading-page {
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    padding: 16px 12px;
+  }
+  .t-header {
+    margin-bottom: 16px;
+  }
+  .t-title {
+    font-size: 18px;
+  }
+  .t-pnl-value {
+    font-size: 20px;
+  }
+  /* On narrow screens, drop the % column & prices to save space.
+     Mobile users still see Player / Date / Cost / P&L. */
+  .t-table-head, .t-tr-head {
+    grid-template-columns: minmax(0, 1.6fr) 60px 65px 75px;
+  }
+  .t-th-pct, .t-th-prices, .t-td-pct, .t-td-prices {
+    display: none;
+  }
+  .t-detail-grid {
+    padding: 12px 16px;
+    gap: 8px 16px;
+  }
+}
+
+/* ===========================================================================
+ * v0.8.4 (PM-D6) — Trading Performance header refresh + Recent Trades
+ *
+ * Header right cluster:
+ *   - .t-header-right: container for Live Tennis link + refresh button
+ *   - .t-live-link:    quiet text link, dotted underline, opens dashboard
+ *   - .t-refresh-btn:  grey jelly-bean pill with a refresh-arrow icon
+ *
+ * Recent Trades section: flat list of all executed transactions for the
+ * displayed date, one row per fill OR settlement, sorted newest-first.
+ *
+ * Footer collapse:
+ *   - .t-footer-line:  single-line "As of HH:MM AM/PM TZ · Trading v0.8.4"
+ *
+ * The prior .t-asof and .t-footer rules remain defined above; they're
+ * unreferenced by the new template but harmless. Future cleanup can drop.
+ * =========================================================================== */
+
+.t-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.t-live-link {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--text-tertiary);
+  padding-bottom: 1px;
+}
+.t-live-link:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
+}
+.t-refresh-btn {
+  background: var(--bg-row-header);
+  border: 0.5px solid var(--border-tertiary);
+  border-radius: 999px;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
+  transition: background 100ms ease, color 100ms ease;
+}
+.t-refresh-btn:hover {
+  background: #ebebe6;
+  color: var(--text-primary);
+}
+.t-refresh-btn svg { width: 13px; height: 13px; }
+
+.t-recent-section { margin-bottom: 16px; }
+.t-recent-table-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1.4fr) 70px 65px 70px 50px 50px 80px;
+  gap: 8px;
+  padding: 10px 12px;
+  align-items: center;
+}
+.t-recent-head {
+  background: var(--bg-row-header);
+  border-bottom: 0.5px solid var(--border-tertiary);
+}
+.t-recent-row {
+  border-bottom: 0.5px solid var(--border-tertiary);
+  font-size: 13px;
+}
+.t-recent-row:last-child { border-bottom: none; }
+.t-recent-th {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.t-recent-th-rate, .t-recent-th-qty, .t-recent-th-amount { text-align: right; }
+.t-recent-player { font-weight: 500; }
+.t-recent-time { color: var(--text-secondary); font-size: 12px; }
+.t-recent-state { color: var(--text-secondary); }
+.t-recent-state.bought { color: var(--text-primary); }
+.t-recent-state.sold { color: var(--text-primary); }
+.t-recent-condition { color: var(--text-secondary); font-size: 12px; }
+.t-recent-condition.won { color: var(--text-positive); font-weight: 500; }
+.t-recent-condition.lost { color: var(--text-negative); font-weight: 500; }
+.t-recent-rate, .t-recent-qty, .t-recent-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.t-recent-amount.positive { color: var(--text-positive); font-weight: 500; }
+.t-recent-amount.negative { color: var(--text-negative); font-weight: 500; }
+
+.t-footer-line {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding-top: 12px;
+  border-top: 0.5px solid var(--border-tertiary);
+}
+.t-footer-line .sep { margin: 0 6px; color: var(--text-tertiary); }
+
+/* Mobile: tighten the Recent Trades grid columns and font */
+@media (max-width: 640px) {
+  .t-recent-table-grid {
+    grid-template-columns: minmax(0,1fr) 60px 55px 60px 45px 40px 70px;
+    gap: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .t-recent-player { font-size: 12px; }
+}

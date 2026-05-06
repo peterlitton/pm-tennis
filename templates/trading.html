@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trading — performance</title>
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs><radialGradient id="g" cx="0.35" cy="0.3"><stop offset="0%25" stop-color="%23F0F88B"/><stop offset="100%25" stop-color="%23B5D33D"/></radialGradient></defs><circle cx="24" cy="24" r="22" fill="url(%23g)"/><path d="M 4 10 C 16 22, 32 22, 44 10" stroke="white" stroke-width="2.5" fill="none" opacity="0.9"/><path d="M 4 38 C 16 26, 32 26, 44 38" stroke="white" stroke-width="2.5" fill="none" opacity="0.9"/></svg>' />
+<link rel="stylesheet" href="/static/trading.css" />
+</head>
+<body>
+
+<div class="trading-page">
+
+  <div class="t-header">
+    <div>
+      <span class="t-title">Trading Performance</span>
+      <div class="t-date-selector">
+        <button class="t-date-button" type="button" onclick="document.getElementById('t-date-menu').classList.toggle('open')">
+          <span class="t-date-current">{{ display_date_label }}</span>
+          <span class="t-date-full">· {{ display_date_full }}</span>
+          <svg class="t-date-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6 L8 10 L12 6"/></svg>
+        </button>
+        <div id="t-date-menu" class="t-date-menu">
+          <a class="t-date-option {% if display_date_label == 'Today' %}t-date-option-active{% endif %}" href="/trading{{ token_qs }}">Today</a>
+          <a class="t-date-option {% if display_date_label == 'Yesterday' %}t-date-option-active{% endif %}" href="/trading?date={{ yesterday_iso }}{{ token_qs_amp }}">Yesterday</a>
+          <a class="t-date-option" href="#" onclick="
+            var d = prompt('Enter date (YYYY-MM-DD):', '{{ display_date_iso }}');
+            if (d) { window.location.href = '/trading?date=' + d + '{{ token_qs_amp }}'; }
+            return false;
+          ">Custom date…</a>
+        </div>
+      </div>
+    </div>
+    <!-- v0.8.4 (PM-D6): right-side header cluster — Live Tennis link
+         (quiet text style, opens in new tab) + grey jelly-bean refresh
+         button (full page reload). Live Tennis link styled to match
+         the Performance link added to the live dashboard in v0.8.3. -->
+    <div class="t-header-right">
+      <a href="https://pm-dashboard-o71w.onrender.com/" class="t-live-link" target="_blank" rel="noopener">Live Tennis</a>
+      <button class="t-refresh-btn" type="button" title="Refresh"
+              onclick="window.location.reload()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 8a6 6 0 1 1-1.76-4.24"/>
+          <polyline points="14 2 14 6 10 6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  {% set pnl = summary.cash_pnl %}
+  {% set sign_class = 'pnl-positive' if pnl > 0 else 'pnl-negative' if pnl < 0 else 'pnl-zero' %}
+  {% set abs_pnl = pnl if pnl >= 0 else -pnl %}
+  {% set sign_prefix = '+' if pnl > 0 else ('-' if pnl < 0 else '') %}
+
+  <div class="t-pnl-card {{ sign_class }}">
+    <div class="t-pnl-label">Today's cash P&amp;L</div>
+    <div class="t-pnl-value">{{ sign_prefix }}${{ '%.2f'|format(abs_pnl) }}</div>
+  </div>
+
+  <div class="t-stats-row">
+    <div class="t-stat">
+      <div class="t-stat-label">Closed</div>
+      <div class="t-stat-value">
+        <span class="t-stat-wins">{{ summary.n_profitable }}</span>
+        <span class="t-stat-divider">of</span>
+        <span class="t-stat-total">{{ summary.n_closed }}</span>
+      </div>
+      {% if summary.win_rate is not none %}
+      <div class="t-stat-sub">{{ '%.0f'|format(summary.win_rate * 100) }}% profitable</div>
+      {% else %}
+      <div class="t-stat-sub">none yet</div>
+      {% endif %}
+    </div>
+    <div class="t-stat">
+      <div class="t-stat-label">Return on capital</div>
+      {% if summary.return_on_capital is not none %}
+        {% set roc_sign = '+' if summary.return_on_capital >= 0 else '' %}
+        {% set roc_class = 't-stat-roi-positive' if summary.return_on_capital > 0 else ('t-stat-roi-negative' if summary.return_on_capital < 0 else '') %}
+        <div class="t-stat-value {{ roc_class }}">{{ roc_sign }}{{ summary.return_on_capital }}%</div>
+        <div class="t-stat-sub">${{ '%.2f'|format(summary.total_cost_closed) }} deployed</div>
+      {% else %}
+        <div class="t-stat-value">—</div>
+        <div class="t-stat-sub">no closed contracts</div>
+      {% endif %}
+    </div>
+    <div class="t-stat">
+      <div class="t-stat-label">Activity</div>
+      <div class="t-stat-value">{{ summary.n_buys + summary.n_sells }}</div>
+      <div class="t-stat-sub">{{ summary.n_buys }} buys · {{ summary.n_sells }} sells</div>
+    </div>
+  </div>
+
+  {% if summary.closed_contracts %}
+  <div class="t-table-section">
+    <div class="t-table-title">
+      Closed contracts
+      <span class="t-table-hint">click any row for detail</span>
+    </div>
+    <div class="t-table">
+
+      <div class="t-table-head">
+        <div class="t-th t-th-player">Player</div>
+        <div class="t-th t-th-date">Date</div>
+        <div class="t-th t-th-cost">Cost</div>
+        <div class="t-th t-th-pnl">P&amp;L</div>
+        <div class="t-th t-th-pct">%</div>
+        <div class="t-th t-th-prices">Entry → Exit</div>
+      </div>
+
+      {% for c in summary.closed_contracts %}
+        {% set row_class = 'profit' if c.profitable else 'loss' if not c.broke_even else 'wash' %}
+        {% set cf_abs = c.cash_flow if c.cash_flow >= 0 else -c.cash_flow %}
+        {% set cf_prefix = '+' if c.cash_flow > 0 else ('-' if c.cash_flow < 0 else '') %}
+        {% set pct_prefix = '+' if c.profitability_pct is not none and c.profitability_pct > 0 else '' %}
+
+        {% if c.opened_earlier %}
+        <!-- v0.4.1: contract opened on prior day, settled today.
+             Buy rows are outside today's fetch window so cost looks $0.
+             Render with explicit "Lost · opened earlier" messaging. -->
+        <div class="t-row loss opened-earlier">
+          <div class="t-tr-head" style="cursor: default;">
+            <div class="t-td-player">
+              <span style="display: inline-block; width: 14px;"></span>
+              <span class="t-player-name">{{ c.backed_player or '—' }}</span>
+            </div>
+            <div class="t-td-date">{{ c.close_date_short }}</div>
+            <div class="t-td-prior-note" style="grid-column: span 4; text-align: right; color: var(--text-tertiary); font-style: italic; font-size: 12px;">
+              Lost · opened on prior day (cost on earlier CSV)
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="t-row {{ row_class }}" onclick="this.classList.toggle('expanded')">
+          <div class="t-tr-head">
+            <div class="t-td-player">
+              <svg class="t-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4 L10 8 L6 12"/></svg>
+              <span class="t-player-name">{{ c.backed_player or '—' }}</span>
+            </div>
+            <div class="t-td-date">{{ c.close_date_short }}</div>
+            <div class="t-td-cost">${{ '%.2f'|format(c.cost) }}</div>
+            <div class="t-td-pnl">{{ cf_prefix }}${{ '%.2f'|format(cf_abs) }}</div>
+            <div class="t-td-pct">
+              {% if c.profitability_pct is not none %}{{ pct_prefix }}{{ c.profitability_pct }}%{% else %}—{% endif %}
+            </div>
+            <div class="t-td-prices">
+              {% if c.entry_price_avg is not none %}
+                {% if c.entry_price_avg >= 1.0 %}${{ '%.2f'|format(c.entry_price_avg) }}{% else %}{{ (c.entry_price_avg * 100)|int }}¢{% endif %}
+              {% else %}—{% endif %}
+              <span class="t-arrow">→</span>
+              {% if c.exit_price_avg is not none %}
+                {% if c.exit_price_avg >= 1.0 %}${{ '%.2f'|format(c.exit_price_avg) }}{% elif c.exit_price_avg == 0.0 %}$0.00{% else %}{{ (c.exit_price_avg * 100)|int }}¢{% endif %}
+              {% else %}—{% endif %}
+            </div>
+          </div>
+          <div class="t-detail">
+            <div class="t-detail-grid">
+              <div class="t-detail-item">
+                <span class="t-detail-label">Held for</span>
+                <span class="t-detail-value">
+                  {% if c.held_minutes is not none %}{{ c.held_minutes }} min{% else %}—{% endif %}
+                </span>
+              </div>
+              <div class="t-detail-item">
+                <span class="t-detail-label">Trades</span>
+                <span class="t-detail-value">{{ c.n_buys }} buy{% if c.n_buys != 1 %}s{% endif %} · {{ c.n_sells }} sell{% if c.n_sells != 1 %}s{% endif %}</span>
+              </div>
+              <div class="t-detail-item">
+                <span class="t-detail-label">Score at entry</span>
+                <span class="t-detail-value-placeholder">available May 7</span>
+              </div>
+              <div class="t-detail-item">
+                <span class="t-detail-label">Score at exit</span>
+                <span class="t-detail-value-placeholder">available May 7</span>
+              </div>
+            </div>
+
+            {% if c.combined_fills %}
+            <div class="t-fills-section">
+              <div class="t-fills-divider"></div>
+              <div class="t-fills-label">Fills</div>
+              <div class="t-fills-table">
+                <div class="t-fills-head">
+                  <div>Side</div>
+                  <div>Time</div>
+                  <div class="t-fills-num">Qty</div>
+                  <div class="t-fills-num">Price</div>
+                  <div class="t-fills-num">Amount</div>
+                </div>
+                {% for f in c.combined_fills %}
+                <div class="t-fills-row">
+                  <div class="t-fill-side {% if f.side == 'Buy' %}buy{% elif f.side == 'Sell' %}sell{% else %}settled{% endif %}">{{ f.side }}</div>
+                  <div class="t-fill-time">{{ f.time_short }}</div>
+                  <div class="t-fill-qty">{{ f.shares }}</div>
+                  <div class="t-fill-price">
+                    {% if f.price >= 1.0 %}${{ '%.2f'|format(f.price) }}{% elif f.price == 0.0 %}$0.00{% else %}{{ (f.price * 100)|int }}¢{% endif %}
+                  </div>
+                  <div class="t-fill-amount {% if f.amount > 0 %}cash-in{% elif f.amount < 0 %}cash-out{% endif %}">
+                    {% if f.amount > 0 %}+${{ '%.2f'|format(f.amount) }}{% elif f.amount < 0 %}−${{ '%.2f'|format(-f.amount) }}{% else %}$0.00{% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+
+    </div>
+    <div class="t-table-footnote">
+      Entry and exit prices are weighted averages across all fills for that contract.
+    </div>
+  </div>
+  {% endif %}
+
+  {% if recent_trades %}
+  <!-- v0.8.4 (PM-D6): Recent Trades — flat list of executed transactions
+       for the displayed date in operator's local TZ. One row per fill or
+       settlement, sorted newest-first. Resting limit orders that have
+       NOT filled are NOT shown. See docs/PM-D6-Recent-Trades-2026-05-06.md. -->
+  <div class="t-recent-section">
+    <div class="t-table-title">
+      Recent trades
+      <span class="t-table-hint">today's executed transactions, newest first</span>
+    </div>
+    <div class="t-table">
+      <div class="t-recent-table-grid t-recent-head">
+        <div class="t-recent-th">Player</div>
+        <div class="t-recent-th">Time</div>
+        <div class="t-recent-th">State</div>
+        <div class="t-recent-th">Condition</div>
+        <div class="t-recent-th t-recent-th-rate">Rate</div>
+        <div class="t-recent-th t-recent-th-qty">Qty</div>
+        <div class="t-recent-th t-recent-th-amount">Amount</div>
+      </div>
+      {% for t in recent_trades %}
+      <div class="t-recent-table-grid t-recent-row">
+        <div class="t-recent-player">{{ t.player }}</div>
+        <div class="t-recent-time">{{ t.time_short }}</div>
+        <div class="t-recent-state {{ t.state_class }}">{{ t.state }}</div>
+        <div class="t-recent-condition {{ t.condition_class }}">{{ t.condition }}</div>
+        <div class="t-recent-rate">
+          {% if t.rate_dollars >= 1.0 %}${{ '%.2f'|format(t.rate_dollars) }}{% elif t.rate_dollars == 0.0 %}$0.00{% else %}{{ t.rate_cents }}¢{% endif %}
+        </div>
+        <div class="t-recent-qty">{{ t.qty }}</div>
+        <div class="t-recent-amount {{ t.amount_class }}">
+          {% if t.amount_dollars > 0 %}+${{ '%.2f'|format(t.amount_dollars) }}{% elif t.amount_dollars < 0 %}−${{ '%.2f'|format(-t.amount_dollars) }}{% else %}$0.00{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- v0.8.4 (PM-D6): footer collapsed to a single line. The previous
+       "Refresh page for current data" copy is removed; the new refresh
+       button in the header is the affordance. As-of time format aligned
+       to operator standard HH:MM AM/PM TZ. -->
+  <div class="t-footer-line">
+    As of {{ as_of }}
+    <span class="sep">·</span>
+    Trading v0.8.4
+  </div>
+
+</div>
+
+</body>
+</html>
